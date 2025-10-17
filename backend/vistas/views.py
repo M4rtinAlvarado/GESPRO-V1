@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase, LineaTrabajo, ActividadDifusion_Linea, Actividad_Encargado
+from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase, LineaTrabajo, ActividadDifusion_Linea, Actividad_Encargado, Fecha
 from datetime import datetime, timedelta
 from django.contrib import messages
 from django.db import models
@@ -207,6 +207,40 @@ def actualizar_estado(request):
         except ActividadBase.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
     return JsonResponse({'success': False, 'error': 'Método no permitido'})        
+
+def editar_actividad(request, actividad_id):
+    actividad = get_object_or_404(ActividadBase, id=actividad_id)  # Base permite normal o difusión
     
+    if request.method == 'POST':
+        nuevo_nombre = request.POST.get('nombre')
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+
+        # Actualizar nombre si se envió
+        if nuevo_nombre:
+            actividad.nombre = nuevo_nombre
+            actividad.save()
+
+        # Actualizar o crear registro de fechas
+        if fecha_inicio and fecha_fin:
+            fecha_obj, created = Fecha.objects.get_or_create(
+                actividad=actividad,
+                estado=True,  # solo una fecha activa
+                defaults={'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin}
+            )
+            if not created:
+                fecha_obj.fecha_inicio = fecha_inicio
+                fecha_obj.fecha_fin = fecha_fin
+                fecha_obj.save()
+
+        messages.success(request, f'Actividad "{actividad.nombre}" actualizada correctamente.')
+
+        # Si la actividad es de difusión o normal, redirige según tipo
+        if hasattr(actividad, 'proyecto'):  # difusión
+            return redirect('vista_tablero', proyecto_id=actividad.proyecto.id)
+        elif hasattr(actividad, 'linea_trabajo'):  # normal
+            return redirect('vista_tablero', proyecto_id=actividad.linea_trabajo.proyecto.id)
+
+    return redirect('vista_tablero', proyecto_id=actividad.id) 
 
 
