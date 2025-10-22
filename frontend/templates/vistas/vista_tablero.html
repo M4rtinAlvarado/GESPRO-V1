@@ -41,7 +41,19 @@
                         {% if actividad.producto_asociado %}
                         <small class="text-gray-500">Producto: {{ actividad.producto_asociado.nombre }}</small>
                         {% endif %}
-                        <small class="text-gray-500">Encargado: {{ actividad.encargados|join:", " }}</small>
+
+                        <!-- Cambie los encargados a diccionario, edu -->
+                        <small class="text-gray-500">
+                            Encargados:
+                            {% if actividad.encargados %}
+                                {% for encargado in actividad.encargados %}
+                                    {{ encargado.nombre }}
+                                    {% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                Sin encargados
+                            {% endif %}
+                        </small>
                         <small class="text-gray-400">{{ actividad.tipo }}</small>
                     </div>
                 {% endif %}

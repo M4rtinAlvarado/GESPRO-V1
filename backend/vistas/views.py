@@ -34,8 +34,14 @@ def obtener_datos(request, proyecto_id):
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
                 "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
             })
+
+
         consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
-        encargados = [rel.encargado.nombre for rel in consulta_2]
+        encargados = [
+            {"nombre": rel.encargado.nombre, "correo": rel.encargado.correo_electronico} 
+            for rel in consulta_2
+]
+
         todas_actividades.append({
             'id': actividad.id,
             'nombre': actividad.nombre or f"Actividad {actividad.id}",
@@ -64,7 +70,11 @@ def obtener_datos(request, proyecto_id):
         lineas_trabajo = [rel.linea_trabajo.nombre for rel in consulta]
 
         consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
-        encargados = [rel.encargado.nombre for rel in consulta_2]
+        encargados = [
+            {"nombre": rel.encargado.nombre, "correo": rel.encargado.correo_electronico} 
+            for rel in consulta_2
+        ]
+
 
 
         todas_actividades.append({
@@ -244,3 +254,11 @@ def editar_actividad(request, actividad_id):
     return redirect('vista_tablero', proyecto_id=actividad.id) 
 
 
+
+def editar_encargado(request):
+    # Por ahora no hace nada, solo devuelve un redirect temporal
+    return redirect('lista_actividades', proyecto_id=1)
+
+def eliminar_encargado(request):
+    # TODO: Implementar la eliminación
+    return redirect(request.META.get('HTTP_REFERER', '/'))
