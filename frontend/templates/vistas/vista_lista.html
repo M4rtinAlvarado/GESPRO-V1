@@ -86,7 +86,7 @@
 
     <!-- Modal editar actividad -->
     <div id="modal-{{ act.id }}" 
-        class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 modal-backdrop">
+        class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg relative">
         <!-- Botón cerrar -->
         <button type="button" data-modal-close="#modal-{{ act.id }}" 
@@ -225,7 +225,7 @@
 
         <!-- Modal editar/añadir encargado -->
         {% for encargado in act.encargados %}
-        <div id="modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
             <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
                 <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,7 +256,7 @@
 
 
         <!-- Modal añadir nuevo -->
-        <div id="modal-editar-encargado-{{ act.id }}-nuevo" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="modal-editar-encargado-{{ act.id }}-nuevo" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
             <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
                 <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -395,12 +395,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const fechaFin{{ act.id }} = document.getElementById('fecha_fin-{{ act.id }}');
 
     const fechas{{ act.id }} = {
-        {% for idx, fecha in act.fechas_dict.items %}
-        "{{ idx }}": { "inicio": "{{ fecha.fecha_inicio }}", "fin": "{{ fecha.fecha_fin }}" },
-        {% empty %}
-        // sin fechas
-        {% endfor %}
-    };
+                {% for fecha in act.fechas %}
+                "{{ forloop.counter0 }}": { 
+                    "inicio": "{{ fecha.fecha_inicio|default:'' }}", 
+                    "fin": "{{ fecha.fecha_fin|default:'' }}" 
+                },
+                {% empty %}
+                // sin fechas
+                {% endfor %}
+            };
 
     // Si no hay periodos cargados, limpiar fechas al abrir
     if (Object.keys(fechas{{ act.id }}).length === 0) {
