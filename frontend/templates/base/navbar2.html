@@ -4,26 +4,27 @@
 <head>
   <meta charset="UTF-8">
   <title>{% block title %}Proyecto X{% endblock %}</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   {% tailwind_css %}
 </head>
 <body class="bg-gray-100">
 
-  <!-- NAVBAR -->
   <nav class="bg-blue-950 shadow-md">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex items-center justify-between h-16 py-5 p-2">
 
-        <!-- Botón volver -->
         <div class="flex items-center">
           <a href="{% url 'proyectos' %}" class="text-4xl font-bold text-white hover:text-gray-300">←</a>
         </div>
 
-        <!-- Título centrado -->
         <div class="flex-1 text-center">
           <h1 class="text-4xl font-semibold text-white">{{ proyecto.nombre }}</h1>
         </div>
 
-        <!-- Pestañas -->
         <div class="flex space-x-6">
           <a href="{% url 'vista_gantt' proyecto.id %}" class="text-white hover:text-gray-300 {% if request.resolver_match.url_name == 'vista_gantt' %}font-bold border-b-2 border-white{% endif %}">
             Gantt
@@ -46,7 +47,6 @@
     </div>
   </nav>
 
-  <!-- CONTENIDO -->
   <main class="p-4">
     {% block content %}
     {% endblock %}
