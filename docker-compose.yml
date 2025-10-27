@@ -1,10 +1,13 @@
 services:
-  frontend:
+  gespro-frontend:
     build: .
-    ports:
-      - "3003:3003"
+    container_name: gespro-frontend
+    restart: unless-stopped
+    expose:
+      - "3003"        # No lo publiques al host, solo expón internamente
     networks:
       - red_taller_software
+    command: python backend/manage.py runserver 0.0.0.0:3003
 
 networks:
   red_taller_software:

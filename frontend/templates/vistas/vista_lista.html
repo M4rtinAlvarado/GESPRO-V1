@@ -386,110 +386,129 @@ function createHiddenInput(name, value) {
 document.addEventListener('DOMContentLoaded', () => {
     {% for act in actividades %}
     
-    // --- 1. Referencias ---
-    const form{{ act.id }} = document.getElementById('form-editar-{{ act.id }}');
-    const selectPeriodo{{ act.id }} = document.getElementById('periodo_selector-{{ act.id }}');
-    const btnAgregar{{ act.id }} = document.getElementById('btn-agregar-periodo-{{ act.id }}');
+    // --- 1. ID y Referencias (Nombres Únicos) ---
+    const actId_{{ act.id }} = {{ act.id }}; // Guardamos el ID
+    const form_{{ act.id }} = document.getElementById(`form-editar-${actId_{{ act.id }}}`);
+    const selectPeriodo_{{ act.id }} = document.getElementById(`periodo_selector-${actId_{{ act.id }}}`);
+    const btnAgregar_{{ act.id }} = document.getElementById(`btn-agregar-periodo-${actId_{{ act.id }}}`);
+    const inputInicio_{{ act.id }} = document.getElementById(`fecha_inicio-${actId_{{ act.id }}}`);
+    const inputFin_{{ act.id }} = document.getElementById(`fecha_fin-${actId_{{ act.id }}}`);
 
-    // --- 2. "Memoria" Única ---
-    let estadoPeriodos{{ act.id }} = [
+    // Salir si faltan elementos
+    if (!form_{{ act.id }} || !selectPeriodo_{{ act.id }} || !btnAgregar_{{ act.id }} || !inputInicio_{{ act.id }} || !inputFin_{{ act.id }}) {
+        console.error(`[Actividad ${actId_{{ act.id }}}] Faltan elementos esenciales.`);
+        return; 
+    }
+
+    // --- 2. "Memoria" Única (Nombre Único) ---
+    let estadoPeriodos_{{ act.id }} = [
         {% for fecha in act.fechas %}
-        { id_periodo: "{{ fecha.id }}", f_inicio: "{{ fecha.fecha_inicio|default:'' }}", f_fin: "{{ fecha.fecha_fin|default:'' }}" },
+        { id_periodo: String("{{ fecha.id }}").trim(), f_inicio: "{{ fecha.fecha_inicio|default:'' }}", f_fin: "{{ fecha.fecha_fin|default:'' }}" },
         {% endfor %}
     ];
-    const numPeriodosExistentes{{ act.id }} = estadoPeriodos{{ act.id }}.length;
+    // console.log(`[Actividad ${actId_{{ act.id }}}] Estado inicial:`, JSON.parse(JSON.stringify(estadoPeriodos_{{ act.id }})));
 
-    // --- Helper: Encontrar índice por ID o 'nuevo-X' ---
-    function findPeriodoIndex(value) {
-        if (value.startsWith('nuevo-')) {
-            // Para los nuevos, el value ES el índice después del prefijo
-            return parseInt(value.split('-')[1]);
+    // --- Helper: Encontrar índice (Usa Nombre Único) ---
+    function findPeriodoIndex_{{ act.id }}(value) {
+        const trimmedValue = String(value).trim();
+        if (trimmedValue.startsWith('nuevo-')) {
+            const index = parseInt(trimmedValue.split('-')[1]);
+            return (index >= 0 && index < estadoPeriodos_{{ act.id }}.length) ? index : -1; 
         } else {
-            // Para los existentes, buscamos el índice por 'id_periodo'
-            return estadoPeriodos{{ act.id }}.findIndex(p => p.id_periodo === value);
+            // Usa == y el array con nombre único
+            return estadoPeriodos_{{ act.id }}.findIndex(p => p.id_periodo == trimmedValue); 
         }
     }
 
-    // --- 3. Flatpickr ---
-    const onInicioChange{{ act.id }} = function(selectedDates) {
-        // Obtenemos el ID (o 'nuevo-X') del dropdown
-        const selectedValue = selectPeriodo{{ act.id }}.value;
-        // Buscamos el índice en el array usando el ID/valor
-        const idx = findPeriodoIndex(selectedValue); 
-        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            estadoPeriodos{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]);
-            fpFin{{ act.id }}.set('minDate', selectedDates[0]);
+    // --- 3. Flatpickr (Nombres Únicos) ---
+    let fpInicio_{{ act.id }}, fpFin_{{ act.id }}; 
+    
+    const onInicioChange_{{ act.id }} = function(selectedDates) {
+        const selectedValue = selectPeriodo_{{ act.id }}.value;
+        const idx = findPeriodoIndex_{{ act.id }}(selectedValue); 
+        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) {
+            estadoPeriodos_{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]);
+            if (fpFin_{{ act.id }}) fpFin_{{ act.id }}.set('minDate', selectedDates[0]); 
         }
     };
-    
-    const onFinChange{{ act.id }} = function(selectedDates) {
-        const selectedValue = selectPeriodo{{ act.id }}.value;
-        const idx = findPeriodoIndex(selectedValue);
-        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            estadoPeriodos{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]);
+    const onFinChange_{{ act.id }} = function(selectedDates) {
+        const selectedValue = selectPeriodo_{{ act.id }}.value;
+        const idx = findPeriodoIndex_{{ act.id }}(selectedValue);
+        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) {
+            estadoPeriodos_{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]);
         }
     };
 
-    const fpInicio{{ act.id }} = flatpickr("#fecha_inicio-{{ act.id }}", { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onInicioChange{{ act.id }} });
-    const fpFin{{ act.id }} = flatpickr("#fecha_fin-{{ act.id }}", { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onFinChange{{ act.id }} });
+    fpInicio_{{ act.id }} = flatpickr(inputInicio_{{ act.id }}, { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onInicioChange_{{ act.id }} });
+    fpFin_{{ act.id }} = flatpickr(inputFin_{{ act.id }}, { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onFinChange_{{ act.id }} });
     
-    // --- 4. Carga Inicial ---
-    if (estadoPeriodos{{ act.id }}.length > 0) {
-        fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_inicio); 
-        fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_fin); 
-        fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[0].f_inicio); 
+    // --- 4. Carga Inicial (Nombres Únicos) ---
+    if (estadoPeriodos_{{ act.id }}.length > 0) {
+        fpInicio_{{ act.id }}.setDate(estadoPeriodos_{{ act.id }}[0].f_inicio); 
+        fpFin_{{ act.id }}.setDate(estadoPeriodos_{{ act.id }}[0].f_fin); 
+        fpFin_{{ act.id }}.set('minDate', estadoPeriodos_{{ act.id }}[0].f_inicio); 
     } else {
-        fpInicio{{ act.id }}.setDate(""); fpFin{{ act.id }}.setDate("");
+        fpInicio_{{ act.id }}.clear(); fpFin_{{ act.id }}.clear(); 
+        fpFin_{{ act.id }}.set('minDate', null);
     }
 
-    // --- 5. Cambiar Dropdown ---
-    selectPeriodo{{ act.id }}.addEventListener('change', () => {
-        const selectedValue = selectPeriodo{{ act.id }}.value;
-        const idx = findPeriodoIndex(selectedValue); // Buscamos por ID/valor
-        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_inicio); 
-            fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_fin); 
-            fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[idx].f_inicio); 
+    // --- 5. Cambiar Dropdown (Nombres Únicos) ---
+    selectPeriodo_{{ act.id }}.addEventListener('change', () => {
+        const selectedValue = selectPeriodo_{{ act.id }}.value;
+        const idx = findPeriodoIndex_{{ act.id }}(selectedValue); 
+        // console.log(`[Actividad ${actId_{{ act.id }}}] Change: val=${selectedValue}, idx=${idx}`);
+
+        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) { 
+            const periodoACargar = estadoPeriodos_{{ act.id }}[idx];
+            // console.log(`[Actividad ${actId_{{ act.id }}}] Cargando:`, periodoACargar); 
+            fpInicio_{{ act.id }}.setDate(periodoACargar.f_inicio, false); 
+            fpFin_{{ act.id }}.setDate(periodoACargar.f_fin, false);   
+            fpFin_{{ act.id }}.set('minDate', periodoACargar.f_inicio); 
+        } else {
+            // console.warn(`[Actividad ${actId_{{ act.id }}}] No se cargó periodo para val=${selectedValue}, idx=${idx}`); 
+             fpInicio_{{ act.id }}.clear(); 
+             fpFin_{{ act.id }}.clear(); 
+             fpFin_{{ act.id }}.set('minDate', null);
         }
     });
 
-    // --- 6. Agregar nuevo ---
-    btnAgregar{{ act.id }}.addEventListener('click', () => {
-        const proximoIndice = estadoPeriodos{{ act.id }}.length;
-        estadoPeriodos{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); 
-        
-        const nuevoPeriodoNum = numPeriodosExistentes{{ act.id }} + (proximoIndice - numPeriodosExistentes{{ act.id }}) + 1; // Ajustado
+    // --- 6. Agregar nuevo (Nombres Únicos) ---
+    btnAgregar_{{ act.id }}.addEventListener('click', () => {
+        const proximoIndice = estadoPeriodos_{{ act.id }}.length;
+        estadoPeriodos_{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); 
+        const nuevoPeriodoNum = proximoIndice + 1; 
         const nuevaOpcion = document.createElement('option');
         nuevaOpcion.textContent = `Periodo ${nuevoPeriodoNum} (Nuevo)`;
-        // El valor para los nuevos ahora es 'nuevo-indice'
-        nuevaOpcion.value = `nuevo-${proximoIndice}`; // ej: 'nuevo-1' si ya había 1
-        
-        if (selectPeriodo{{ act.id }}.options.length === 1 && selectPeriodo{{ act.id }}.options[0].disabled) {
-            selectPeriodo{{ act.id }}.innerHTML = "";
+        const nuevoValue = `nuevo-${proximoIndice}`;
+        nuevaOpcion.value = nuevoValue; 
+        if (selectPeriodo_{{ act.id }}.options.length === 1 && selectPeriodo_{{ act.id }}.options[0].disabled) {
+            selectPeriodo_{{ act.id }}.innerHTML = "";
         }
-        selectPeriodo{{ act.id }}.appendChild(nuevaOpcion);
-        nuevaOpcion.selected = true;
-
-        fpInicio{{ act.id }}.setDate(""); fpFin{{ act.id }}.setDate(""); fpFin{{ act.id }}.set('minDate', null); 
+        selectPeriodo_{{ act.id }}.appendChild(nuevaOpcion);
+        nuevaOpcion.selected = true; 
+        fpInicio_{{ act.id }}.clear(); fpFin_{{ act.id }}.clear(); 
+        fpFin_{{ act.id }}.set('minDate', null); 
     });
 
-    // --- 7. Enviar Formulario ---
-    form{{ act.id }}.addEventListener('submit', (event) => {
-        form{{ act.id }}.appendChild( createHiddenInput('actividad', '{{ act.id }}') );
-        const periodosLimpios = estadoPeriodos{{ act.id }}.filter(p => p.f_inicio && p.f_fin); 
-        console.log("Array de periodos limpios a enviar:", periodosLimpios);
+    // --- 7. Enviar Formulario (Nombres Únicos) ---
+    form_{{ act.id }}.addEventListener('submit', (event) => {
+        if (!form_{{ act.id }}.querySelector('input[name="actividad"]')) {
+             form_{{ act.id }}.appendChild( createHiddenInput('actividad', String(actId_{{ act.id }})) ); 
+        }
+        const periodosLimpios = estadoPeriodos_{{ act.id }}.filter(p => p.f_inicio && p.f_fin); 
+        form_{{ act.id }}.querySelectorAll('input[name="periodos[]"]').forEach(inp => inp.remove());
         periodosLimpios.forEach(periodo => {
             const jsonString = JSON.stringify(periodo);
-            form{{ act.id }}.appendChild( createHiddenInput('periodos[]', jsonString) );
+            form_{{ act.id }}.appendChild( createHiddenInput('periodos[]', jsonString) );
         });
-        document.getElementById('fecha_inicio-{{act.id}}').disabled = true;
-        document.getElementById('fecha_fin-{{act.id}}').disabled = true;
-        // Ya no necesitamos deshabilitar hiddenPeriodo, no se usa
+        inputInicio_{{ act.id }}.disabled = true; 
+        inputFin_{{ act.id }}.disabled = true;
     });
     
-    {% endfor %}
-});
+    {% endfor %} // Fin del bucle Django
+}); // Fin DOMContentLoaded
 </script>
+
 <!-- Script para manejar modales de editar/añadir encargado -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
