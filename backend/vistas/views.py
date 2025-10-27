@@ -32,7 +32,7 @@ def obtener_datos(request, proyecto_id):
             if inicio and fin and inicio == fin:
                 fin += timedelta(days=1)
             fechas_lista.append({
-                "id": actividad.id,
+                "id": fecha.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
                 "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
             })
@@ -68,7 +68,7 @@ def obtener_datos(request, proyecto_id):
             if inicio and fin and inicio == fin:
                 fin += timedelta(days=1)
             fechas_lista.append({
-                "id": actividad.id,
+                "id": fecha.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
                 "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
             })
@@ -248,7 +248,7 @@ def editar_actividad(request):
         #si id_perido es None, crear nuevo periodo
         periodos = request.POST.getlist('periodos[]')
         ids_presentes_en_request = []
-        print("Periodos recibidos:", periodos)
+        # print("Periodos recibidos:", periodos)
         for periodo_data_string in periodos:
             valid_json_string = periodo_data_string.replace("'", '"')
             

@@ -106,7 +106,7 @@
         </p>
 
         <!-- Formulario -->
-        <form action="{% url 'editar_actividad'  %}" method="POST" id="form-editar-{{ act.id }}">
+        <form action="{% url 'editar_actividad' %}" method="POST" id="form-editar-{{ act.id }}">
         {% csrf_token %}
 
         <!-- Nombre -->
@@ -133,7 +133,7 @@
                     class="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
                 
                 {% for fecha in act.fechas %}
-                    <option value="{{ forloop.counter0 }}">
+                    <option value="{{ fecha.id }}">
                         Periodo {{ forloop.counter }}
                     </option>
                 {% empty %}
@@ -182,21 +182,22 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Encargados</label>
             <ul class="space-y-2">
                 {% for encargado in act.encargados %}
-                <li class="flex justify-between items-center p-2 bg-gray-100 rounded-md text-black">
-                    <span class="text-sm font-medium">
-                        {{ encargado.nombre }}
+                <li class="flex justify-between items-start p-2 bg-gray-100 rounded-md text-black">
+                    <span class="text-sm font-medium pt-1"> {{ encargado.nombre }}
                     </span>
                     <div class="flex items-center gap-3">
-                        <!-- Botón eliminar -->
                         <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline form-eliminar-encargado">
                             {% csrf_token %}
                             <input type="hidden" name="actividad_id" value="{{ act.id }}">
                             <input type="hidden" name="encargado_id" value="{{ encargado.id }}"> 
-                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> <svg ...> ... </svg>
+                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> 
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </form>
 
-                        <!-- Botón editar -->
                         <button 
                             type="button"
                             data-modal-target="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}"
@@ -214,7 +215,6 @@
                 {% endfor %}
 
 
-                <!-- Opción añadir nuevo -->
                 <li class="flex justify-between items-center p-2 bg-gray-100 rounded-md text-black">
                     <span class="text-sm font-medium">Agregar encargado</span>
                     <button 
@@ -222,7 +222,6 @@
                         data-modal-target="#modal-editar-encargado-{{ act.id }}-nuevo"
                         class="text-green-500 hover:text-green-700"
                     >
-                        <!-- Icono + -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
@@ -298,7 +297,7 @@
             Cancelar
             </button>
             <button type="submit" 
-                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    form="form-editar-{{ act.id }}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Guardar Cambios
             </button>
         </div>
@@ -376,99 +375,94 @@ document.addEventListener("DOMContentLoaded", function() {
 // --- FUNCIONES DE AYUDA (Globales) ---
 function formatDate(date) {
     if (!date) return "";
-    let d = new Date(date),
-        month = '' + (d.getMonth() + 1),
-        day = '' + d.getDate(),
-        year = d.getFullYear();
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-    return [year, month, day].join('-');
+    let d = new Date(date), month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+    if (month.length < 2) month = '0' + month; if (day.length < 2) day = '0' + day; return [year, month, day].join('-');
 }
 
 function createHiddenInput(name, value) {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    return input;
+    const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; return input;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     {% for act in actividades %}
     
-    // --- 1. Referencias a los elementos ---
+    // --- 1. Referencias ---
     const form{{ act.id }} = document.getElementById('form-editar-{{ act.id }}');
     const selectPeriodo{{ act.id }} = document.getElementById('periodo_selector-{{ act.id }}');
     const btnAgregar{{ act.id }} = document.getElementById('btn-agregar-periodo-{{ act.id }}');
-    const hiddenPeriodo{{ act.id }} = document.getElementById('periodo_hidden-{{ act.id }}'); 
 
-    // --- 2. "Memoria" Única (Formato Backend) ---
+    // --- 2. "Memoria" Única ---
     let estadoPeriodos{{ act.id }} = [
         {% for fecha in act.fechas %}
-        { 
-            id_periodo: "{{ fecha.id }}", // <-- CAMBIO: Usa el ID
-            f_inicio: "{{ fecha.fecha_inicio|default:'' }}", // <-- CAMBIO: Nombre de la clave
-            f_fin: "{{ fecha.fecha_fin|default:'' }}" // <-- CAMBIO: Nombre de la clave
-        },
+        { id_periodo: "{{ fecha.id }}", f_inicio: "{{ fecha.fecha_inicio|default:'' }}", f_fin: "{{ fecha.fecha_fin|default:'' }}" },
         {% endfor %}
     ];
     const numPeriodosExistentes{{ act.id }} = estadoPeriodos{{ act.id }}.length;
 
-    // --- 3. Referencias a Flatpickr ---
+    // --- Helper: Encontrar índice por ID o 'nuevo-X' ---
+    function findPeriodoIndex(value) {
+        if (value.startsWith('nuevo-')) {
+            // Para los nuevos, el value ES el índice después del prefijo
+            return parseInt(value.split('-')[1]);
+        } else {
+            // Para los existentes, buscamos el índice por 'id_periodo'
+            return estadoPeriodos{{ act.id }}.findIndex(p => p.id_periodo === value);
+        }
+    }
+
+    // --- 3. Flatpickr ---
     const onInicioChange{{ act.id }} = function(selectedDates) {
-        const idx = parseInt(selectPeriodo{{ act.id }}.value);
-        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            estadoPeriodos{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]); // <-- CAMBIO: Nombre de la clave
+        // Obtenemos el ID (o 'nuevo-X') del dropdown
+        const selectedValue = selectPeriodo{{ act.id }}.value;
+        // Buscamos el índice en el array usando el ID/valor
+        const idx = findPeriodoIndex(selectedValue); 
+        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            estadoPeriodos{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]);
             fpFin{{ act.id }}.set('minDate', selectedDates[0]);
         }
     };
     
     const onFinChange{{ act.id }} = function(selectedDates) {
-        const idx = parseInt(selectPeriodo{{ act.id }}.value);
-        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            estadoPeriodos{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]); // <-- CAMBIO: Nombre de la clave
+        const selectedValue = selectPeriodo{{ act.id }}.value;
+        const idx = findPeriodoIndex(selectedValue);
+        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            estadoPeriodos{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]);
         }
     };
 
-    const fpInicio{{ act.id }} = flatpickr("#fecha_inicio-{{ act.id }}", {
-        altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d",
-        onChange: onInicioChange{{ act.id }}
-    });
-    const fpFin{{ act.id }} = flatpickr("#fecha_fin-{{ act.id }}", {
-        altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d",
-        onChange: onFinChange{{ act.id }}
-    });
+    const fpInicio{{ act.id }} = flatpickr("#fecha_inicio-{{ act.id }}", { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onInicioChange{{ act.id }} });
+    const fpFin{{ act.id }} = flatpickr("#fecha_fin-{{ act.id }}", { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onFinChange{{ act.id }} });
     
     // --- 4. Carga Inicial ---
     if (estadoPeriodos{{ act.id }}.length > 0) {
-        fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_inicio); // <-- CAMBIO
-        fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_fin); // <-- CAMBIO
-        fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[0].f_inicio); // <-- CAMBIO
+        fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_inicio); 
+        fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_fin); 
+        fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[0].f_inicio); 
     } else {
-        fpInicio{{ act.id }}.setDate("");
-        fpFin{{ act.id }}.setDate("");
+        fpInicio{{ act.id }}.setDate(""); fpFin{{ act.id }}.setDate("");
     }
 
-    // --- 5. Evento: Cambiar Dropdown ---
+    // --- 5. Cambiar Dropdown ---
     selectPeriodo{{ act.id }}.addEventListener('change', () => {
-        const idx = parseInt(selectPeriodo{{ act.id }}.value);
-        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
-            fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_inicio); // <-- CAMBIO
-            fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_fin); // <-- CAMBIO
-            fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[idx].f_inicio); // <-- CAMBIO
+        const selectedValue = selectPeriodo{{ act.id }}.value;
+        const idx = findPeriodoIndex(selectedValue); // Buscamos por ID/valor
+        if (idx !== -1 && estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_inicio); 
+            fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_fin); 
+            fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[idx].f_inicio); 
         }
     });
 
-    // --- 6. Evento: Clic en Botón (Agregar nuevo) ---
+    // --- 6. Agregar nuevo ---
     btnAgregar{{ act.id }}.addEventListener('click', () => {
         const proximoIndice = estadoPeriodos{{ act.id }}.length;
-        // Añade el objeto con el formato del backend
-        estadoPeriodos{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); // <-- CAMBIO
+        estadoPeriodos{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); 
         
-        const nuevoPeriodoNum = proximoIndice + 1;
+        const nuevoPeriodoNum = numPeriodosExistentes{{ act.id }} + (proximoIndice - numPeriodosExistentes{{ act.id }}) + 1; // Ajustado
         const nuevaOpcion = document.createElement('option');
         nuevaOpcion.textContent = `Periodo ${nuevoPeriodoNum} (Nuevo)`;
-        nuevaOpcion.value = proximoIndice; 
+        // El valor para los nuevos ahora es 'nuevo-indice'
+        nuevaOpcion.value = `nuevo-${proximoIndice}`; // ej: 'nuevo-1' si ya había 1
         
         if (selectPeriodo{{ act.id }}.options.length === 1 && selectPeriodo{{ act.id }}.options[0].disabled) {
             selectPeriodo{{ act.id }}.innerHTML = "";
@@ -476,38 +470,26 @@ document.addEventListener('DOMContentLoaded', () => {
         selectPeriodo{{ act.id }}.appendChild(nuevaOpcion);
         nuevaOpcion.selected = true;
 
-        fpInicio{{ act.id }}.setDate("");
-        fpFin{{ act.id }}.setDate("");
-        fpFin{{ act.id }}.set('minDate', null); 
+        fpInicio{{ act.id }}.setDate(""); fpFin{{ act.id }}.setDate(""); fpFin{{ act.id }}.set('minDate', null); 
     });
 
-    // --- 7. Evento: Enviar Formulario ---
+    // --- 7. Enviar Formulario ---
     form{{ act.id }}.addEventListener('submit', (event) => {
-        
-        // Filtramos periodos que tengan ambas fechas
-        const periodosLimpios = estadoPeriodos{{ act.id }}.filter(p => p.f_inicio && p.f_fin); // <-- CAMBIO
-
+        form{{ act.id }}.appendChild( createHiddenInput('actividad', '{{ act.id }}') );
+        const periodosLimpios = estadoPeriodos{{ act.id }}.filter(p => p.f_inicio && p.f_fin); 
         console.log("Array de periodos limpios a enviar:", periodosLimpios);
-        
-        const jsonPayload = JSON.stringify(periodosLimpios);
-
-        // Creamos el input hidden con el nombre 'periodos'
-        form{{ act.id }}.appendChild(
-            createHiddenInput('periodos', jsonPayload) // <-- CAMBIO: nombre del input
-        );
-
-        // Deshabilitamos los inputs que ya no queremos enviar
+        periodosLimpios.forEach(periodo => {
+            const jsonString = JSON.stringify(periodo);
+            form{{ act.id }}.appendChild( createHiddenInput('periodos[]', jsonString) );
+        });
         document.getElementById('fecha_inicio-{{act.id}}').disabled = true;
         document.getElementById('fecha_fin-{{act.id}}').disabled = true;
-        hiddenPeriodo{{ act.id }}.disabled = true;
-
-        // El formulario se envía...
+        // Ya no necesitamos deshabilitar hiddenPeriodo, no se usa
     });
     
     {% endfor %}
 });
 </script>
-
 <!-- Script para manejar modales de editar/añadir encargado -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
