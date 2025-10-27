@@ -31,6 +31,7 @@ def obtener_datos(request, proyecto_id):
             if inicio and fin and inicio == fin:
                 fin += timedelta(days=1)
             fechas_lista.append({
+                "id": actividad.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
                 "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
             })
@@ -38,7 +39,11 @@ def obtener_datos(request, proyecto_id):
 
         consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
         encargados = [
-            {"nombre": rel.encargado.nombre, "correo": rel.encargado.correo_electronico} 
+            {
+                "id": rel.encargado.id,
+                "nombre": rel.encargado.nombre, 
+                "correo": rel.encargado.correo_electronico
+            } 
             for rel in consulta_2
 ]
 
@@ -62,6 +67,7 @@ def obtener_datos(request, proyecto_id):
             if inicio and fin and inicio == fin:
                 fin += timedelta(days=1)
             fechas_lista.append({
+                "id": actividad.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
                 "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
             })
@@ -71,7 +77,11 @@ def obtener_datos(request, proyecto_id):
 
         consulta_2 = Actividad_Encargado.objects.filter(actividad=actividad).select_related('encargado')
         encargados = [
-            {"nombre": rel.encargado.nombre, "correo": rel.encargado.correo_electronico} 
+            {
+                "id": rel.encargado.id,
+                "nombre": rel.encargado.nombre, 
+                "correo": rel.encargado.correo_electronico
+            } 
             for rel in consulta_2
         ]
 

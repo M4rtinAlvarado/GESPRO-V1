@@ -162,7 +162,7 @@
             <label for="fecha_inicio-{{act.id}}" class="block text-sm font-medium text-gray-700">
             Fecha de inicio
             </label>
-            <input type="date" name="fecha_inicio" id="fecha_inicio-{{act.id}}" 
+            <input type="text" name="fecha_inicio" id="fecha_inicio-{{act.id}}" 
                 value="{{ act.fechas.0.fecha_inicio|default:'' }}"  
                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
         </div>
@@ -172,7 +172,7 @@
             <label for="fecha_fin-{{act.id}}" class="block text-sm font-medium text-gray-700">
             Fecha de fin
             </label>
-            <input type="date" name="fecha_fin" id="fecha_fin-{{act.id}}" 
+            <input type="text" name="fecha_fin" id="fecha_fin-{{act.id}}" 
                 value="{{ act.fechas.0.fecha_fin|default:'' }}"  
                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
         </div>
@@ -188,15 +188,11 @@
                     </span>
                     <div class="flex items-center gap-3">
                         <!-- Botón eliminar -->
-                        <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline">
+                        <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline form-eliminar-encargado">
                             {% csrf_token %}
                             <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                            <input type="hidden" name="encargado_index" value="{{ forloop.counter0 }}">
-                            <button type="button" class="text-red-500 hover:text-red-700" title="Eliminar encargado">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                            <input type="hidden" name="encargado_id" value="{{ encargado.id }}"> 
+                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> <svg ...> ... </svg>
                             </button>
                         </form>
 
@@ -248,7 +244,6 @@
                 <form action="{% url 'editar_encargado' %}" method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                    <input type="hidden" name="encargado_index" value="{{ forloop.counter0 }}">
                     <div class="mt-2">
                         <label class="block text-sm font-medium text-gray-700">Nombre</label>
                         <input type="text" name="nombre" value="{{ encargado.nombre }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
@@ -373,40 +368,7 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 <!-- Script para habilitar/deshabilitar el botón de guardar cambios -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('form').forEach(form => {
-    const originalValues = {};
-    form.querySelectorAll('input, select').forEach(input => {
-      originalValues[input.name] = input.value;
-    });
 
-    const submitButton = form.querySelector('button[type="submit"]');
-    
-    const checkChanges = () => {
-      let changed = false;
-      form.querySelectorAll('input, select').forEach(input => {
-        if (input.value !== originalValues[input.name]) changed = true;
-      });
-      
-      // --- ESTA ES LA CORRECCIÓN ---
-      // Solo intentamos deshabilitar el botón si realmente existe
-      if (submitButton) {
-        submitButton.disabled = !changed;
-        submitButton.classList.toggle('opacity-50', !changed);
-        submitButton.classList.toggle('cursor-not-allowed', !changed);
-      }
-    };
-
-    form.addEventListener('input', checkChanges);
-    
-    // Ejecutamos checkChanges() solo si el botón existe
-    if (submitButton) {
-        checkChanges();
-    }
-  });
-});
-</script>
 
 <!-- Script para manejar selección de periodos y actualizar fechas ---- LOS ERRORES SON XQ EL VS NO CACHA DE DJANGO :P-->
 <script>
@@ -418,10 +380,8 @@ function formatDate(date) {
         month = '' + (d.getMonth() + 1),
         day = '' + d.getDate(),
         year = d.getFullYear();
-
     if (month.length < 2) month = '0' + month;
     if (day.length < 2) day = '0' + day;
-
     return [year, month, day].join('-');
 }
 
@@ -440,128 +400,108 @@ document.addEventListener('DOMContentLoaded', () => {
     const form{{ act.id }} = document.getElementById('form-editar-{{ act.id }}');
     const selectPeriodo{{ act.id }} = document.getElementById('periodo_selector-{{ act.id }}');
     const btnAgregar{{ act.id }} = document.getElementById('btn-agregar-periodo-{{ act.id }}');
-    const hiddenPeriodo{{ act.id }} = document.getElementById('periodo_hidden-{{ act.id }}');
+    const hiddenPeriodo{{ act.id }} = document.getElementById('periodo_hidden-{{ act.id }}'); 
 
-    // --- 3. Almacenes de Fechas (Definidos antes) ---
-    const fechasExistentes{{ act.id }} = {
+    // --- 2. "Memoria" Única (Formato Backend) ---
+    let estadoPeriodos{{ act.id }} = [
         {% for fecha in act.fechas %}
-        "{{ forloop.counter0 }}": { 
-            "inicio": "{{ fecha.fecha_inicio|default:'' }}", 
-            "fin": "{{ fecha.fecha_fin|default:'' }}" 
+        { 
+            id_periodo: "{{ fecha.id }}", // <-- CAMBIO: Usa el ID
+            f_inicio: "{{ fecha.fecha_inicio|default:'' }}", // <-- CAMBIO: Nombre de la clave
+            f_fin: "{{ fecha.fecha_fin|default:'' }}" // <-- CAMBIO: Nombre de la clave
         },
         {% endfor %}
-    };
-    
-    let fechasNuevas{{ act.id }} = [];
-    const numPeriodosExistentes{{ act.id }} = {{ act.fechas|length }};
+    ];
+    const numPeriodosExistentes{{ act.id }} = estadoPeriodos{{ act.id }}.length;
 
-
-    // --- 2. Referencias a Flatpickr (CORREGIDO) ---
-    // Creamos handlers separados para INICIO y FIN
-
+    // --- 3. Referencias a Flatpickr ---
     const onInicioChange{{ act.id }} = function(selectedDates) {
-        // --- ESTA ES LA LÍNEA NUEVA ---
-        // Le dice al calendario de FIN que su fecha mínima es la que acabamos de seleccionar
-        fpFin{{ act.id }}.set('minDate', selectedDates[0]);
-        // -----------------------------
-
-        const valorHidden = hiddenPeriodo{{ act.id }}.value;
-        if (valorHidden.startsWith('nuevo-')) {
-            const idx = parseInt(valorHidden.split('-')[1]);
-            // Solo actualizamos el INICIO en la memoria
-            fechasNuevas{{ act.id }}[idx].inicio = formatDate(selectedDates[0]);
+        const idx = parseInt(selectPeriodo{{ act.id }}.value);
+        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            estadoPeriodos{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]); // <-- CAMBIO: Nombre de la clave
+            fpFin{{ act.id }}.set('minDate', selectedDates[0]);
         }
     };
     
     const onFinChange{{ act.id }} = function(selectedDates) {
-        const valorHidden = hiddenPeriodo{{ act.id }}.value;
-        if (valorHidden.startsWith('nuevo-')) {
-            const idx = parseInt(valorHidden.split('-')[1]);
-            // Solo actualizamos el FIN en la memoria
-            fechasNuevas{{ act.id }}[idx].fin = formatDate(selectedDates[0]);
+        const idx = parseInt(selectPeriodo{{ act.id }}.value);
+        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            estadoPeriodos{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]); // <-- CAMBIO: Nombre de la clave
         }
     };
 
     const fpInicio{{ act.id }} = flatpickr("#fecha_inicio-{{ act.id }}", {
         altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d",
-        onChange: onInicioChange{{ act.id }} // <-- Handler de INICIO
+        onChange: onInicioChange{{ act.id }}
     });
     const fpFin{{ act.id }} = flatpickr("#fecha_fin-{{ act.id }}", {
         altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d",
-        onChange: onFinChange{{ act.id }} // <-- Handler de FIN
+        onChange: onFinChange{{ act.id }}
     });
+    
+    // --- 4. Carga Inicial ---
+    if (estadoPeriodos{{ act.id }}.length > 0) {
+        fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_inicio); // <-- CAMBIO
+        fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[0].f_fin); // <-- CAMBIO
+        fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[0].f_inicio); // <-- CAMBIO
+    } else {
+        fpInicio{{ act.id }}.setDate("");
+        fpFin{{ act.id }}.setDate("");
+    }
 
-
-    // --- 5. Evento: Cambiar Dropdown (Seleccionar) ---
+    // --- 5. Evento: Cambiar Dropdown ---
     selectPeriodo{{ act.id }}.addEventListener('change', () => {
-        // (Ya no necesitamos guardar, los 'onChange' lo hicieron)
-        
-        // Cargar las fechas del NUEVO periodo seleccionado
-        const nuevoValor = selectPeriodo{{ act.id }}.value;
-        hiddenPeriodo{{ act.id }}.value = nuevoValor; // Actualizar el hidden
-
-        if (nuevoValor.startsWith('nuevo-')) {
-            // Cargando desde la memoria "nuevos"
-            const idx = parseInt(nuevoValor.split('-')[1]);
-            fpInicio{{ act.id }}.setDate(fechasNuevas{{ act.id }}[idx].inicio);
-            fpFin{{ act.id }}.setDate(fechasNuevas{{ act.id }}[idx].fin);
-            
-        } else if (fechasExistentes{{ act.id }}[nuevoValor]) {
-            // Cargando desde la memoria "existentes"
-            fpInicio{{ act.id }}.setDate(fechasExistentes{{ act.id }}[nuevoValor].inicio);
-            fpFin{{ act.id }}.setDate(fechasExistentes{{ act.id }}[nuevoValor].fin);
+        const idx = parseInt(selectPeriodo{{ act.id }}.value);
+        if (estadoPeriodos{{ act.id }}[idx] !== undefined) {
+            fpInicio{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_inicio); // <-- CAMBIO
+            fpFin{{ act.id }}.setDate(estadoPeriodos{{ act.id }}[idx].f_fin); // <-- CAMBIO
+            fpFin{{ act.id }}.set('minDate', estadoPeriodos{{ act.id }}[idx].f_inicio); // <-- CAMBIO
         }
     });
 
     // --- 6. Evento: Clic en Botón (Agregar nuevo) ---
     btnAgregar{{ act.id }}.addEventListener('click', () => {
-        // (Ya no necesitamos guardar)
+        const proximoIndice = estadoPeriodos{{ act.id }}.length;
+        // Añade el objeto con el formato del backend
+        estadoPeriodos{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); // <-- CAMBIO
         
-        // 2. Crear el nuevo periodo en la "memoria"
-        const proximoIndice = fechasNuevas{{ act.id }}.length;
-        fechasNuevas{{ act.id }}.push({ inicio: "", fin: "" }); // Añade slot vacío
-        
-        // 3. Calcular el número de periodo
-        const nuevoPeriodoNum = numPeriodosExistentes{{ act.id }} + proximoIndice + 1;
-        
-        // 4. Crear el <option>
+        const nuevoPeriodoNum = proximoIndice + 1;
         const nuevaOpcion = document.createElement('option');
         nuevaOpcion.textContent = `Periodo ${nuevoPeriodoNum} (Nuevo)`;
-        nuevaOpcion.value = `nuevo-${proximoIndice}`; // ej: "nuevo-0"
+        nuevaOpcion.value = proximoIndice; 
         
-        // 5. Añadirlo y seleccionarlo
         if (selectPeriodo{{ act.id }}.options.length === 1 && selectPeriodo{{ act.id }}.options[0].disabled) {
             selectPeriodo{{ act.id }}.innerHTML = "";
         }
         selectPeriodo{{ act.id }}.appendChild(nuevaOpcion);
         nuevaOpcion.selected = true;
 
-        // 6. Limpiar inputs y setear hidden
         fpInicio{{ act.id }}.setDate("");
         fpFin{{ act.id }}.setDate("");
-        hiddenPeriodo{{ act.id }}.value = `nuevo-${proximoIndice}`;
+        fpFin{{ act.id }}.set('minDate', null); 
     });
 
-    // --- 7. Evento: Enviar Formulario (Guardar Cambios) ---
-    form{{ act.id }}.addEventListener('submit', () => {
-        // (Ya no necesitamos guardar)
+    // --- 7. Evento: Enviar Formulario ---
+    form{{ act.id }}.addEventListener('submit', (event) => {
         
-        // 2. Inyectar TODOS los periodos nuevos en el form
-        fechasNuevas{{ act.id }}.forEach((periodo, index) => {
-            if (periodo.inicio && periodo.fin) {
-                form{{ act.id }}.appendChild(
-                    createHiddenInput(`nuevo_periodo_inicio_${index}`, periodo.inicio)
-                );
-                form{{ act.id }}.appendChild(
-                    createHiddenInput(`nuevo_periodo_fin_${index}`, periodo.fin)
-                );
-            }
-        });
+        // Filtramos periodos que tengan ambas fechas
+        const periodosLimpios = estadoPeriodos{{ act.id }}.filter(p => p.f_inicio && p.f_fin); // <-- CAMBIO
+
+        console.log("Array de periodos limpios a enviar:", periodosLimpios);
         
-        // 3. Anular el 'periodo' principal si era uno nuevo
-        if (hiddenPeriodo{{ act.id }}.value.startsWith('nuevo-')) {
-             hiddenPeriodo{{ act.id }}.value = ""; 
-        }
+        const jsonPayload = JSON.stringify(periodosLimpios);
+
+        // Creamos el input hidden con el nombre 'periodos'
+        form{{ act.id }}.appendChild(
+            createHiddenInput('periodos', jsonPayload) // <-- CAMBIO: nombre del input
+        );
+
+        // Deshabilitamos los inputs que ya no queremos enviar
+        document.getElementById('fecha_inicio-{{act.id}}').disabled = true;
+        document.getElementById('fecha_fin-{{act.id}}').disabled = true;
+        hiddenPeriodo{{ act.id }}.disabled = true;
+
+        // El formulario se envía...
     });
     
     {% endfor %}
@@ -591,6 +531,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
         backdrop.addEventListener('click', (e) => {
             if (e.target === backdrop) backdrop.classList.add('hidden'), backdrop.classList.remove('flex');
+        });
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.form-eliminar-encargado').forEach(form => {
+        form.addEventListener('submit', function(event) {
+            // Muestra una ventana de confirmación
+            const confirmado = confirm('¿Estás seguro de que quieres eliminar a este encargado?');
+            if (!confirmado) {
+                // Si el usuario da "Cancelar", detiene el envío
+                event.preventDefault(); 
+            }
         });
     });
 });
