@@ -106,7 +106,7 @@
         </p>
 
         <!-- Formulario -->
-        <form action="{% url 'editar_actividad' act.id %}" method="POST" id="form-editar-{{ act.id }}">
+        <form action="{% url 'editar_actividad'  %}" method="POST" id="form-editar-{{ act.id }}">
         {% csrf_token %}
 
         <!-- Nombre -->
@@ -241,7 +241,7 @@
                     </svg>
                 </button>
                 <h2 class="text-xl font-bold mb-4 text-black">Editar Encargado</h2>
-                <form action="{% url 'editar_encargado' %}" method="POST">
+                <form action="{% url 'crear_encargado' %}" method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="actividad_id" value="{{ act.id }}">
                     <div class="mt-2">
@@ -271,7 +271,7 @@
                     </svg>
                 </button>
                 <h2 class="text-xl font-bold mb-4 text-black">Agregar Encargado</h2>
-                <form action="{% url 'editar_encargado' %}" method="POST">
+                <form action="{% url 'crear_encargado' %}" method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="actividad_id" value="{{ act.id }}">
                     <input type="hidden" name="encargado_index" value="nuevo">

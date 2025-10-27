@@ -1,11 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from proyectos.models import Proyecto, Actividad, ActividadDifusion, ActividadBase, LineaTrabajo, ActividadDifusion_Linea, Actividad_Encargado, Fecha
+from proyectos.models import *
 from datetime import datetime, timedelta
 from django.contrib import messages
 from django.db import models
 from .gantt import calcular_gantt_data
+import json
 
 
 
@@ -228,47 +229,98 @@ def actualizar_estado(request):
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
     return JsonResponse({'success': False, 'error': 'Método no permitido'})        
 
-def editar_actividad(request, actividad_id):
-    actividad = get_object_or_404(ActividadBase, id=actividad_id)  # Base permite normal o difusión
-    
+def editar_actividad(request):
+    #requets = {actividad: id, nombre: nuevo_nombre, periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
     if request.method == 'POST':
+        print(request.POST)
+        actividad = request.POST.get('actividad')
         nuevo_nombre = request.POST.get('nombre')
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-
+        print(actividad, nuevo_nombre)
+        actividad = get_object_or_404(ActividadBase, id=actividad)
         # Actualizar nombre si se envió
         if nuevo_nombre:
             actividad.nombre = nuevo_nombre
             actividad.save()
+        # Actualizar periodos si se envió
+        #recorrer cada periodo
+        #traer de la base de datos
+        #comparar fechas y actualizar
+        #si id_perido es None, crear nuevo periodo
+        periodos = request.POST.getlist('periodos[]')
+        ids_presentes_en_request = []
+        print("Periodos recibidos:", periodos)
+        for periodo_data_string in periodos:
+            valid_json_string = periodo_data_string.replace("'", '"')
+            
+            periodo_data = json.loads(valid_json_string)
+            periodo_id = periodo_data.get('id_periodo')
+            if periodo_id != '':
+                ids_presentes_en_request.append(periodo_id)
+            f_inicio = periodo_data.get('f_inicio')
+            f_fin = periodo_data.get('f_fin')
+            print(periodo_id, f_inicio, f_fin)
+            if periodo_id:
+                print("Actualizando periodo existente")
+                # Actualizar periodo existente
+                periodo = get_object_or_404(Fecha, id=periodo_id, actividad=actividad)
+                #comparar fechas del request con las ya existentes
+                if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
+                    periodo.fecha_inicio = f_inicio
+                if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
+                    periodo.fecha_fin = f_fin
+                periodo.save()
+            else:
+                # Crear nuevo periodo
+                print("Creando nuevo periodo")
+                nuevo_periodo = Fecha.objects.create(
+                    actividad=actividad,
+                    fecha_inicio=f_inicio,
+                    fecha_fin=f_fin,
+                    estado=True
+                )
 
-        # Actualizar o crear registro de fechas
-        if fecha_inicio and fecha_fin:
-            fecha_obj, created = Fecha.objects.get_or_create(
-                actividad=actividad,
-                estado=True,  # solo una fecha activa
-                defaults={'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin}
-            )
-            if not created:
-                fecha_obj.fecha_inicio = fecha_inicio
-                fecha_obj.fecha_fin = fecha_fin
-                fecha_obj.save()
+                ids_presentes_en_request.append(nuevo_periodo.id)
+        Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad).exclude(
+        id__in=ids_presentes_en_request)
+        
+        # Ejecuta la eliminación
+        conteo_eliminado, _ = Fechas_a_eliminar.delete()
+        print(f"Periodos eliminados: {conteo_eliminado}") # Muestra en consola
+        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
+        if not actividad_esp :
+            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
+            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
+        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
+    
 
-        messages.success(request, f'Actividad "{actividad.nombre}" actualizada correctamente.')
-
-        # Si la actividad es de difusión o normal, redirige según tipo
-        if hasattr(actividad, 'proyecto'):  # difusión
-            return redirect('vista_tablero', proyecto_id=actividad.proyecto.id)
-        elif hasattr(actividad, 'linea_trabajo'):  # normal
-            return redirect('vista_tablero', proyecto_id=actividad.linea_trabajo.proyecto.id)
-
-    return redirect('vista_tablero', proyecto_id=actividad.id) 
-
-
-
-def editar_encargado(request):
-    # Por ahora no hace nada, solo devuelve un redirect temporal
-    return redirect('lista_actividades', proyecto_id=1)
+        
+def crear_encargado(request):
+    #request = {nombre: nombre, correo: correo, actividad_id: id_actividad}
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        correo = request.POST.get('correo')
+        encargado = Encargado.objects.create(nombre=nombre, correo_electronico=correo)
+        actividad_id = request.POST.get('actividad_id')
+        actividad = get_object_or_404(ActividadBase, id=actividad_id)
+        Actividad_Encargado.objects.create(actividad=actividad, encargado=encargado)
+        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
+        if not actividad_esp :
+            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
+            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
+        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
 
 def eliminar_encargado(request):
-    # TODO: Implementar la eliminación
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+    #request = {encargado_id: id_encargado, actividad_id: id_actividad}
+    if request.method == 'POST':
+        encargado_id = request.POST.get('encargado_id')
+        actividad_id = request.POST.get('actividad_id')
+        print(encargado_id, actividad_id)
+        actividad = get_object_or_404(ActividadBase, id=actividad_id)
+        encargado = get_object_or_404(Encargado, id=encargado_id)
+        relacion = get_object_or_404(Actividad_Encargado, actividad=actividad, encargado=encargado)
+        relacion.delete()
+        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
+        if not actividad_esp :
+            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
+            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
+        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
