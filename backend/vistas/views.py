@@ -226,6 +226,9 @@ def actualizar_estado(request):
             actividad = ActividadBase.objects.get(id=actividad_id)
             actividad.estado = nuevo_estado
             actividad.save()
+            proyecto = get_object_or_404(Proyecto, id=actividad.proyecto.id)
+            proyecto.ultima_modificacion = datetime.now()
+            proyecto.save()
             return JsonResponse({'success': True})
         except ActividadBase.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
@@ -285,14 +288,27 @@ def editar_actividad(request):
         Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad).exclude(
         id__in=ids_presentes_en_request)
         
-        # Ejecuta la eliminación
-        conteo_eliminado, _ = Fechas_a_eliminar.delete()
+        # para cada fecha actrualizar estado a False
+        conteo_eliminado = 0
+        for fecha in Fechas_a_eliminar:
+            fecha.estado = False
+            fecha.save()
+            conteo_eliminado += 1
         print(f"Periodos eliminados: {conteo_eliminado}") # Muestra en consola
-        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
+        try:
+            #actividad normal
+            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        except:
+            #actividad difusion
             actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
-        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
+            proyecto_id = actividad_esp.proyecto.id
+        
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        proyecto.ultima_modificacion = datetime.now()
+        proyecto.save()
+         
+        return redirect('lista_actividades', proyecto_id=proyecto_id)
     
 
         
@@ -305,12 +321,54 @@ def crear_encargado(request):
         actividad_id = request.POST.get('actividad_id')
         actividad = get_object_or_404(ActividadBase, id=actividad_id)
         Actividad_Encargado.objects.create(actividad=actividad, encargado=encargado)
-        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
+        
+        try:
+            #actividad normal
+            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        except:
+            #actividad difusion
             actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
             proyecto_id = actividad_esp.proyecto.id
-        else:
+        
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        proyecto.ultima_modificacion = datetime.now()
+        proyecto.save()
+        
+        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
+        query_params = urlencode({'open_modal': actividad_id})
+
+        
+        return redirect( f"{base_path}?{query_params}" )
+    
+def editar_encargado(request):
+    #request = {encargado_id: id_encargado, nombre: nombre, correo: correo, actividad_id: id_actividad}
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        correo = request.POST.get('correo')
+        actividad_id = request.POST.get('actividad_id')
+        encarado_id = request.POST.get('encargado_id')
+        encargado = get_object_or_404(Encargado, id=encarado_id)
+        if nombre:
+            encargado.nombre = nombre
+        if correo:
+            encargado.correo_electronico = correo
+        encargado.save()
+        actividad = get_object_or_404(ActividadBase, id=actividad_id)
+        
+        try:
+            #actividad normal
+            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
             proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        except:
+            #actividad difusion
+            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.proyecto.id
+
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        proyecto.ultima_modificacion = datetime.now()
+        proyecto.save()
+
         base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
         query_params = urlencode({'open_modal': actividad_id})
     
@@ -326,13 +384,22 @@ def eliminar_encargado(request):
         actividad = get_object_or_404(ActividadBase, id=actividad_id)
         encargado = get_object_or_404(Encargado, id=encargado_id)
         relacion = get_object_or_404(Actividad_Encargado, actividad=actividad, encargado=encargado)
-        relacion.delete()
+        relacion.estado = False
+        relacion.save()
         actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
+        try:
+            #actividad normal
+            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        except:
+            #actividad difusion
             actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
             proyecto_id = actividad_esp.proyecto.id
-        else:
-            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        proyecto.ultima_modificacion = datetime.now()
+        proyecto.save()
+
         base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
         query_params = urlencode({'open_modal': actividad_id})
     

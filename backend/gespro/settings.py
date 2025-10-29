@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-1+3@n368!w5*v_p4hm8#)qv(u18l!gjk0&5b4pa(khn)g9u+t(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '146.83.216.166', 'gespro.inf.uach.cl']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '146.83.216.166', 'gespro.inf.uach.cl','testserver']
 
 CSRF_TRUSTED_ORIGINS = ['https://gespro.inf.uach.cl']
 
