@@ -84,11 +84,9 @@
         </div>
     </div>
 
-    <!-- Modal editar actividad -->
     <div id="modal-{{ act.id }}" 
         class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg relative">
-        <!-- Botón cerrar -->
         <button type="button" data-modal-close="#modal-{{ act.id }}" 
                 class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,7 +95,6 @@
         </svg>
         </button>
         
-        <!-- Título -->
         <h2 class="text-2xl font-bold text-black">
           Editar Actividad:
         </h2>
@@ -105,11 +102,120 @@
           {{ act.nombre }}
         </p>
 
-        <!-- Formulario -->
+        <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Encargados</label>
+            <ul class="space-y-2">
+                {% for encargado in act.encargados %}
+                <li class="flex justify-between items-start p-2 bg-gray-100 rounded-md text-black">
+                    <span class="text-sm font-medium pt-1"> {{ encargado.nombre }}
+                    </span>
+                    <div class="flex items-center gap-3">
+                        
+                        <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline form-eliminar-encargado">
+                            {% csrf_token %}
+                            <input type="hidden" name="actividad_id" value="{{ act.id }}">
+                            <input type="hidden" name="encargado_id" value="{{ encargado.id }}"> 
+                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> 
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </form>
+
+                        <button 
+                            type="button"
+                            data-modal-target="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}"
+                            class="text-gray-500 hover:text-gray-700"
+                            title="Editar encargado"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+                            </svg>
+                        </button>
+                    </div>
+                </li>
+                {% endfor %}
+
+                <li class="flex justify-between items-center p-2 bg-gray-100 rounded-md text-black">
+                    <span class="text-sm font-medium">Agregar encargado</span>
+                    <button 
+                        type="button"
+                        data-modal-target="#modal-editar-encargado-{{ act.id }}-nuevo"
+                        class="text-green-500 hover:text-green-700"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        {% for encargado in act.encargados %}
+        <div id="modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
+            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <h2 class="text-xl font-bold mb-4 text-black">Editar Encargado</h2>
+                
+                <form action="{% url 'editar_encargado' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
+                    <input type="hidden" name="encargado_id" value="{{ encargado.id }}">
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" name="nombre" value="{{ encargado.nombre }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Correo</label>
+                        <input type="text" name="correo" value="{{ encargado.correo }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+
+
+        <div id="modal-editar-encargado-{{ act.id }}-nuevo" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
+            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <h2 class="text-xl font-bold mb-4 text-black">Agregar Encargado</h2>
+                <form action="{% url 'crear_encargado' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
+                    <input type="hidden" name="encargado_index" value="nuevo">
+                    <div class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Correo</label>
+                        <input type="email" name="correo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
         <form action="{% url 'editar_actividad' %}" method="POST" id="form-editar-{{ act.id }}">
         {% csrf_token %}
 
-        <!-- Nombre -->
         <div class="mt-4">
             <label for="nombre-{{act.id}}" class="block text-sm font-medium text-gray-700">
             Nombre de la actividad
@@ -119,7 +225,6 @@
                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
         </div>
 
-        <!-- Dropdown de periodos + botón eliminar -->
         <div class="mt-4">
         <label for="periodo_selector-{{ act.id }}" class="block text-sm font-medium text-gray-700">
             Selecciona un periodo
@@ -157,7 +262,6 @@
         </div>
         </div>
 
-        <!-- Fecha de inicio -->
         <div class="mt-4">
             <label for="fecha_inicio-{{act.id}}" class="block text-sm font-medium text-gray-700">
             Fecha de inicio
@@ -167,7 +271,6 @@
                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
         </div>
 
-        <!-- Fecha de fin -->
         <div class="mt-4">
             <label for="fecha_fin-{{act.id}}" class="block text-sm font-medium text-gray-700">
             Fecha de fin
@@ -177,120 +280,6 @@
                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
         </div>
 
-        <!-- Encargados -->
-        <div class="mt-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Encargados</label>
-            <ul class="space-y-2">
-                {% for encargado in act.encargados %}
-                <li class="flex justify-between items-start p-2 bg-gray-100 rounded-md text-black">
-                    <span class="text-sm font-medium pt-1"> {{ encargado.nombre }}
-                    </span>
-                    <div class="flex items-center gap-3">
-                        <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline form-eliminar-encargado">
-                            {% csrf_token %}
-                            <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                            <input type="hidden" name="encargado_id" value="{{ encargado.id }}"> 
-                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> 
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </form>
-
-                        <button 
-                            type="button"
-                            data-modal-target="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}"
-                            class="text-gray-500 hover:text-gray-700"
-                            title="Editar encargado"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
-                            </svg>
-                        </button>
-                    </div>
-                </li>
-
-                {% endfor %}
-
-
-                <li class="flex justify-between items-center p-2 bg-gray-100 rounded-md text-black">
-                    <span class="text-sm font-medium">Agregar encargado</span>
-                    <button 
-                        type="button"
-                        data-modal-target="#modal-editar-encargado-{{ act.id }}-nuevo"
-                        class="text-green-500 hover:text-green-700"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </button>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Modal editar/añadir encargado -->
-        {% for encargado in act.encargados %}
-        <div id="modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <h2 class="text-xl font-bold mb-4 text-black">Editar Encargado</h2>
-                <form action="{% url 'crear_encargado' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                    <div class="mt-2">
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" name="nombre" value="{{ encargado.nombre }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Correo</label>
-                        <input type="text" name="correo" value="{{ encargado.correo }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-
-
-        <!-- Modal añadir nuevo -->
-        <div id="modal-editar-encargado-{{ act.id }}-nuevo" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <h2 class="text-xl font-bold mb-4 text-black">Agregar Encargado</h2>
-                <form action="{% url 'crear_encargado' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                    <input type="hidden" name="encargado_index" value="nuevo">
-                    <div class="mt-2">
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Correo</label>
-                        <input type="email" name="correo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Botones -->
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" data-modal-close="#modal-{{ act.id }}" 
                     class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
@@ -310,7 +299,6 @@
     {% endfor %}
 </div>
 
-<!-- Script para cambiar estado -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll("select[name='estado']").forEach(select => {
@@ -335,7 +323,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<!-- Script para abrir/cerrar modal y manejar fechas -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     // Código de modales (abrir/cerrar)
@@ -366,7 +353,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<!-- Script para manejar selección de periodos y actualizar fechas ---- LOS ERRORES SON XQ EL VS NO CACHA DE DJANGO :P-->
 <script>
 
 // --- FUNCIONES DE AYUDA (Globales) ---
@@ -386,10 +372,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 1. ID y Referencias (Nombres Únicos) ---
     const actId_{{ act.id }} = {{ act.id }}; // Guardamos el ID
     const form_{{ act.id }} = document.getElementById(`form-editar-${actId_{{ act.id }}}`);
-    const selectPeriodo_{{ act.id }} = document.getElementById(`periodo_selector-${actId_{{ act.id }}}`);
-    const btnAgregar_{{ act.id }} = document.getElementById(`btn-agregar-periodo-${actId_{{ act.id }}}`);
-    const inputInicio_{{ act.id }} = document.getElementById(`fecha_inicio-${actId_{{ act.id }}}`);
-    const inputFin_{{ act.id }} = document.getElementById(`fecha_fin-${actId_{{ act.id }}}`);
+    // !! IMPORTANTE: El botón de eliminar periodo AHORA ESTÁ FUERA del form_{{act.id}}
+    // Lo buscamos desde el modal completo para asegurar que lo encontramos
+    const modal_{{ act.id }} = document.getElementById(`modal-{{ act.id }}`);
+    if (!modal_{{ act.id }}) return; // Salir si el modal no existe
+    
+    const selectPeriodo_{{ act.id }} = modal_{{ act.id }}.querySelector(`#periodo_selector-${actId_{{ act.id }}}`);
+    const btnAgregar_{{ act.id }} = modal_{{ act.id }}.querySelector(`#btn-agregar-periodo-${actId_{{ act.id }}}`);
+    const inputInicio_{{ act.id }} = modal_{{ act.id }}.querySelector(`#fecha_inicio-${actId_{{ act.id }}}`);
+    const inputFin_{{ act.id }} = modal_{{ act.id }}.querySelector(`#fecha_fin-${actId_{{ act.id }}}`);
 
     // Salir si faltan elementos
     if (!form_{{ act.id }} || !selectPeriodo_{{ act.id }} || !btnAgregar_{{ act.id }} || !inputInicio_{{ act.id }} || !inputFin_{{ act.id }}) {
@@ -483,6 +474,59 @@ document.addEventListener('DOMContentLoaded', () => {
         fpFin_{{ act.id }}.set('minDate', null); 
     });
 
+    // Buscamos el botón eliminar desde el modal
+    const btnEliminar_{{ act.id }} = modal_{{ act.id }}.querySelector('.eliminar-periodo');
+
+    if (btnEliminar_{{ act.id }}) {
+        btnEliminar_{{ act.id }}.addEventListener('click', () => {
+            const selectedValue = selectPeriodo_{{ act.id }}.value;
+            const selectedIndexHTML = selectPeriodo_{{ act.id }}.selectedIndex;
+
+            // No hacer nada si el dropdown está en "No hay periodos"
+            if (!selectedValue || selectedIndexHTML === -1 || selectPeriodo_{{ act.id }}.options[selectedIndexHTML].disabled) {
+                return;
+            }
+
+            // Confirmación
+            if (!confirm('¿Estás seguro de que quieres eliminar este periodo?')) {
+                return;
+            }
+
+            // 1. Encontrar el índice en el array JS
+            const idxEnArray = findPeriodoIndex_{{ act.id }}(selectedValue);
+
+            if (idxEnArray !== -1) {
+                // 2. Eliminar del array "memoria"
+                estadoPeriodos_{{ act.id }}.splice(idxEnArray, 1);
+            } else {
+                console.warn(`[Actividad {{ act.id }}] No se encontró el periodo ${selectedValue} en el array.`);
+            }
+
+            // 3. Eliminar del dropdown
+            selectPeriodo_{{ act.id }}.options[selectedIndexHTML].remove();
+
+            // 4. Limpiar y actualizar UI
+            if (selectPeriodo_{{ act.id }}.options.length > 0) {
+                // Si quedan opciones, selecciona la primera y dispara 'change'
+                selectPeriodo_{{ act.id }}.selectedIndex = 0;
+                selectPeriodo_{{ act.id }}.dispatchEvent(new Event('change'));
+            } else {
+                // Si no quedan opciones, limpiar fechas y poner placeholder
+                fpInicio_{{ act.id }}.clear();
+                fpFin_{{ act.id }}.clear();
+                fpFin_{{ act.id }}.set('minDate', null);
+                
+                // Añadir placeholder
+                const placeholder = document.createElement('option');
+                placeholder.value = "";
+                placeholder.textContent = "No hay periodos";
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                selectPeriodo_{{ act.id }}.appendChild(placeholder);
+            }
+        });
+    }
+
     // --- 7. Enviar Formulario (Nombres Únicos) ---
     form_{{ act.id }}.addEventListener('submit', (event) => {
         if (!form_{{ act.id }}.querySelector('input[name="actividad"]')) {
@@ -502,7 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
 }); // Fin DOMContentLoaded
 </script>
 
-<!-- Script para manejar modales de editar/añadir encargado -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
     const openModalButtons = document.querySelectorAll('[data-modal-target]');
