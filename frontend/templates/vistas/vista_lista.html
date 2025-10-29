@@ -532,5 +532,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Obtener los parámetros de consulta de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const actividadIdParaAbrir = urlParams.get('open_modal');
+    
+    if (actividadIdParaAbrir) {
+        // Construir el selector de ID del modal
+        const modalId = `#modal-${actividadIdParaAbrir}`;
+        const modal = document.querySelector(modalId);
+        
+        if (modal) {
+            // Eliminar la clase 'hidden' y añadir 'flex' para mostrar el modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Opcional: Limpiar el parámetro de la URL para que no se abra en futuras recargas
+            if (window.history.replaceState) {
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+            }
+        }
+    }
+});
+</script>
 
 {% endblock %}

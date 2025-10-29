@@ -7,6 +7,8 @@ from django.contrib import messages
 from django.db import models
 from .gantt import calcular_gantt_data
 import json
+from django.urls import reverse 
+from urllib.parse import urlencode, urlunparse
 
 
 
@@ -306,8 +308,14 @@ def crear_encargado(request):
         actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
         if not actividad_esp :
             actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
-        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
+            proyecto_id = actividad_esp.proyecto.id
+        else:
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
+        query_params = urlencode({'open_modal': actividad_id})
+    
+        
+        return redirect( f"{base_path}?{query_params}" )
 
 def eliminar_encargado(request):
     #request = {encargado_id: id_encargado, actividad_id: id_actividad}
@@ -322,5 +330,11 @@ def eliminar_encargado(request):
         actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
         if not actividad_esp :
             actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
-        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
+            proyecto_id = actividad_esp.proyecto.id
+        else:
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
+        query_params = urlencode({'open_modal': actividad_id})
+    
+        
+        return redirect( f"{base_path}?{query_params}" )
