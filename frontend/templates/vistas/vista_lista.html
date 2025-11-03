@@ -3,30 +3,19 @@
 
 {% block content %}
 
+<!-- Mensajes -->
 <div class="mt-3 space-y-2 w-9/10">
-    {% for message in messages %}   
-    <script>
-        setTimeout(() => {
-        const mensajes = document.querySelectorAll('.mt-3 .px-4');
-        mensajes.forEach(m => m.remove());
-        }, 10000); // desaparece después de 10s
-    </script>
-        <div class="
-            px-4 py-2 rounded-lg text-sm font-medium 
-            {% if message.tags == 'success' %}
-                bg-green-100 text-green-700 border border-green-300
-            {% elif message.tags == 'error' %}
-                bg-red-100 text-red-700 border border-red-300
-            {% elif message.tags == 'warning' %}
-                bg-yellow-100 text-yellow-800 border border-yellow-300
-            {% else %}
-                bg-gray-100 text-gray-700 border border-gray-300
-            {% endif %}
-        ">
+    {% for message in messages %}
+        <div class="px-4 py-2 rounded-lg text-sm font-medium 
+            {% if message.tags == 'success' %}bg-green-100 text-green-700 border border-green-300
+            {% elif message.tags == 'error' %}bg-red-100 text-red-700 border border-red-300
+            {% else %}bg-gray-100 text-gray-700 border border-gray-300{% endif %}">
             {{ message }}
         </div>
     {% endfor %}
 </div>
+
+<!-- Lista de actividades -->
 <div class="flex flex-col items-center gap-4 py-6">
     <div class="flex flex-row justify-between w-full px-4">
         <h1 class="text-4xl">Actividades del proyecto</h1>
@@ -35,25 +24,22 @@
     {% for act in actividades %}
     <div class="relative w-9/10 p-4 bg-transparent text-black border-b border-gray-500">
         <div class="flex justify-between items-center">
-            <div class="text-2l font-semibold">
-                {{ act.nombre }}
-            </div>
-            
+            <div class="text-2xl font-semibold">{{ act.nombre }}</div>
+
             <div class="flex items-center gap-4">
-                <button 
-                    type="button"
-                    data-modal-target="#modal-{{ act.id }}"
-                    class="p-2 rounded-md hover:bg-gray-200 transition-colors">
+                <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1"
+                        data-id="{{ act.id }}"
+                        data-nombre="{{ act.nombre }}"
+                        data-encargados="{% for e in act.encargados %}{{ e.nombre }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                        data-periodos="{% for f in act.fechas %}{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
                     </svg>
                 </button>
-
+        
                 <div class="estado-actividad">
-                    <select 
-                        name="estado" 
-                        class="border border-gray-600 text-sm rounded p-1"
-                        data-actividad-id="{{ act.id }}">
+                    <select name="estado" class="border border-gray-600 text-sm rounded p-1"
+                            data-actividad-id="{{ act.id }}">
                         {% for value, label in estados %}
                             <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
                                 {{ label }}
@@ -62,555 +48,322 @@
                     </select>
                 </div>
             </div>
-            </div>
+        </div>
 
         <div class="mt-3 text-sm flex gap-6">
-            <p><span class="font-bold">Tipo:</span> {{ act.tipo }}</p>
-            <p><span class="font-bold">Encargados:</span>
+            <p><strong>Tipo:</strong> {{ act.tipo }}</p>
+            <p><strong>Encargados:</strong>
                 {% if act.encargados %}
                     {% for encargado in act.encargados %}
-                        {{ encargado.nombre }} {% if not forloop.last %}, {% endif %}
+                        {{ encargado.nombre }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 {% else %}
                     Sin encargados
                 {% endif %}
             </p>
-
-            {% if act.tipo == "Difusión" %}
-                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|join:"-" }}</p>
-            {% else %} 
-                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo }}</p>
-            {% endif %}
+            <p><strong>Línea:</strong> {{ act.linea_trabajo }}</p>
         </div>
     </div>
-
-    <div id="modal-{{ act.id }}" 
-        class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg relative">
-        <button type="button" data-modal-close="#modal-{{ act.id }}" 
-                class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        </button>
-        
-        <h2 class="text-2xl font-bold text-black">
-          Editar Actividad:
-        </h2>
-        <p class="text-lg text-gray-700 mb-4 -mt-2">
-          {{ act.nombre }}
-        </p>
-
-        <div class="mt-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Encargados</label>
-            <ul class="space-y-2">
-                {% for encargado in act.encargados %}
-                <li class="flex justify-between items-start p-2 bg-gray-100 rounded-md text-black">
-                    <span class="text-sm font-medium pt-1"> {{ encargado.nombre }}
-                    </span>
-                    <div class="flex items-center gap-3">
-                        
-                        <form action="{% url 'eliminar_encargado' %}" method="POST" class="inline form-eliminar-encargado">
-                            {% csrf_token %}
-                            <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                            <input type="hidden" name="encargado_id" value="{{ encargado.id }}"> 
-                            <button type="submit" class="text-red-500 hover:text-red-700" title="Eliminar encargado"> 
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </form>
-
-                        <button 
-                            type="button"
-                            data-modal-target="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}"
-                            class="text-gray-500 hover:text-gray-700"
-                            title="Editar encargado"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
-                            </svg>
-                        </button>
-                    </div>
-                </li>
-                {% endfor %}
-
-                <li class="flex justify-between items-center p-2 bg-gray-100 rounded-md text-black">
-                    <span class="text-sm font-medium">Agregar encargado</span>
-                    <button 
-                        type="button"
-                        data-modal-target="#modal-editar-encargado-{{ act.id }}-nuevo"
-                        class="text-green-500 hover:text-green-700"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </button>
-                </li>
-            </ul>
-        </div>
-
-        {% for encargado in act.encargados %}
-        <div id="modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <h2 class="text-xl font-bold mb-4 text-black">Editar Encargado</h2>
-                
-                <form action="{% url 'editar_encargado' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                    <input type="hidden" name="encargado_id" value="{{ encargado.id }}">
-                    <div class="mt-2">
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" name="nombre" value="{{ encargado.nombre }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Correo</label>
-                        <input type="text" name="correo" value="{{ encargado.correo }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-{{ forloop.counter0 }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-
-
-        <div id="modal-editar-encargado-{{ act.id }}-nuevo" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 modal-backdrop">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
-                <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <h2 class="text-xl font-bold mb-4 text-black">Agregar Encargado</h2>
-                <form action="{% url 'crear_encargado' %}" method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="actividad_id" value="{{ act.id }}">
-                    <input type="hidden" name="encargado_index" value="nuevo">
-                    <div class="mt-2">
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <input type="text" name="nombre" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700">Correo</label>
-                        <input type="email" name="correo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" data-modal-close="#modal-editar-encargado-{{ act.id }}-nuevo" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <form action="{% url 'editar_actividad' %}" method="POST" id="form-editar-{{ act.id }}">
-        {% csrf_token %}
-
-        <div class="mt-4">
-            <label for="nombre-{{act.id}}" class="block text-sm font-medium text-gray-700">
-            Nombre de la actividad
-            </label>
-            <input type="text" name="nombre" id="nombre-{{act.id}}" 
-                value="{{ act.nombre }}" 
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-        </div>
-
-        <div class="mt-4">
-        <label for="periodo_selector-{{ act.id }}" class="block text-sm font-medium text-gray-700">
-            Selecciona un periodo
-        </label>
-        
-        <input type="hidden" name="periodo" id="periodo_hidden-{{ act.id }}" 
-               value="{% if act.fechas %}0{% else %}nuevo{% endif %}">
-
-        <div class="flex gap-2 items-center mt-1">
-            <select id="periodo_selector-{{ act.id }}"
-                    class="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-                
-                {% for fecha in act.fechas %}
-                    <option value="{{ fecha.id }}">
-                        Periodo {{ forloop.counter }}
-                    </option>
-                {% empty %}
-                    <option value="" disabled selected>No hay periodos</option>
-                {% endfor %}
-            </select>
-
-            <button type="button"
-                id="btn-agregar-periodo-{{ act.id }}"
-                class="px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition"
-                title="Agregar nuevo periodo">
-                Agregar
-            </button>
-
-            <button type="button"
-                data-actividad-id="{{ act.id }}"
-                class="eliminar-periodo px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                title="Eliminar periodo seleccionado">
-                Eliminar
-            </button>
-        </div>
-        </div>
-
-        <div class="mt-4">
-            <label for="fecha_inicio-{{act.id}}" class="block text-sm font-medium text-gray-700">
-            Fecha de inicio
-            </label>
-            <input type="text" name="fecha_inicio" id="fecha_inicio-{{act.id}}" 
-                value="{{ act.fechas.0.fecha_inicio|default:'' }}"  
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-        </div>
-
-        <div class="mt-4">
-            <label for="fecha_fin-{{act.id}}" class="block text-sm font-medium text-gray-700">
-            Fecha de fin
-            </label>
-            <input type="text" name="fecha_fin" id="fecha_fin-{{act.id}}" 
-                value="{{ act.fechas.0.fecha_fin|default:'' }}"  
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-black">
-        </div>
-
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" data-modal-close="#modal-{{ act.id }}" 
-                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
-            Cancelar
-            </button>
-            <button type="submit" 
-                    form="form-editar-{{ act.id }}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Guardar Cambios
-            </button>
-        </div>
-        </form>
-    </div>
-    </div>
-
-    {% empty %}
-    <div class="text-gray-500 py-6">No hay actividades registradas.</div>
     {% endfor %}
 </div>
 
+<!-- Modal de edición de actividad -->
+<div id="editModal" class="hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-1/3 max-h-[80vh] overflow-y-auto rounded">
+    <h2 class="text-xl font-bold">Editar Actividad</h2>
+
+    <div class="p-4 flex flex-col gap-4">
+        <!-- Nombre -->
+        <label>Nombre:</label>
+        <input type="text" id="modalNombre" class="border p-1 w-full mb-3">
+
+        <!-- Encargados -->
+        <label>Encargados:</label>
+        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50">
+            <!-- Lista de encargados -->
+        </div>
+
+        <div class="relative flex gap-2 mb-1">
+            <!-- Lupa dentro del input -->
+            <svg class="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" 
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+            </svg>
+
+            <input type="text" id="modalEncargadosInput" placeholder="Agregar encargado..." 
+                class="border p-1 pl-8 flex-1" autocomplete="off">
+            <button id="addEncargadoBtn" class="border px-2 py-1 hidden">Agregar</button>
+        </div>
+
+        <ul id="searchResults" class="border p-1 mb-2 max-h-40 overflow-y-auto hidden"></ul>
+
+
+        <!-- Periodos -->
+        <label>Periodos:</label>
+        <div id="modalPeriodosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50">
+            <!-- Lista de periodos -->
+        </div>
+        <div class="flex gap-2 mb-3">
+            <input type="date" id="modalPeriodoInicio" class="border p-1 w-1/2">
+            <input type="date" id="modalPeriodoFin" class="border p-1 w-1/2">
+            <button id="addPeriodo" class="border px-2 py-1 bg-green-500 text-white">Agregar</button>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-2">
+            <button id="cancelChanges" class="px-3 py-1 border rounded">Cancelar</button>
+            <button id="saveChanges" class="px-3 py-1 border rounded bg-blue-500 text-white">Guardar</button>
+        </div>
+    </div>
+</div>
+<div id="modalOverlay" class="hidden fixed inset-0 bg-black opacity-30 z-40"></div>
+
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+let tempActivity = { encargados: [], periodos: [] };
+const allEncargados = {{ all_encargados|safe }};
+
+// Abrir modal
+function abrirModalEditar(button) {
+    tempActivity.id = button.dataset.id;
+    tempActivity.nombre = button.dataset.nombre;
+    tempActivity.encargados = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
+    tempActivity.periodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
+
+    document.getElementById("modalNombre").value = tempActivity.nombre;
+
+    actualizarEncargadosUI();
+    actualizarPeriodosUI();
+
+    document.getElementById("editModal").classList.remove("hidden");
+    document.getElementById("modalOverlay").classList.remove("hidden");
+
+    // BLOQUEAR SCROLL DE FONDO
+    document.body.classList.add('overflow-hidden');
+}
+
+// Cerrar modal
+function cerrarModal() {
+    document.getElementById("editModal").classList.add("hidden");
+    document.getElementById("modalOverlay").classList.add("hidden");
+    tempActivity = { encargados: [], periodos: [] };
+
+    // PERMITIR SCROLL DE FONDO
+    document.body.classList.remove('overflow-hidden');
+}
+
+// Asignar botones
+document.getElementById("cancelChanges").addEventListener("click", cerrarModal);
+document.getElementById("modalOverlay").addEventListener("click", cerrarModal);
+
+
+// Utils: formatear fecha a DD/MM/YY
+function formatDateDDMMYY(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+}
+
+// Actualizar Encargados
+function actualizarEncargadosUI() {
+    const container = document.getElementById("modalEncargadosList");
+    container.innerHTML = '';
+
+    if (tempActivity.encargados.length === 0) {
+        const msg = document.createElement('p');
+        msg.textContent = "Sin encargados";
+        msg.classList.add('text-gray-500', 'italic');
+        container.appendChild(msg);
+        return;
+    }
+
+    tempActivity.encargados.forEach((e, i) => {
+        const div = document.createElement('div');
+        div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-blue-100');
+
+        const span = document.createElement('span');
+        span.textContent = e;
+
+        const btn = document.createElement('button');
+        btn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
+        </svg>`;
+        btn.addEventListener('click', () => {
+            tempActivity.encargados.splice(i, 1);
+            actualizarEncargadosUI();
+        });
+
+        div.appendChild(span);
+        div.appendChild(btn);
+        container.appendChild(div);
+    });
+}
+
+// Filtrar encargados
+document.getElementById("modalEncargadosInput").addEventListener("input", e => {
+    const value = e.target.value.trim().toLowerCase();
+    const results = document.getElementById("searchResults");
+    results.innerHTML = '';
+
+    if(!value) { results.classList.add("hidden"); document.getElementById("addEncargadoBtn").classList.add("hidden"); return; }
+
+    const matches = allEncargados.map(enc => enc.nombre)
+        .filter(name => name.toLowerCase().includes(value) && !tempActivity.encargados.includes(name));
+
+    if(matches.length > 0) {
+        matches.forEach(name => {
+            const li = document.createElement('li');
+            li.textContent = name;
+            li.addEventListener('click', () => { tempActivity.encargados.push(name); actualizarEncargadosUI(); e.target.value=''; results.classList.add("hidden"); });
+            results.appendChild(li);
+        });
+        results.classList.remove("hidden");
+        document.getElementById("addEncargadoBtn").classList.add("hidden");
+    } else {
+        results.classList.add("hidden");
+        document.getElementById("addEncargadoBtn").classList.remove("hidden");
+    }
+});
+
+document.getElementById("addEncargadoBtn").addEventListener("click", () => {
+    const newEnc = document.getElementById("modalEncargadosInput").value.trim();
+    if(newEnc){ tempActivity.encargados.push(newEnc); actualizarEncargadosUI(); document.getElementById("modalEncargadosInput").value=''; document.getElementById("addEncargadoBtn").classList.add("hidden"); }
+});
+
+// Actualizar Periodos
+// Actualizar Periodos
+function actualizarPeriodosUI() {
+    const container = document.getElementById("modalPeriodosList");
+    container.innerHTML = '';
+
+    if (tempActivity.periodos.length === 0) {
+        const msg = document.createElement('p');
+        msg.textContent = "Sin periodos";
+        msg.classList.add('text-gray-500', 'italic');
+        container.appendChild(msg);
+        return;
+    }
+
+    tempActivity.periodos.forEach((p, i) => {
+        const div = document.createElement('div');
+        // Contenedor flex para inputs + X
+        div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-gray-100', 'gap-2');
+
+        let inicio = '', fin = '';
+        if (typeof p === 'string') {
+            [inicio, fin] = p.split('|');
+        }
+
+        // Contenedor de inputs con flex-grow
+        const inputsDiv = document.createElement('div');
+        inputsDiv.classList.add('flex', 'gap-2', 'flex-1', 'min-w-0');
+
+        const inputInicio = document.createElement('input');
+        inputInicio.type = 'date';
+        inputInicio.value = inicio;
+        inputInicio.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
+        inputInicio.addEventListener('input', (e) => {
+            tempActivity.periodos[i] = `${e.target.value}|${fin}`;
+            actualizarPeriodosUI();
+        });
+
+        const inputFin = document.createElement('input');
+        inputFin.type = 'date';
+        inputFin.value = fin;
+        inputFin.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
+        inputFin.addEventListener('input', (e) => {
+            tempActivity.periodos[i] = `${inicio}|${e.target.value}`;
+            actualizarPeriodosUI();
+        });
+
+        inputsDiv.appendChild(inputInicio);
+        inputsDiv.appendChild(inputFin);
+
+        // Botón X
+        const btn = document.createElement('button');
+        btn.classList.add('ml-2'); // margen a la izquierda
+        btn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
+        </svg>`;
+        btn.addEventListener('click', () => {
+            tempActivity.periodos.splice(i, 1);
+            actualizarPeriodosUI();
+        });
+
+        div.appendChild(inputsDiv);
+        div.appendChild(btn);
+        container.appendChild(div);
+    });
+}
+
+
+// Botón agregar periodo
+document.getElementById("addPeriodo").addEventListener('click', () => {
+    const inicio = document.getElementById("modalPeriodoInicio").value;
+    const fin = document.getElementById("modalPeriodoFin").value;
+
+    if (inicio && fin) {
+        tempActivity.periodos.push(`${inicio}|${fin}`);
+        document.getElementById("modalPeriodoInicio").value = '';
+        document.getElementById("modalPeriodoFin").value = '';
+        actualizarPeriodosUI();
+    } else {
+        alert("Debes ingresar fecha inicio y fecha fin");
+    }
+});
+
+function eliminarPeriodo(btn) {
+    const hijos = Array.from(document.getElementById('modalPeriodosList').children);
+    const index = hijos.indexOf(btn.parentElement);
+    if (index > -1) tempActivity.periodos.splice(index, 1);
+    actualizarPeriodosUI();
+}
+
+// Guardar cambios al backend
+document.getElementById("saveChanges").addEventListener("click", () => {
+    fetch("{% url 'editar_actividad' actividad_id=0 %}".replace('0', tempActivity.id), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+        body: JSON.stringify({
+            nombre: tempActivity.nombre,
+            encargados: tempActivity.encargados,
+            periodos: tempActivity.periodos
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){ cerrarModal(); location.reload(); }
+        else alert("Error al guardar cambios: " + data.error);
+    })
+    .catch(err => { console.error(err); alert("Error al guardar cambios"); });
+});
+
+
+
+// Asignar botones editar
+document.querySelectorAll('.btn-editar').forEach(btn => btn.addEventListener('click', ()=>abrirModalEditar(btn)));
+
+// Cambiar estado
+document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("select[name='estado']").forEach(select => {
         let valorInicial = select.value;
-        select.addEventListener("change", function() {
+        select.addEventListener('change', () => {
             const actividadId = select.dataset.actividadId;
             const nuevoEstado = select.value;
-            if (nuevoEstado === valorInicial) return;
+            if(nuevoEstado === valorInicial) return;
             fetch("{% url 'actualizar_estado' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
-            }).then(res => res.json()).then(data => {
-                if (data.success) valorInicial = nuevoEstado;
-                else select.value = valorInicial;
-            }).catch(() => select.value = valorInicial);
+                method:"POST",
+                headers:{ "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":"{{ csrf_token }}" },
+                body:`actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+            }).then(res=>res.json())
+            .then(data => { if(data.success) valorInicial=nuevoEstado; else select.value=valorInicial; })
+            .catch(()=>select.value=valorInicial);
         });
     });
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Código de modales (abrir/cerrar)
-    const openModalButtons = document.querySelectorAll('[data-modal-target]');
-    const closeModalButtons = document.querySelectorAll('[data-modal-close]');
-    
-    openModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = document.querySelector(button.dataset.modalTarget);
-            if (modal) modal.classList.remove('hidden'), modal.classList.add('flex');
-        });
-    });
-    
-    closeModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = document.querySelector(button.dataset.modalClose);
-            if (modal) modal.classList.add('hidden'), modal.classList.remove('flex');
-        });
-    });
-    
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-        backdrop.addEventListener('click', (e) => {
-            if (e.target === backdrop) backdrop.classList.add('hidden'), backdrop.classList.remove('flex');
-        });
-    });
-
-    
-});
-</script>
-
-<script>
-
-// --- FUNCIONES DE AYUDA (Globales) ---
-function formatDate(date) {
-    if (!date) return "";
-    let d = new Date(date), month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
-    if (month.length < 2) month = '0' + month; if (day.length < 2) day = '0' + day; return [year, month, day].join('-');
-}
-
-function createHiddenInput(name, value) {
-    const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; return input;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    {% for act in actividades %}
-    
-    // --- 1. ID y Referencias (Nombres Únicos) ---
-    const actId_{{ act.id }} = {{ act.id }}; // Guardamos el ID
-    const form_{{ act.id }} = document.getElementById(`form-editar-${actId_{{ act.id }}}`);
-    // !! IMPORTANTE: El botón de eliminar periodo AHORA ESTÁ FUERA del form_{{act.id}}
-    // Lo buscamos desde el modal completo para asegurar que lo encontramos
-    const modal_{{ act.id }} = document.getElementById(`modal-{{ act.id }}`);
-    if (!modal_{{ act.id }}) return; // Salir si el modal no existe
-    
-    const selectPeriodo_{{ act.id }} = modal_{{ act.id }}.querySelector(`#periodo_selector-${actId_{{ act.id }}}`);
-    const btnAgregar_{{ act.id }} = modal_{{ act.id }}.querySelector(`#btn-agregar-periodo-${actId_{{ act.id }}}`);
-    const inputInicio_{{ act.id }} = modal_{{ act.id }}.querySelector(`#fecha_inicio-${actId_{{ act.id }}}`);
-    const inputFin_{{ act.id }} = modal_{{ act.id }}.querySelector(`#fecha_fin-${actId_{{ act.id }}}`);
-
-    // Salir si faltan elementos
-    if (!form_{{ act.id }} || !selectPeriodo_{{ act.id }} || !btnAgregar_{{ act.id }} || !inputInicio_{{ act.id }} || !inputFin_{{ act.id }}) {
-        console.error(`[Actividad ${actId_{{ act.id }}}] Faltan elementos esenciales.`);
-        return; 
-    }
-
-    // --- 2. "Memoria" Única (Nombre Único) ---
-    let estadoPeriodos_{{ act.id }} = [
-        {% for fecha in act.fechas %}
-        { id_periodo: String("{{ fecha.id }}").trim(), f_inicio: "{{ fecha.fecha_inicio|default:'' }}", f_fin: "{{ fecha.fecha_fin|default:'' }}" },
-        {% endfor %}
-    ];
-
-    // --- Helper: Encontrar índice (Usa Nombre Único) ---
-    function findPeriodoIndex_{{ act.id }}(value) {
-        const trimmedValue = String(value).trim();
-        if (trimmedValue.startsWith('nuevo-')) {
-            const index = parseInt(trimmedValue.split('-')[1]);
-            return (index >= 0 && index < estadoPeriodos_{{ act.id }}.length) ? index : -1; 
-        } else {
-            // Usa == y el array con nombre único
-            return estadoPeriodos_{{ act.id }}.findIndex(p => p.id_periodo == trimmedValue); 
-        }
-    }
-
-    // --- 3. Flatpickr (Nombres Únicos) ---
-    let fpInicio_{{ act.id }}, fpFin_{{ act.id }}; 
-    
-    const onInicioChange_{{ act.id }} = function(selectedDates) {
-        const selectedValue = selectPeriodo_{{ act.id }}.value;
-        const idx = findPeriodoIndex_{{ act.id }}(selectedValue); 
-        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) {
-            estadoPeriodos_{{ act.id }}[idx].f_inicio = formatDate(selectedDates[0]);
-            if (fpFin_{{ act.id }}) fpFin_{{ act.id }}.set('minDate', selectedDates[0]); 
-        }
-    };
-    const onFinChange_{{ act.id }} = function(selectedDates) {
-        const selectedValue = selectPeriodo_{{ act.id }}.value;
-        const idx = findPeriodoIndex_{{ act.id }}(selectedValue);
-        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) {
-            estadoPeriodos_{{ act.id }}[idx].f_fin = formatDate(selectedDates[0]);
-        }
-    };
-
-    fpInicio_{{ act.id }} = flatpickr(inputInicio_{{ act.id }}, { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onInicioChange_{{ act.id }} });
-    fpFin_{{ act.id }} = flatpickr(inputFin_{{ act.id }}, { altInput: true, altFormat: "d-m-Y", dateFormat: "Y-m-d", onChange: onFinChange_{{ act.id }} });
-    
-    // --- 4. Carga Inicial (Nombres Únicos) ---
-    if (estadoPeriodos_{{ act.id }}.length > 0) {
-        fpInicio_{{ act.id }}.setDate(estadoPeriodos_{{ act.id }}[0].f_inicio); 
-        fpFin_{{ act.id }}.setDate(estadoPeriodos_{{ act.id }}[0].f_fin); 
-        fpFin_{{ act.id }}.set('minDate', estadoPeriodos_{{ act.id }}[0].f_inicio); 
-    } else {
-        fpInicio_{{ act.id }}.clear(); fpFin_{{ act.id }}.clear(); 
-        fpFin_{{ act.id }}.set('minDate', null);
-    }
-
-    // --- 5. Cambiar Dropdown (Nombres Únicos) ---
-    selectPeriodo_{{ act.id }}.addEventListener('change', () => {
-        const selectedValue = selectPeriodo_{{ act.id }}.value;
-        const idx = findPeriodoIndex_{{ act.id }}(selectedValue); 
-
-        if (idx !== -1 && estadoPeriodos_{{ act.id }}[idx]) { 
-            const periodoACargar = estadoPeriodos_{{ act.id }}[idx];
-            fpInicio_{{ act.id }}.setDate(periodoACargar.f_inicio, false); 
-            fpFin_{{ act.id }}.setDate(periodoACargar.f_fin, false);   
-            fpFin_{{ act.id }}.set('minDate', periodoACargar.f_inicio); 
-        } else {
-             fpInicio_{{ act.id }}.clear(); 
-             fpFin_{{ act.id }}.clear(); 
-             fpFin_{{ act.id }}.set('minDate', null);
-        }
-    });
-
-    // --- 6. Agregar nuevo (Nombres Únicos) ---
-    btnAgregar_{{ act.id }}.addEventListener('click', () => {
-        const proximoIndice = estadoPeriodos_{{ act.id }}.length;
-        estadoPeriodos_{{ act.id }}.push({ id_periodo: '', f_inicio: "", f_fin: "" }); 
-        const nuevoPeriodoNum = proximoIndice + 1; 
-        const nuevaOpcion = document.createElement('option');
-        nuevaOpcion.textContent = `Periodo ${nuevoPeriodoNum} (Nuevo)`;
-        const nuevoValue = `nuevo-${proximoIndice}`;
-        nuevaOpcion.value = nuevoValue; 
-        if (selectPeriodo_{{ act.id }}.options.length === 1 && selectPeriodo_{{ act.id }}.options[0].disabled) {
-            selectPeriodo_{{ act.id }}.innerHTML = "";
-        }
-        selectPeriodo_{{ act.id }}.appendChild(nuevaOpcion);
-        nuevaOpcion.selected = true; 
-        fpInicio_{{ act.id }}.clear(); fpFin_{{ act.id }}.clear(); 
-        fpFin_{{ act.id }}.set('minDate', null); 
-    });
-
-    // Buscamos el botón eliminar desde el modal
-    const btnEliminar_{{ act.id }} = modal_{{ act.id }}.querySelector('.eliminar-periodo');
-
-    if (btnEliminar_{{ act.id }}) {
-        btnEliminar_{{ act.id }}.addEventListener('click', () => {
-            const selectedValue = selectPeriodo_{{ act.id }}.value;
-            const selectedIndexHTML = selectPeriodo_{{ act.id }}.selectedIndex;
-
-            // No hacer nada si el dropdown está en "No hay periodos"
-            if (!selectedValue || selectedIndexHTML === -1 || selectPeriodo_{{ act.id }}.options[selectedIndexHTML].disabled) {
-                return;
-            }
-
-            // Confirmación
-            if (!confirm('¿Estás seguro de que quieres eliminar este periodo?')) {
-                return;
-            }
-
-            // 1. Encontrar el índice en el array JS
-            const idxEnArray = findPeriodoIndex_{{ act.id }}(selectedValue);
-
-            if (idxEnArray !== -1) {
-                // 2. Eliminar del array "memoria"
-                estadoPeriodos_{{ act.id }}.splice(idxEnArray, 1);
-            } else {
-                console.warn(`[Actividad {{ act.id }}] No se encontró el periodo ${selectedValue} en el array.`);
-            }
-
-            // 3. Eliminar del dropdown
-            selectPeriodo_{{ act.id }}.options[selectedIndexHTML].remove();
-
-            // 4. Limpiar y actualizar UI
-            if (selectPeriodo_{{ act.id }}.options.length > 0) {
-                // Si quedan opciones, selecciona la primera y dispara 'change'
-                selectPeriodo_{{ act.id }}.selectedIndex = 0;
-                selectPeriodo_{{ act.id }}.dispatchEvent(new Event('change'));
-            } else {
-                // Si no quedan opciones, limpiar fechas y poner placeholder
-                fpInicio_{{ act.id }}.clear();
-                fpFin_{{ act.id }}.clear();
-                fpFin_{{ act.id }}.set('minDate', null);
-                
-                // Añadir placeholder
-                const placeholder = document.createElement('option');
-                placeholder.value = "";
-                placeholder.textContent = "No hay periodos";
-                placeholder.disabled = true;
-                placeholder.selected = true;
-                selectPeriodo_{{ act.id }}.appendChild(placeholder);
-            }
-        });
-    }
-
-    // --- 7. Enviar Formulario (Nombres Únicos) ---
-    form_{{ act.id }}.addEventListener('submit', (event) => {
-        if (!form_{{ act.id }}.querySelector('input[name="actividad"]')) {
-             form_{{ act.id }}.appendChild( createHiddenInput('actividad', String(actId_{{ act.id }})) ); 
-        }
-        const periodosLimpios = estadoPeriodos_{{ act.id }}.filter(p => p.f_inicio && p.f_fin); 
-        form_{{ act.id }}.querySelectorAll('input[name="periodos[]"]').forEach(inp => inp.remove());
-        periodosLimpios.forEach(periodo => {
-            const jsonString = JSON.stringify(periodo);
-            form_{{ act.id }}.appendChild( createHiddenInput('periodos[]', jsonString) );
-        });
-        inputInicio_{{ act.id }}.disabled = true; 
-        inputFin_{{ act.id }}.disabled = true;
-    });
-    
-    {% endfor %} // Fin del bucle Django
-}); // Fin DOMContentLoaded
-</script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-    const openModalButtons = document.querySelectorAll('[data-modal-target]');
-    const closeModalButtons = document.querySelectorAll('[data-modal-close]');
-    
-    openModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = document.querySelector(button.dataset.modalTarget);
-            if (modal) modal.classList.remove('hidden'), modal.classList.add('flex');
-        });
-    });
-
-    closeModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = document.querySelector(button.dataset.modalClose);
-            if (modal) modal.classList.add('hidden'), modal.classList.remove('flex');
-        });
-    });
-
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-        backdrop.addEventListener('click', (e) => {
-            if (e.target === backdrop) backdrop.classList.add('hidden'), backdrop.classList.remove('flex');
-        });
-    });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.form-eliminar-encargado').forEach(form => {
-        form.addEventListener('submit', function(event) {
-            // Muestra una ventana de confirmación
-            const confirmado = confirm('¿Estás seguro de que quieres eliminar a este encargado?');
-            if (!confirmado) {
-                // Si el usuario da "Cancelar", detiene el envío
-                event.preventDefault(); 
-            }
-        });
-    });
-});
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Obtener los parámetros de consulta de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const actividadIdParaAbrir = urlParams.get('open_modal');
-    
-    if (actividadIdParaAbrir) {
-        // Construir el selector de ID del modal
-        const modalId = `#modal-${actividadIdParaAbrir}`;
-        const modal = document.querySelector(modalId);
-        
-        if (modal) {
-            // Eliminar la clase 'hidden' y añadir 'flex' para mostrar el modal
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
-            // Opcional: Limpiar el parámetro de la URL para que no se abra en futuras recargas
-            if (window.history.replaceState) {
-                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-            }
-        }
-    }
 });
 </script>
 

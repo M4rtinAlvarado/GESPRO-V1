@@ -8,9 +8,6 @@ urlpatterns = [
     path('vista_tablero/<int:proyecto_id>/', views.vista_tablero, name='vista_tablero'),
     #path("actualizar_estado/<int:actividad_id>/", views.actualizar_estado_actividad, name="actualizar_estado_actividad"),
     path("actualizar_estado/", views.actualizar_estado, name="actualizar_estado"),
-    path('editar_actividad/', views.editar_actividad, name='editar_actividad'),
-    path('crear_encargado/', views.crear_encargado, name='crear_encargado'),
-    path('eliminar_encargado/', views.eliminar_encargado, name='eliminar_encargado'),
-    path('editar_encargado/', views.editar_encargado, name='editar_encargado'),
+    path('editar_actividad/<int:actividad_id>/', views.editar_actividad, name='editar_actividad'),
 
 ]

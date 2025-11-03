@@ -14,6 +14,9 @@ from urllib.parse import urlencode, urlunparse
 
 def obtener_datos(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    all_encargados_qs = Encargado.objects.filter(estado=True)
+    all_encargados = list(all_encargados_qs.values('id', 'nombre'))
     
     # SIN FILTRO DE ESTADO (como pediste)
     actividades_normales = Actividad.objects.filter(
@@ -124,6 +127,7 @@ def obtener_datos(request, proyecto_id):
         'proyecto': proyecto,
         'actividades': todas_actividades,
         'estados': estados,
+        'all_encargados': all_encargados,
     }
 
     return context
@@ -239,16 +243,62 @@ def actualizar_estado(request):
             return JsonResponse({'success': True})
         except ActividadBase.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})        
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})   
 
-def editar_actividad(request):
-    #requets = {actividad: id, nombre: nuevo_nombre, periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
+
+
+def editar_actividad(request, actividad_id):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        try:
+            actividad = ActividadBase.objects.get(id=actividad_id)
+            actividad.nombre = data.get("nombre", actividad.nombre)
+            actividad.save()
+
+            # Actualizar encargados
+            nuevos_encargados = data.get("encargados", [])
+            # Limpia relaciones anteriores
+            Actividad_Encargado.objects.filter(actividad=actividad).delete()
+            for enc_nombre in nuevos_encargados:
+                enc, _ = Encargado.objects.get_or_create(nombre=enc_nombre)
+                Actividad_Encargado.objects.create(actividad=actividad, encargado=enc)
+
+            # Actualizar fechas/periodos
+            nuevos_periodos = data.get("periodos", [])
+            # Limpia fechas anteriores
+            Fecha.objects.filter(actividad=actividad).delete()
+            for p in nuevos_periodos:
+                inicio, fin = p.split('|')  # si tu input tiene "YYYY-MM-DD|YYYY-MM-DD"
+                Fecha.objects.create(actividad=actividad, fecha_inicio=inicio, fecha_fin=fin)
+
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    return JsonResponse({"success": False, "error": "Método no permitido"})
+     
+"""
+def editar_actividad(request, actividad_id):
+    #requets = {actividad: id, nombre: nuevo_nombre,encargados:[{id_encargado: id, nombre: nombre_text, correo: correo_text}], periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
+    
+    # encargados existentes se mandan con id
+    # encargados nuevos se mandan sin id, label vacia
+    # encargados a eliminar no se mandan
+
+    # para agregar encargados, es una barra de busqueda con encargados existentes y un boton para crear nuevo encargado, al final de la lista
+    # el boton crear en
+
+    # Primero obtener la actividad (sea normal o difusión)
+    try:
+        actividad = Actividad.objects.get(id=actividad_id)
+    except Actividad.DoesNotExist:
+        actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
+
     if request.method == 'POST':
         print(request.POST)
-        actividad = request.POST.get('actividad')
         nuevo_nombre = request.POST.get('nombre')
         print(actividad, nuevo_nombre)
-        actividad = get_object_or_404(ActividadBase, id=actividad)
+
+
         # Actualizar nombre si se envió
         if nuevo_nombre:
             actividad.nombre = nuevo_nombre
@@ -294,6 +344,10 @@ def editar_actividad(request):
                 ids_presentes_en_request.append(nuevo_periodo.id)
         Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad).exclude(
         id__in=ids_presentes_en_request)
+  
+
+        # --- Aquí pasar info_antes e info_despues al script de correos ---
+        #enviar_correo_cambios(info_antes, info_despues)
         
         # Ejecuta la eliminación
         conteo_eliminado, _ = Fechas_a_eliminar.delete()
@@ -304,82 +358,35 @@ def editar_actividad(request):
             return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
         return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
     
+    else:
+        # Luego los encargados
+        encargados_actuales = [
+            {
+                "id": e.encargado.id,
+                "nombre": e.encargado.nombre,
+                "correo": e.encargado.correo_electronico
+            }
+            for e in actividad.actividad_encargados.filter(estado=True)
+        ]
 
-        
-def crear_encargado(request):
-    #request = {nombre: nombre, correo: correo, actividad_id: id_actividad}
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        correo = request.POST.get('correo')
-        encargado = Encargado.objects.create(nombre=nombre, correo_electronico=correo)
-        actividad_id = request.POST.get('actividad_id')
-        actividad = get_object_or_404(ActividadBase, id=actividad_id)
-        Actividad_Encargado.objects.create(actividad=actividad, encargado=encargado)
-        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
-            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.proyecto.id
-        else:
-            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
-        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
-        query_params = urlencode({'open_modal': actividad_id})
-    
-        
-        return redirect( f"{base_path}?{query_params}" )
+        print("Encargados actuales:", encargados_actuales)
 
-def editar_encargado(request):
-    #request = {encargado_id: id_encargado, nombre: nombre, correo: correo, actividad_id: id_actividad}
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        correo = request.POST.get('correo')
-        actividad_id = request.POST.get('actividad_id')
-        encarado_id = request.POST.get('encargado_id')
-        encargado = get_object_or_404(Encargado, id=encarado_id)
-        if nombre:
-            encargado.nombre = nombre
-        if correo:
-            encargado.correo_electronico = correo
-        encargado.save()
-        actividad = get_object_or_404(ActividadBase, id=actividad_id)
-        
-        try:
-            #actividad normal
-            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
-        except:
-            #actividad difusion
-            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.proyecto.id
+        todos_los_encargados = [
+            {"id": e.id, "nombre": e.nombre, "correo": e.correo_electronico}
+            for e in Encargado.objects.all()
+        ]
 
-        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-        proyecto.ultima_modificacion = datetime.now()
-        proyecto.save()
-
-        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
-        query_params = urlencode({'open_modal': actividad_id})
-    
-        
-        return redirect( f"{base_path}?{query_params}" )
+        return render(request, "modal_editar_actividad.html", {
+            "act": actividad,
+            "encargados_actuales": encargados_actuales,
+            "todos_los_encargados": todos_los_encargados
+        })
+"""
 
 
-def eliminar_encargado(request):
-    #request = {encargado_id: id_encargado, actividad_id: id_actividad}
-    if request.method == 'POST':
-        encargado_id = request.POST.get('encargado_id')
-        actividad_id = request.POST.get('actividad_id')
-        print(encargado_id, actividad_id)
-        actividad = get_object_or_404(ActividadBase, id=actividad_id)
-        encargado = get_object_or_404(Encargado, id=encargado_id)
-        relacion = get_object_or_404(Actividad_Encargado, actividad=actividad, encargado=encargado)
-        relacion.delete()
-        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
-            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.proyecto.id
-        else:
-            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
-        base_path = reverse('lista_actividades', kwargs={'proyecto_id': proyecto_id})
-        query_params = urlencode({'open_modal': actividad_id})
-    
-        
-        return redirect( f"{base_path}?{query_params}" )
+
+
+def enviar_correo_cambios(info_antes, info_despues):
+    print("=== CAMBIOS EN ACTIVIDAD ===")
+    print("Antes:", info_antes)
+    print("Después:", info_despues)
