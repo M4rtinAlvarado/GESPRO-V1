@@ -247,141 +247,29 @@ def actualizar_estado(request):
 
 
 
-def editar_actividad(request, actividad_id):
+
+def editar_actividad(request):
     if request.method == "POST":
-        data = json.loads(request.body)
         try:
-            actividad = ActividadBase.objects.get(id=actividad_id)
-            actividad.nombre = data.get("nombre", actividad.nombre)
-            actividad.save()
+            data = json.loads(request.body)
+            print("\n--- Datos recibidos en editar_actividad ---")
+            print(json.dumps(data, indent=4, ensure_ascii=False))
+            print("------------------------------------------\n")
 
-            # Actualizar encargados
-            nuevos_encargados = data.get("encargados", [])
-            # Limpia relaciones anteriores
-            Actividad_Encargado.objects.filter(actividad=actividad).delete()
-            for enc_nombre in nuevos_encargados:
-                enc, _ = Encargado.objects.get_or_create(nombre=enc_nombre)
-                Actividad_Encargado.objects.create(actividad=actividad, encargado=enc)
+            actividad_id = data.get("id")
+            nombre = data.get("nombre")
+            encargados = data.get("encargados", [])
+            periodos = data.get("periodos", [])
 
-            # Actualizar fechas/periodos
-            nuevos_periodos = data.get("periodos", [])
-            # Limpia fechas anteriores
-            Fecha.objects.filter(actividad=actividad).delete()
-            for p in nuevos_periodos:
-                inicio, fin = p.split('|')  # si tu input tiene "YYYY-MM-DD|YYYY-MM-DD"
-                Fecha.objects.create(actividad=actividad, fecha_inicio=inicio, fecha_fin=fin)
+            print("------------------------------------------\n")
+            #printar el encargado 0
+            print(encargados[0]["nombre"])
 
-            return JsonResponse({"success": True})
+            return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
     return JsonResponse({"success": False, "error": "Método no permitido"})
      
-"""
-def editar_actividad(request, actividad_id):
-    #requets = {actividad: id, nombre: nuevo_nombre,encargados:[{id_encargado: id, nombre: nombre_text, correo: correo_text}], periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
-    
-    # encargados existentes se mandan con id
-    # encargados nuevos se mandan sin id, label vacia
-    # encargados a eliminar no se mandan
-
-    # para agregar encargados, es una barra de busqueda con encargados existentes y un boton para crear nuevo encargado, al final de la lista
-    # el boton crear en
-
-    # Primero obtener la actividad (sea normal o difusión)
-    try:
-        actividad = Actividad.objects.get(id=actividad_id)
-    except Actividad.DoesNotExist:
-        actividad = get_object_or_404(ActividadDifusion, id=actividad_id)
-
-    if request.method == 'POST':
-        print(request.POST)
-        nuevo_nombre = request.POST.get('nombre')
-        print(actividad, nuevo_nombre)
-
-
-        # Actualizar nombre si se envió
-        if nuevo_nombre:
-            actividad.nombre = nuevo_nombre
-            actividad.save()
-        # Actualizar periodos si se envió
-        #recorrer cada periodo
-        #traer de la base de datos
-        #comparar fechas y actualizar
-        #si id_perido es None, crear nuevo periodo
-        periodos = request.POST.getlist('periodos[]')
-        ids_presentes_en_request = []
-        # print("Periodos recibidos:", periodos)
-        for periodo_data_string in periodos:
-            valid_json_string = periodo_data_string.replace("'", '"')
-            
-            periodo_data = json.loads(valid_json_string)
-            periodo_id = periodo_data.get('id_periodo')
-            if periodo_id != '':
-                ids_presentes_en_request.append(periodo_id)
-            f_inicio = periodo_data.get('f_inicio')
-            f_fin = periodo_data.get('f_fin')
-            print(periodo_id, f_inicio, f_fin)
-            if periodo_id:
-                print("Actualizando periodo existente")
-                # Actualizar periodo existente
-                periodo = get_object_or_404(Fecha, id=periodo_id, actividad=actividad)
-                #comparar fechas del request con las ya existentes
-                if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
-                    periodo.fecha_inicio = f_inicio
-                if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
-                    periodo.fecha_fin = f_fin
-                periodo.save()
-            else:
-                # Crear nuevo periodo
-                print("Creando nuevo periodo")
-                nuevo_periodo = Fecha.objects.create(
-                    actividad=actividad,
-                    fecha_inicio=f_inicio,
-                    fecha_fin=f_fin,
-                    estado=True
-                )
-
-                ids_presentes_en_request.append(nuevo_periodo.id)
-        Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad).exclude(
-        id__in=ids_presentes_en_request)
-  
-
-        # --- Aquí pasar info_antes e info_despues al script de correos ---
-        #enviar_correo_cambios(info_antes, info_despues)
-        
-        # Ejecuta la eliminación
-        conteo_eliminado, _ = Fechas_a_eliminar.delete()
-        print(f"Periodos eliminados: {conteo_eliminado}") # Muestra en consola
-        actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id) 
-        if not actividad_esp :
-            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            return redirect('lista_actividades', proyecto_id=actividad_esp.proyecto.id )
-        return redirect('lista_actividades', proyecto_id=actividad_esp.linea_trabajo.proyecto.id )
-    
-    else:
-        # Luego los encargados
-        encargados_actuales = [
-            {
-                "id": e.encargado.id,
-                "nombre": e.encargado.nombre,
-                "correo": e.encargado.correo_electronico
-            }
-            for e in actividad.actividad_encargados.filter(estado=True)
-        ]
-
-        print("Encargados actuales:", encargados_actuales)
-
-        todos_los_encargados = [
-            {"id": e.id, "nombre": e.nombre, "correo": e.correo_electronico}
-            for e in Encargado.objects.all()
-        ]
-
-        return render(request, "modal_editar_actividad.html", {
-            "act": actividad,
-            "encargados_actuales": encargados_actuales,
-            "todos_los_encargados": todos_los_encargados
-        })
-"""
 
 
 

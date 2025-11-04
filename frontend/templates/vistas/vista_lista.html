@@ -67,6 +67,9 @@
     {% endfor %}
 </div>
 
+<!-- Overlay -->
+<div id="modalOverlay" class="hidden fixed inset-0 bg-black/30 z-40"></div>
+
 <!-- Modal de edición de actividad -->
 <div id="editModal" class="hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-1/3 max-h-[80vh] overflow-y-auto rounded">
     <h2 class="text-xl font-bold">Editar Actividad</h2>
@@ -78,31 +81,34 @@
 
         <!-- Encargados -->
         <label>Encargados:</label>
-        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50">
-            <!-- Lista de encargados -->
-        </div>
+        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
 
-        <div class="relative flex gap-2 mb-1">
-            <!-- Lupa dentro del input -->
-            <svg class="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" 
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
-            </svg>
+        <!-- Campo de nombre y correo -->
+        <div class="flex flex-col gap-2 mb-2">
+            <div class="relative flex gap-2">
+                <svg class="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" 
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+                </svg>
 
-            <input type="text" id="modalEncargadosInput" placeholder="Agregar encargado..." 
-                class="border p-1 pl-8 flex-1" autocomplete="off">
-            <button id="addEncargadoBtn" class="border px-2 py-1 hidden">Agregar</button>
+                <input type="text" id="modalEncargadosInput" placeholder="Agregar encargado..." 
+                    class="border p-1 pl-8 flex-1" autocomplete="off">
+            </div>
+            <span id="nombreError" class="text-red-500 text-sm hidden">Debes ingresar un nombre.</span>
+
+            <input type="email" id="modalEncargadoCorreo" placeholder="Correo electrónico" 
+                class="border p-1 hidden">
+            <span id="correoError" class="text-red-500 text-sm hidden">Debes ingresar un correo electrónico válido.</span>
+
+            <button id="addEncargadoBtn" class="border px-2 py-1 hidden bg-green-500 text-white rounded">Agregar</button>
         </div>
 
         <ul id="searchResults" class="border p-1 mb-2 max-h-40 overflow-y-auto hidden"></ul>
 
-
         <!-- Periodos -->
         <label>Periodos:</label>
-        <div id="modalPeriodosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50">
-            <!-- Lista de periodos -->
-        </div>
+        <div id="modalPeriodosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
         <div class="flex gap-2 mb-3">
             <input type="date" id="modalPeriodoInicio" class="border p-1 w-1/2">
             <input type="date" id="modalPeriodoFin" class="border p-1 w-1/2">
@@ -116,18 +122,29 @@
         </div>
     </div>
 </div>
-<div id="modalOverlay" class="hidden fixed inset-0 bg-black opacity-30 z-40"></div>
 
 <script>
 let tempActivity = { encargados: [], periodos: [] };
 const allEncargados = {{ all_encargados|safe }};
 
-// Abrir modal
+// ===============================
+// Abrir y cerrar modal
+// ===============================
 function abrirModalEditar(button) {
     tempActivity.id = button.dataset.id;
     tempActivity.nombre = button.dataset.nombre;
-    tempActivity.encargados = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
-    tempActivity.periodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
+
+    const encNombres = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
+    tempActivity.encargados = encNombres
+        .map(nombre => allEncargados.find(e => e.nombre === nombre))
+        .filter(Boolean)
+        .map(e => ({ id: e.id, nombre: e.nombre, correo: e.correo }));
+
+    const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
+    tempActivity.periodos = rawPeriodos.map(p => {
+        const [f_inicio, f_fin] = p.split('|');
+        return { id: "", f_inicio, f_fin };
+    });
 
     document.getElementById("modalNombre").value = tempActivity.nombre;
 
@@ -136,27 +153,22 @@ function abrirModalEditar(button) {
 
     document.getElementById("editModal").classList.remove("hidden");
     document.getElementById("modalOverlay").classList.remove("hidden");
-
-    // BLOQUEAR SCROLL DE FONDO
     document.body.classList.add('overflow-hidden');
 }
 
-// Cerrar modal
 function cerrarModal() {
     document.getElementById("editModal").classList.add("hidden");
     document.getElementById("modalOverlay").classList.add("hidden");
     tempActivity = { encargados: [], periodos: [] };
-
-    // PERMITIR SCROLL DE FONDO
     document.body.classList.remove('overflow-hidden');
 }
 
-// Asignar botones
 document.getElementById("cancelChanges").addEventListener("click", cerrarModal);
 document.getElementById("modalOverlay").addEventListener("click", cerrarModal);
 
-
-// Utils: formatear fecha a DD/MM/YY
+// ===============================
+// Utils
+// ===============================
 function formatDateDDMMYY(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -166,7 +178,14 @@ function formatDateDDMMYY(dateStr) {
     return `${day}/${month}/${year}`;
 }
 
-// Actualizar Encargados
+function validarCorreo(correo) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(correo);
+}
+
+// ===============================
+// Encargados
+// ===============================
 function actualizarEncargadosUI() {
     const container = document.getElementById("modalEncargadosList");
     container.innerHTML = '';
@@ -184,7 +203,7 @@ function actualizarEncargadosUI() {
         div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-blue-100');
 
         const span = document.createElement('span');
-        span.textContent = e;
+        span.textContent = `${e.nombre} (${e.correo || 'sin correo'})`;
 
         const btn = document.createElement('button');
         btn.innerHTML = `
@@ -202,39 +221,95 @@ function actualizarEncargadosUI() {
     });
 }
 
-// Filtrar encargados
+// FILTRAR Y AGREGAR ENCARGADOS
 document.getElementById("modalEncargadosInput").addEventListener("input", e => {
     const value = e.target.value.trim().toLowerCase();
     const results = document.getElementById("searchResults");
+    const correoField = document.getElementById("modalEncargadoCorreo");
     results.innerHTML = '';
 
-    if(!value) { results.classList.add("hidden"); document.getElementById("addEncargadoBtn").classList.add("hidden"); return; }
+    if (!value) {
+        results.classList.add("hidden");
+        document.getElementById("addEncargadoBtn").classList.add("hidden");
+        correoField.classList.add("hidden");
+        return;
+    }
 
-    const matches = allEncargados.map(enc => enc.nombre)
-        .filter(name => name.toLowerCase().includes(value) && !tempActivity.encargados.includes(name));
+    const matches = allEncargados
+        .filter(enc => enc.nombre.toLowerCase().includes(value))
+        .filter(enc => !tempActivity.encargados.some(a => a.nombre === enc.nombre));
 
-    if(matches.length > 0) {
-        matches.forEach(name => {
+    if (matches.length > 0) {
+        matches.forEach(enc => {
             const li = document.createElement('li');
-            li.textContent = name;
-            li.addEventListener('click', () => { tempActivity.encargados.push(name); actualizarEncargadosUI(); e.target.value=''; results.classList.add("hidden"); });
+            li.textContent = `${enc.nombre} (${enc.correo || 'sin correo'})`;
+            li.classList.add('cursor-pointer', 'hover:bg-gray-100', 'p-1', 'rounded');
+            li.addEventListener('click', () => {
+                tempActivity.encargados.push({
+                    id: enc.id,
+                    nombre: enc.nombre,
+                    correo: enc.correo
+                });
+                actualizarEncargadosUI();
+                e.target.value = '';
+                results.classList.add("hidden");
+                document.getElementById("addEncargadoBtn").classList.add("hidden");
+                correoField.classList.add("hidden");
+            });
             results.appendChild(li);
         });
         results.classList.remove("hidden");
         document.getElementById("addEncargadoBtn").classList.add("hidden");
+        correoField.classList.add("hidden");
     } else {
         results.classList.add("hidden");
         document.getElementById("addEncargadoBtn").classList.remove("hidden");
+        correoField.classList.remove("hidden");
     }
 });
 
+// AGREGAR NUEVO ENCARGADO MANUALMENTE
 document.getElementById("addEncargadoBtn").addEventListener("click", () => {
-    const newEnc = document.getElementById("modalEncargadosInput").value.trim();
-    if(newEnc){ tempActivity.encargados.push(newEnc); actualizarEncargadosUI(); document.getElementById("modalEncargadosInput").value=''; document.getElementById("addEncargadoBtn").classList.add("hidden"); }
+    const newEncName = document.getElementById("modalEncargadosInput").value.trim();
+    const newEncMail = document.getElementById("modalEncargadoCorreo").value.trim();
+    const correoField = document.getElementById("modalEncargadoCorreo");
+    const nombreError = document.getElementById("nombreError");
+    const correoError = document.getElementById("correoError");
+
+    nombreError.classList.add("hidden");
+    correoError.classList.add("hidden");
+
+    let hasError = false;
+
+    if (!newEncName) {
+        nombreError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (!newEncMail || !validarCorreo(newEncMail)) {
+        correoError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (hasError) return;
+
+    tempActivity.encargados.push({
+        id: "",
+        nombre: newEncName,
+        correo: newEncMail
+    });
+
+    document.getElementById("modalEncargadosInput").value = '';
+    correoField.value = '';
+    document.getElementById("addEncargadoBtn").classList.add("hidden");
+    correoField.classList.add("hidden");
+
+    actualizarEncargadosUI();
 });
 
-// Actualizar Periodos
-// Actualizar Periodos
+// ===============================
+// Periodos
+// ===============================
 function actualizarPeriodosUI() {
     const container = document.getElementById("modalPeriodosList");
     container.innerHTML = '';
@@ -249,42 +324,32 @@ function actualizarPeriodosUI() {
 
     tempActivity.periodos.forEach((p, i) => {
         const div = document.createElement('div');
-        // Contenedor flex para inputs + X
         div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-gray-100', 'gap-2');
 
-        let inicio = '', fin = '';
-        if (typeof p === 'string') {
-            [inicio, fin] = p.split('|');
-        }
-
-        // Contenedor de inputs con flex-grow
         const inputsDiv = document.createElement('div');
         inputsDiv.classList.add('flex', 'gap-2', 'flex-1', 'min-w-0');
 
         const inputInicio = document.createElement('input');
         inputInicio.type = 'date';
-        inputInicio.value = inicio;
+        inputInicio.value = p.f_inicio || '';
         inputInicio.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputInicio.addEventListener('input', (e) => {
-            tempActivity.periodos[i] = `${e.target.value}|${fin}`;
-            actualizarPeriodosUI();
+            tempActivity.periodos[i].f_inicio = e.target.value;
         });
 
         const inputFin = document.createElement('input');
         inputFin.type = 'date';
-        inputFin.value = fin;
+        inputFin.value = p.f_fin || '';
         inputFin.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputFin.addEventListener('input', (e) => {
-            tempActivity.periodos[i] = `${inicio}|${e.target.value}`;
-            actualizarPeriodosUI();
+            tempActivity.periodos[i].f_fin = e.target.value;
         });
 
         inputsDiv.appendChild(inputInicio);
         inputsDiv.appendChild(inputFin);
 
-        // Botón X
         const btn = document.createElement('button');
-        btn.classList.add('ml-2'); // margen a la izquierda
+        btn.classList.add('ml-2');
         btn.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
@@ -296,75 +361,95 @@ function actualizarPeriodosUI() {
 
         div.appendChild(inputsDiv);
         div.appendChild(btn);
+
         container.appendChild(div);
     });
 }
 
-
-// Botón agregar periodo
-document.getElementById("addPeriodo").addEventListener('click', () => {
+// AGREGAR PERIODO
+document.getElementById("addPeriodo").addEventListener("click", () => {
     const inicio = document.getElementById("modalPeriodoInicio").value;
     const fin = document.getElementById("modalPeriodoFin").value;
 
-    if (inicio && fin) {
-        tempActivity.periodos.push(`${inicio}|${fin}`);
-        document.getElementById("modalPeriodoInicio").value = '';
-        document.getElementById("modalPeriodoFin").value = '';
-        actualizarPeriodosUI();
-    } else {
-        alert("Debes ingresar fecha inicio y fecha fin");
+    if (!inicio || !fin || inicio > fin) {
+        alert("Fechas inválidas");
+        return;
     }
-});
 
-function eliminarPeriodo(btn) {
-    const hijos = Array.from(document.getElementById('modalPeriodosList').children);
-    const index = hijos.indexOf(btn.parentElement);
-    if (index > -1) tempActivity.periodos.splice(index, 1);
+    tempActivity.periodos.push({ id: "", f_inicio: inicio, f_fin: fin });
     actualizarPeriodosUI();
-}
 
-// Guardar cambios al backend
-document.getElementById("saveChanges").addEventListener("click", () => {
-    fetch("{% url 'editar_actividad' actividad_id=0 %}".replace('0', tempActivity.id), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-        body: JSON.stringify({
-            nombre: tempActivity.nombre,
-            encargados: tempActivity.encargados,
-            periodos: tempActivity.periodos
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success){ cerrarModal(); location.reload(); }
-        else alert("Error al guardar cambios: " + data.error);
-    })
-    .catch(err => { console.error(err); alert("Error al guardar cambios"); });
+    document.getElementById("modalPeriodoInicio").value = '';
+    document.getElementById("modalPeriodoFin").value = '';
+});
+
+// ===============================
+// Botón editar
+// ===============================
+document.querySelectorAll(".btn-editar").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalEditar(btn));
 });
 
 
+// ===============================
+// Guardar cambios
+// ===============================
+document.getElementById("saveChanges").addEventListener("click", () => {
+    const nombre = document.getElementById("modalNombre").value.trim();
 
-// Asignar botones editar
-document.querySelectorAll('.btn-editar').forEach(btn => btn.addEventListener('click', ()=>abrirModalEditar(btn)));
+    if (!nombre) {
+        alert("El nombre no puede estar vacío");
+        return;
+    }
 
-// Cambiar estado
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("select[name='estado']").forEach(select => {
-        let valorInicial = select.value;
-        select.addEventListener('change', () => {
-            const actividadId = select.dataset.actividadId;
-            const nuevoEstado = select.value;
-            if(nuevoEstado === valorInicial) return;
-            fetch("{% url 'actualizar_estado' %}", {
-                method:"POST",
-                headers:{ "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":"{{ csrf_token }}" },
-                body:`actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
-            }).then(res=>res.json())
-            .then(data => { if(data.success) valorInicial=nuevoEstado; else select.value=valorInicial; })
-            .catch(()=>select.value=valorInicial);
-        });
+    // Validar periodos solapados
+    for (let i = 0; i < tempActivity.periodos.length; i++) {
+        const a = tempActivity.periodos[i];
+        for (let j = i + 1; j < tempActivity.periodos.length; j++) {
+            const b = tempActivity.periodos[j];
+            if (!(a.f_fin < b.f_inicio || a.f_inicio > b.f_fin)) {
+                alert("Los periodos no pueden solaparse");
+                return;
+            }
+        }
+    }
+
+    const payload = {
+        id: tempActivity.id,  // siempre existente
+        nombre: nombre,
+        encargados: tempActivity.encargados.map(e => ({
+            id: e.id || "",  // nuevo encargado -> id vacío
+            nombre: e.nombre,
+            correo: e.correo || ""
+        })),
+        periodos: tempActivity.periodos.map(p => ({
+            id: p.id || "",  // nuevo periodo -> id vacío
+            f_inicio: p.f_inicio,
+            f_fin: p.f_fin
+        }))
+    };
+
+    fetch("{% url 'editar_actividad' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("Error al guardar la actividad");
+        return res.json();
+    })
+    .then(data => {
+        cerrarModal();
+        location.reload(); // actualizar lista
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Hubo un error al guardar la actividad");
     });
 });
-</script>
 
+</script>
 {% endblock %}
