@@ -247,29 +247,183 @@ def actualizar_estado(request):
 
 
 
-
 def editar_actividad(request):
-    if request.method == "POST":
+    #requets = {actividad: id, nombre: nuevo_nombre, periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
+    if request.method == 'POST':
+        
+        # data = json.loads(request.body)
+        # print("\n--- Datos recibidos en editar_actividad ---")
+        # print(json.dumps(data, indent=4, ensure_ascii=False))
+        # print("------------------------------------------\n")
+
+        # actividad_id = data.get("id")
+        # nombre = data.get("nombre")
+        # encargados = data.get("encargados", [])
+        # periodos = data.get("periodos", [])
+
+        # print("------------------------------------------\n")
+        # #printar el encargado 0
+        # print(encargados[0]["nombre"])
+
+
+        #cargar json
+        data = json.loads(request.body)
+
+
+        #obtener id de la actividad y el nombre
+        actividad = data.get('id')
+        nuevo_nombre = data.get('nombre')
+        print(actividad, nuevo_nombre)
+
+        # 1. Obtener Periodos ANTES de la modificación
+        periodos_anteriores = Fecha.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
+        periodos_json_anteriores = [{
+            "id": p.id,
+            "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
+            "f_fin": p.fecha_fin.strftime('%Y-%m-%d')
+        } for p in periodos_anteriores]
+        
+        # 2. Obtener Encargados ANTES de la modificación (usando la relación inversa)
+        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad, estado=True)
+        encargados_json_anteriores = []
+        for relacion in relaciones_encargados:
+             encargados_json_anteriores.append({
+                "id": relacion.encargado.id,
+                "nombre": relacion.encargado.nombre,
+                "correo": relacion.encargado.correo_electronico
+            })
+
+
+        actividad_antes = get_object_or_404(ActividadBase, id=actividad)
+        # 3. Crear el JSON de Estado Inicial
+        estado_anterior_json = {
+            "id": actividad_antes.id,
+            "nombre": actividad_antes.nombre,
+            "encargados": encargados_json_anteriores,
+            "periodos": periodos_json_anteriores
+        }
+        
+        # 4. Imprimir o registrar el estado (opcional)
+        print("\n--- ESTADO DE LA BASE DE DATOS ANTES DE LA EDICIÓN ---")
+        print(json.dumps(estado_anterior_json, indent=4, ensure_ascii=False))
+        print("------------------------------------------------------\n")
+
+        #IMPRIMIR EL ESTADO DESPUES DE LA MODIFICACION
+        print("\n--- ESTADO DE LA BASE DE DATOS DESPUES DE LA EDICIÓN ---")
+        print(json.dumps(data, indent=4, ensure_ascii=False))
+        print("------------------------------------------------------\n")
+
+
+
+        #obtener la actividad
+        actividad = get_object_or_404(ActividadBase, id=actividad)
+
+        # Actualizar nombre si se envió
+        if nuevo_nombre:
+            actividad.nombre = nuevo_nombre
+            actividad.save()
+
+        # Actualizar periodos si se envió
+        #recorrer cada periodo
+        #traer de la base de datos
+        #comparar fechas y actualizar
+        #si id_perido es None, crear nuevo periodo
+        periodos = data.get('periodos',[])
+        ids_presentes_en_request = []
+        # print("Periodos recibidos:", periodos)
+        for periodo_data in periodos:            
+            periodo_id = periodo_data.get('id')
+            if periodo_id != '':
+                ids_presentes_en_request.append(periodo_id)
+            f_inicio = periodo_data.get('f_inicio')
+            f_fin = periodo_data.get('f_fin')
+            print(periodo_id, f_inicio, f_fin)
+            if periodo_id:
+                print("Actualizando periodo existente")
+                # Actualizar periodo existente
+                periodo = get_object_or_404(Fecha, id=periodo_id, actividad=actividad)
+                #comparar fechas del request con las ya existentes
+                if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
+                    periodo.fecha_inicio = f_inicio
+                if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
+                    periodo.fecha_fin = f_fin
+                periodo.save()
+            else:
+                # Crear nuevo periodo
+                print("Creando nuevo periodo")
+                nuevo_periodo = Fecha.objects.create(
+                    actividad=actividad,
+                    fecha_inicio=f_inicio,
+                    fecha_fin=f_fin,
+                    estado=True
+                )
+
+                ids_presentes_en_request.append(nuevo_periodo.id)
+        Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad, estado=True).exclude(
+        id__in=ids_presentes_en_request)
+        
+        # para cada fecha actrualizar estado a False
+        conteo_eliminado = 0
+        for fecha in Fechas_a_eliminar:
+            fecha.estado = False
+            fecha.save()
+            conteo_eliminado += 1
+        print(f"Periodos eliminados: {conteo_eliminado}") # Muestra en consola
+
+
+
+        encargados = data.get('encargados',[])
+        ids_encargados_en_request = []
+        # print("Periodos recibidos:", periodos)
+        for encargado_data in encargados:            
+            encargado_id = encargado_data.get('id')
+            if encargado_id != '':
+                ids_encargados_en_request.append(encargado_id)
+            nombre = encargado_data.get('nombre')
+            correo = encargado_data.get('correo')
+            print(encargado_id, nombre, correo)
+            if encargado_id:
+                print("Actualizando encargado existente")
+                # Actualizar encargado existente
+                encargado = get_object_or_404(Encargado, id=encargado_id)
+                #comparar fechas del request con las ya existentes
+                encargado.nombre = nombre
+                encargado.correo_electronico = correo
+                encargado.save()
+            else:
+                # Crear nuevo encargado
+                print("Creando nuevo encargado")
+                nuevo_encargado = Encargado.objects.create(
+                    actividad=actividad,
+                    nombre=nombre,
+                    correo_electronico=correo,
+                    estado=True
+                )
+
+                ids_encargados_en_request.append(nuevo_encargado.id)
+        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad_id=actividad, estado=True).exclude(
+        id__in=ids_encargados_en_request)
+        # para cada fecha actrualizar estado a False
+        conteo_eliminado = 0
+        for encargado in encargados_a_eliminar:
+            encargado.estado = False
+            encargado.save()
+            conteo_eliminado += 1
+        print(f"encargados eliminados: {conteo_eliminado}") # Muestra en consola
         try:
-            data = json.loads(request.body)
-            print("\n--- Datos recibidos en editar_actividad ---")
-            print(json.dumps(data, indent=4, ensure_ascii=False))
-            print("------------------------------------------\n")
-
-            actividad_id = data.get("id")
-            nombre = data.get("nombre")
-            encargados = data.get("encargados", [])
-            periodos = data.get("periodos", [])
-
-            print("------------------------------------------\n")
-            #printar el encargado 0
-            print(encargados[0]["nombre"])
-
-            return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)})
-    return JsonResponse({"success": False, "error": "Método no permitido"})
-     
+            #actividad normal
+            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
+        except:
+            #actividad difusion
+            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
+            proyecto_id = actividad_esp.proyecto.id
+        
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+        proyecto.ultima_modificacion = datetime.now()
+        proyecto.save()
+         
+        return redirect('lista_actividades', proyecto_id=proyecto_id)
 
 
 
