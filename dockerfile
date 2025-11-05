@@ -27,7 +27,6 @@ EXPOSE 8000
 # Instalar y compilar Tailwind
 RUN python backend/manage.py tailwind install
 RUN python backend/manage.py tailwind build
-run python backend/manage.py migrate
 
 # Ejecutar Django
 CMD ["python", "backend/manage.py", "runserver", "0.0.0.0:3003"]
