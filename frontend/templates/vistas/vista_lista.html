@@ -76,12 +76,19 @@
 
     <div class="p-4 flex flex-col gap-4">
         <!-- Nombre -->
-        <label>Nombre:</label>
-        <input type="text" id="modalNombre" class="border p-1 w-full mb-3">
+        <div class="flex items-center gap-2 mb-3">
+            <label for="modalNombre" class="font-medium">Nombre:</label>
+            <input type="text" id="modalNombre" class="border p-1 rounded flex-1">
+        </div>
 
         <!-- Encargados -->
-        <label>Encargados:</label>
-        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
+        <div class="flex justify-between items-center mb-2">
+        <label class="font-medium">Encargados</label>
+        <button id="openAddEncargadoModal" class="ml-2 px-2 py-1 bg-green-500 text-white rounded">Crear</button>
+        </button>
+        </div>
+
+        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-48 overflow-y-auto border p-2 rounded bg-gray-50 h-[20%]"></div>
 
         <!-- Campo de nombre y correo -->
         <div class="flex flex-col gap-2 mb-2">
@@ -107,13 +114,17 @@
         <ul id="searchResults" class="border p-1 mb-2 max-h-40 overflow-y-auto hidden"></ul>
 
         <!-- Periodos -->
-        <label>Periodos:</label>
+        <label class="font-medium">Periodos:</label>
         <div id="modalPeriodosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
-        <div class="flex gap-2 mb-3">
-            <input type="date" id="modalPeriodoInicio" class="border p-1 w-1/2">
-            <input type="date" id="modalPeriodoFin" class="border p-1 w-1/2">
-            <button id="addPeriodo" class="border px-2 py-1 bg-green-500 text-white">Agregar</button>
+        <label class="font-medium">Agregar periodo:</label>
+        <div class="flex gap-2 mt-2">
+        <input type="date" id="modalPeriodoInicio" class="border p-1 flex-1">
+        <input type="date" id="modalPeriodoFin" class="border p-1 flex-1">
+        <button id="addPeriodo" type="button" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-blue-700">
+            Agregar
+        </button>
         </div>
+        <p id="periodoError" class="text-red-600 text-sm mt-1"></p>
 
         <!-- Botones -->
         <div class="flex justify-end gap-2">
@@ -123,7 +134,81 @@
     </div>
 </div>
 
+<!-- Modal de edición de encargado -->
+<div id="editEncargadoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-lg shadow-xl w-96 relative">
+    <h2 class="text-lg font-semibold mb-4">Editar encargado</h2>
+    
+    <label for="editNombre" class="block text-sm font-medium mb-1">Nombre</label>
+    <input type="text" id="editNombre" class="border p-2 w-full rounded mb-3" placeholder="Nombre del encargado">
+    
+    <label for="editCorreo" class="block text-sm font-medium mb-1">Correo</label>
+    <input type="email" id="editCorreo" class="border p-2 w-full rounded mb-4" placeholder="correo@ejemplo.com">
+
+    <div class="flex justify-end gap-2">
+      <button id="cancelEditBtn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Cancelar</button>
+      <button id="saveEditBtn" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de agregar encargado -->
+<div id="addEncargadoModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50">
+  <div class="bg-white p-6 rounded shadow w-96 relative">
+    <h2 class="text-lg font-semibold mb-4">Agregar Encargado</h2>
+    <label class="block mb-2">Nombre</label>
+    <input type="text" id="addEncargadoNombre" class="w-full border p-1 mb-1">
+    <p id="addNombreError" class="text-red-600 text-sm hidden mb-2">Debe ingresar un nombre válido</p>
+
+    <label class="block mb-2">Correo</label>
+    <input type="email" id="addEncargadoCorreo" class="w-full border p-1 mb-1">
+    <p id="addCorreoError" class="text-red-600 text-sm hidden mb-2">Debe ingresar un correo válido</p>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button id="cancelAddEncargado" class="px-3 py-1 border rounded">Cancelar</button>
+      <button id="saveAddEncargado" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Agregar</button>
+    </div>
+  </div>
+</div>
+
+
+
 <script>
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll("select[name='estado']").forEach(select => {
+        let valorInicial = select.value
+
+        select.addEventListener("change", function() {
+            const actividadId = select.dataset.actividadId
+            const nuevoEstado = select.value
+
+            if (nuevoEstado === valorInicial) return
+
+            fetch("{% url 'actualizar_estado' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    valorInicial = nuevoEstado
+                } else {
+                    select.value = valorInicial 
+                }
+            })
+            .catch(err => {
+                select.value = valorInicial
+            })
+        })
+    })
+})
+
+
 let tempActivity = { encargados: [], periodos: [] };
 const allEncargados = {{ all_encargados|safe }};
 
@@ -169,15 +254,6 @@ document.getElementById("modalOverlay").addEventListener("click", cerrarModal);
 // ===============================
 // Utils
 // ===============================
-function formatDateDDMMYY(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
-}
-
 function validarCorreo(correo) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(correo);
@@ -187,51 +263,85 @@ function validarCorreo(correo) {
 // Encargados
 // ===============================
 function actualizarEncargadosUI() {
-    const container = document.getElementById("modalEncargadosList");
-    container.innerHTML = '';
+  const container = document.getElementById("modalEncargadosList");
+  container.innerHTML = '';
 
-    if (tempActivity.encargados.length === 0) {
-        const msg = document.createElement('p');
-        msg.textContent = "Sin encargados";
-        msg.classList.add('text-gray-500', 'italic');
-        container.appendChild(msg);
-        return;
-    }
+  if (tempActivity.encargados.length === 0) {
+    const msg = document.createElement('p');
+    msg.textContent = "Sin encargados";
+    msg.classList.add('text-gray-500', 'italic');
+    container.appendChild(msg);
+    return;
+  }
 
-    tempActivity.encargados.forEach((e, i) => {
-        const div = document.createElement('div');
-        div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-blue-100');
+  tempActivity.encargados.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.classList.add(
+      'flex', 'items-center', 'justify-between',
+      'p-2', 'rounded', 'bg-gray-50', 'hover:bg-blue-100',
+      'border-b', 'border-gray-300', 'last:border-b-0'
+    );
 
-        const span = document.createElement('span');
-        span.textContent = `${e.nombre} (${e.correo || 'sin correo'})`;
+    const infoDiv = document.createElement('div');
+    infoDiv.classList.add('flex', 'flex-col', 'flex-1', 'mr-2');
 
-        const btn = document.createElement('button');
-        btn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
-        </svg>`;
-        btn.addEventListener('click', () => {
-            tempActivity.encargados.splice(i, 1);
-            actualizarEncargadosUI();
-        });
+    const nombreSpan = document.createElement('span');
+    nombreSpan.textContent = e.nombre;
+    nombreSpan.classList.add('font-medium');
 
-        div.appendChild(span);
-        div.appendChild(btn);
-        container.appendChild(div);
+    const correoSpan = document.createElement('span');
+    correoSpan.textContent = e.correo || 'sin correo';
+    correoSpan.classList.add('text-sm', 'text-gray-600');
+
+    infoDiv.appendChild(nombreSpan);
+    infoDiv.appendChild(correoSpan);
+
+    // Botones
+    const btnContainer = document.createElement('div');
+    btnContainer.classList.add('flex', 'gap-2', 'items-center');
+
+    // Editar
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+        </svg>
+    `;
+    editBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    abrirModalEditarEncargado(e, i);
     });
+
+    // Eliminar
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600 hover:text-red-800" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
+      </svg>`;
+    deleteBtn.addEventListener('click', () => {
+      tempActivity.encargados.splice(i, 1);
+      actualizarEncargadosUI();
+    });
+
+    btnContainer.appendChild(editBtn);
+    btnContainer.appendChild(deleteBtn);
+
+    div.appendChild(infoDiv);
+    div.appendChild(btnContainer);
+    container.appendChild(div);
+  });
 }
+
 
 // FILTRAR Y AGREGAR ENCARGADOS
 document.getElementById("modalEncargadosInput").addEventListener("input", e => {
     const value = e.target.value.trim().toLowerCase();
     const results = document.getElementById("searchResults");
-    const correoField = document.getElementById("modalEncargadoCorreo");
+
     results.innerHTML = '';
 
     if (!value) {
         results.classList.add("hidden");
-        document.getElementById("addEncargadoBtn").classList.add("hidden");
-        correoField.classList.add("hidden");
         return;
     }
 
@@ -244,6 +354,7 @@ document.getElementById("modalEncargadosInput").addEventListener("input", e => {
             const li = document.createElement('li');
             li.textContent = `${enc.nombre} (${enc.correo || 'sin correo'})`;
             li.classList.add('cursor-pointer', 'hover:bg-gray-100', 'p-1', 'rounded');
+
             li.addEventListener('click', () => {
                 tempActivity.encargados.push({
                     id: enc.id,
@@ -253,59 +364,113 @@ document.getElementById("modalEncargadosInput").addEventListener("input", e => {
                 actualizarEncargadosUI();
                 e.target.value = '';
                 results.classList.add("hidden");
-                document.getElementById("addEncargadoBtn").classList.add("hidden");
-                correoField.classList.add("hidden");
             });
+
             results.appendChild(li);
         });
+
         results.classList.remove("hidden");
-        document.getElementById("addEncargadoBtn").classList.add("hidden");
-        correoField.classList.add("hidden");
     } else {
+        // Si no hay coincidencias
         results.classList.add("hidden");
-        document.getElementById("addEncargadoBtn").classList.remove("hidden");
-        correoField.classList.remove("hidden");
     }
 });
 
-// AGREGAR NUEVO ENCARGADO MANUALMENTE
-document.getElementById("addEncargadoBtn").addEventListener("click", () => {
-    const newEncName = document.getElementById("modalEncargadosInput").value.trim();
-    const newEncMail = document.getElementById("modalEncargadoCorreo").value.trim();
-    const correoField = document.getElementById("modalEncargadoCorreo");
-    const nombreError = document.getElementById("nombreError");
-    const correoError = document.getElementById("correoError");
 
-    nombreError.classList.add("hidden");
-    correoError.classList.add("hidden");
+// ABRIR MODAL EDITAR ENCARGADO
+function abrirModalEditarEncargado(encargado, index) {
+  const modal = document.getElementById("editEncargadoModal");
+  const nombreInput = document.getElementById("editNombre");
+  const correoInput = document.getElementById("editCorreo");
 
-    let hasError = false;
+  document.getElementById("errorNombreEncargado")?.remove();
+  document.getElementById("errorCorreoEncargado")?.remove();
 
-    if (!newEncName) {
-        nombreError.classList.remove("hidden");
-        hasError = true;
+  nombreInput.value = encargado.nombre;
+  correoInput.value = encargado.correo || '';
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  Object.assign(modal.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backdropFilter: "blur(3px)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: "50"
+  });
+
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    document.getElementById("errorNombreEncargado")?.remove();
+    document.getElementById("errorCorreoEncargado")?.remove();
+  };
+
+  document.getElementById("cancelEditBtn").onclick = closeModal;
+
+  document.getElementById("saveEditBtn").onclick = () => {
+
+    document.getElementById("errorNombreEncargado")?.remove();
+    document.getElementById("errorCorreoEncargado")?.remove();
+
+    const nuevoNombre = nombreInput.value.trim();
+    const nuevoCorreo = correoInput.value.trim();
+
+    // Validar nombre vacío
+    if (!nuevoNombre) {
+      const error = document.createElement("p");
+      error.id = "errorNombreEncargado";
+      error.textContent = "El nombre no puede estar vacío.";
+      error.classList.add("text-red-500", "text-sm", "mt-1");
+      nombreInput.insertAdjacentElement("afterend", error);
+      return;
     }
 
-    if (!newEncMail || !validarCorreo(newEncMail)) {
-        correoError.classList.remove("hidden");
-        hasError = true;
+    // Validar nombre duplicado
+    const nombreExiste = tempActivity.encargados.some(
+      (e, i) => i !== index && e.nombre.toLowerCase() === nuevoNombre.toLowerCase()
+    );
+    if (nombreExiste) {
+      const error = document.createElement("p");
+      error.id = "errorNombreEncargado";
+      error.textContent = "Ya existe un encargado con ese nombre.";
+      error.classList.add("text-red-500", "text-sm", "mt-1");
+      nombreInput.insertAdjacentElement("afterend", error);
+      return;
     }
 
-    if (hasError) return;
+    // Validar formato de correo
+    if (nuevoCorreo && !validarCorreo(nuevoCorreo)) {
+      const error = document.createElement("p");
+      error.id = "errorCorreoEncargado";
+      error.textContent = "El correo no tiene un formato válido.";
+      error.classList.add("text-red-500", "text-sm", "mt-1");
+      correoInput.insertAdjacentElement("afterend", error);
+      return;
+    }
 
-    tempActivity.encargados.push({
-        id: "",
-        nombre: newEncName,
-        correo: newEncMail
-    });
-
-    document.getElementById("modalEncargadosInput").value = '';
-    correoField.value = '';
-    document.getElementById("addEncargadoBtn").classList.add("hidden");
-    correoField.classList.add("hidden");
-
+    encargado.nombre = nuevoNombre;
+    encargado.correo = nuevoCorreo;
     actualizarEncargadosUI();
-});
+    closeModal();
+  };
+
+  nombreInput.addEventListener("input", () => {
+    document.getElementById("errorNombreEncargado")?.remove();
+  });
+  correoInput.addEventListener("input", () => {
+    document.getElementById("errorCorreoEncargado")?.remove();
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
 
 // ===============================
 // Periodos
@@ -313,6 +478,16 @@ document.getElementById("addEncargadoBtn").addEventListener("click", () => {
 function actualizarPeriodosUI() {
     const container = document.getElementById("modalPeriodosList");
     container.innerHTML = '';
+
+    let errorLabel = document.getElementById("periodoSolapadoError");
+    if (!errorLabel) {
+        errorLabel = document.createElement('p');
+        errorLabel.id = "periodoSolapadoError";
+        errorLabel.classList.add('text-red-600', 'font-medium', 'mb-2', 'hidden');
+        container.parentElement.insertBefore(errorLabel, container);
+    }
+    errorLabel.textContent = '';
+    errorLabel.classList.add("hidden");
 
     if (tempActivity.periodos.length === 0) {
         const msg = document.createElement('p');
@@ -324,7 +499,12 @@ function actualizarPeriodosUI() {
 
     tempActivity.periodos.forEach((p, i) => {
         const div = document.createElement('div');
-        div.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'border', 'rounded', 'bg-gray-100', 'gap-2');
+        div.classList.add(
+            'flex', 'items-center', 'justify-between',
+            'p-2', 'rounded', 'bg-gray-100',
+            'gap-2', 'border-b', 'border-gray-300',
+            'last:border-b-0', 'hover:bg-blue-100'
+        );
 
         const inputsDiv = document.createElement('div');
         inputsDiv.classList.add('flex', 'gap-2', 'flex-1', 'min-w-0');
@@ -335,6 +515,7 @@ function actualizarPeriodosUI() {
         inputInicio.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputInicio.addEventListener('input', (e) => {
             tempActivity.periodos[i].f_inicio = e.target.value;
+            validarSolapamientos();
         });
 
         const inputFin = document.createElement('input');
@@ -343,6 +524,7 @@ function actualizarPeriodosUI() {
         inputFin.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputFin.addEventListener('input', (e) => {
             tempActivity.periodos[i].f_fin = e.target.value;
+            validarSolapamientos();
         });
 
         inputsDiv.appendChild(inputInicio);
@@ -357,37 +539,187 @@ function actualizarPeriodosUI() {
         btn.addEventListener('click', () => {
             tempActivity.periodos.splice(i, 1);
             actualizarPeriodosUI();
+            validarSolapamientos();
         });
 
         div.appendChild(inputsDiv);
         div.appendChild(btn);
-
         container.appendChild(div);
     });
+
+    validarSolapamientos(); // Chequear al renderizar
 }
 
-// AGREGAR PERIODO
+// ===============================
+// Validar solapamientos
+// ===============================
+function validarSolapamientos() {
+    const errorLabel = document.getElementById("periodoSolapadoError");
+    const periodosDivs = document.querySelectorAll("#modalPeriodosList > div");
+
+    // Limpiar errores y colores previos
+    errorLabel.textContent = '';
+    errorLabel.classList.add('hidden');
+    periodosDivs.forEach(div => {
+        div.classList.remove('bg-red-100', 'border-red-400');
+    });
+
+    let solapados = new Set();
+
+    for (let i = 0; i < tempActivity.periodos.length; i++) {
+        const a = tempActivity.periodos[i];
+        if (!a.f_inicio || !a.f_fin) continue;
+
+        const inicioA = new Date(a.f_inicio);
+        const finA = new Date(a.f_fin);
+
+        for (let j = i + 1; j < tempActivity.periodos.length; j++) {
+            const b = tempActivity.periodos[j];
+            if (!b.f_inicio || !b.f_fin) continue;
+
+            const inicioB = new Date(b.f_inicio);
+            const finB = new Date(b.f_fin);
+
+            // Si se solapan
+            if (inicioA <= finB && finA >= inicioB) {
+                solapados.add(i);
+                solapados.add(j);
+            }
+        }
+    }
+
+    if (solapados.size > 0) {
+        errorLabel.textContent = "Hay periodos que se solapan. Corrige las fechas marcadas en rojo.";
+        errorLabel.classList.remove('hidden');
+        solapados.forEach(i => {
+            if (periodosDivs[i]) {
+                periodosDivs[i].classList.add('bg-red-100', 'border-red-400');
+            }
+        });
+    }
+}
+
+// ===============================
+// Agregar periodo 
+// ===============================
 document.getElementById("addPeriodo").addEventListener("click", () => {
     const inicio = document.getElementById("modalPeriodoInicio").value;
     const fin = document.getElementById("modalPeriodoFin").value;
+    const errorMsg = document.getElementById("periodoError");
+    errorMsg.textContent = '';
 
-    if (!inicio || !fin || inicio > fin) {
-        alert("Fechas inválidas");
+    document.querySelectorAll("#modalPeriodosList > div").forEach(div => {
+        div.classList.remove("bg-red-100", "border-red-400");
+    });
+
+    if (!inicio || !fin) {
+        errorMsg.textContent = "Ambas fechas son obligatorias.";
+        return;
+    }
+
+    if (inicio > fin) {
+        errorMsg.textContent = "La fecha de inicio no puede ser mayor que la de fin.";
+        return;
+    }
+
+    const nuevoInicio = new Date(inicio);
+    const nuevoFin = new Date(fin);
+
+    const periodosSolapados = [];
+    tempActivity.periodos.forEach((p, i) => {
+        const inicioExistente = new Date(p.f_inicio);
+        const finExistente = new Date(p.f_fin);
+
+        const seSolapan =
+            (nuevoInicio <= finExistente) && (nuevoFin >= inicioExistente);
+
+        if (seSolapan) {
+            periodosSolapados.push(i);
+        }
+    });
+
+    if (periodosSolapados.length > 0) {
+        errorMsg.textContent = `El periodo se solapa con ${periodosSolapados.length > 1 ? "varios periodos existentes" : "un periodo existente"}.`;
+        
+        const periodosDivs = document.querySelectorAll("#modalPeriodosList > div");
+        periodosSolapados.forEach(i => {
+            const div = periodosDivs[i];
+            if (div) {
+                div.classList.add("bg-red-100", "border-red-400");
+            }
+        });
+
         return;
     }
 
     tempActivity.periodos.push({ id: "", f_inicio: inicio, f_fin: fin });
     actualizarPeriodosUI();
 
+
     document.getElementById("modalPeriodoInicio").value = '';
     document.getElementById("modalPeriodoFin").value = '';
 });
+
 
 // ===============================
 // Botón editar
 // ===============================
 document.querySelectorAll(".btn-editar").forEach(btn => {
     btn.addEventListener("click", () => abrirModalEditar(btn));
+});
+
+// Abrir modal agregar encargado
+document.getElementById("openAddEncargadoModal").addEventListener("click", () => {
+    document.getElementById("addEncargadoModal").classList.remove("hidden");
+    document.getElementById("addEncargadoNombre").value = '';
+    document.getElementById("addEncargadoCorreo").value = '';
+    document.getElementById("addNombreError").classList.add("hidden");
+    document.getElementById("addCorreoError").classList.add("hidden");
+});
+
+// Cancelar
+document.getElementById("cancelAddEncargado").addEventListener("click", () => {
+    document.getElementById("addEncargadoModal").classList.add("hidden");
+});
+
+// Guardar nuevo encargado
+document.getElementById("saveAddEncargado").addEventListener("click", () => {
+    const nombre = document.getElementById("addEncargadoNombre").value.trim();
+    const correo = document.getElementById("addEncargadoCorreo").value.trim();
+    let hasError = false;
+
+    const nombreError = document.getElementById("addNombreError");
+    const correoError = document.getElementById("addCorreoError");
+
+    nombreError.classList.add("hidden");
+    correoError.classList.add("hidden");
+
+    if (!nombre) {
+        nombreError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (!correo || !validarCorreo(correo)) {
+        correoError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (tempActivity.encargados.some(e => e.nombre.toLowerCase() === nombre.toLowerCase())) {
+        nombreError.textContent = "Ya existe un encargado con ese nombre";
+        nombreError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (hasError) return;
+
+    tempActivity.encargados.push({
+        id: "",
+        nombre: nombre,
+        correo: correo
+    });
+
+    actualizarEncargadosUI();
+    document.getElementById("addEncargadoModal").classList.add("hidden");
 });
 
 
@@ -402,7 +734,6 @@ document.getElementById("saveChanges").addEventListener("click", () => {
         return;
     }
 
-    // Validar periodos solapados
     for (let i = 0; i < tempActivity.periodos.length; i++) {
         const a = tempActivity.periodos[i];
         for (let j = i + 1; j < tempActivity.periodos.length; j++) {
@@ -443,7 +774,7 @@ document.getElementById("saveChanges").addEventListener("click", () => {
     })
     .then(data => {
         cerrarModal();
-        location.reload(); // actualizar lista
+        location.reload();
     })
     .catch(err => {
         console.error(err);
