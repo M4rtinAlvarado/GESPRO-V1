@@ -410,20 +410,7 @@ def editar_actividad(request):
             encargado.save()
             conteo_eliminado += 1
         print(f"encargados eliminados: {conteo_eliminado}") # Muestra en consola
-        try:
-            #actividad normal
-            actividad_esp = get_object_or_404(Actividad, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.linea_trabajo.proyecto.id
-        except:
-            #actividad difusion
-            actividad_esp = get_object_or_404(ActividadDifusion, actividadbase_ptr=actividad.id)
-            proyecto_id = actividad_esp.proyecto.id
-        
-        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-        proyecto.ultima_modificacion = datetime.now()
-        proyecto.save()
-         
-        return redirect('lista_actividades', proyecto_id=proyecto_id)
+    return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
 
 
 
