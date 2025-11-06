@@ -208,5 +208,6 @@ def actualizar_estado(request):
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
     return JsonResponse({'success': False, 'error': 'Método no permitido'})        
     
-
+def reportes(request, proyecto_id):
+    return render(request, 'vistas/reportes.html', {'proyecto': get_object_or_404(Proyecto, id=proyecto_id)})
 
