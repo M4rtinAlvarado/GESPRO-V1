@@ -382,7 +382,7 @@ def editar_actividad(request):
             nombre = encargado_data.get('nombre')
             correo = encargado_data.get('correo')
             print(encargado_id, nombre, correo)
-            if encargado_id:
+            if encargado_id != '':
                 print("Actualizando encargado existente")
                 # Actualizar encargado existente
                 encargado = get_object_or_404(Encargado, id=encargado_id)
@@ -390,24 +390,44 @@ def editar_actividad(request):
                 encargado.nombre = nombre
                 encargado.correo_electronico = correo
                 encargado.save()
+
+                if not Actividad_Encargado.objects.filter(actividad=actividad, encargado=encargado).exists():
+                    # Crear la relación si no existe
+                    Actividad_Encargado.objects.create(
+                        actividad=actividad,
+                        encargado=encargado,
+                        estado=True
+                    ) 
+                else:
+                    # Asegurarse de que la relación esté activa
+                    relacion = Actividad_Encargado.objects.get(actividad=actividad, encargado=encargado)
+                    if not relacion.estado:
+                        relacion.estado = True
+                        relacion.save()
+        
             else:
                 # Crear nuevo encargado
                 print("Creando nuevo encargado")
                 nuevo_encargado = Encargado.objects.create(
-                    actividad=actividad,
                     nombre=nombre,
                     correo_electronico=correo,
+                    estado=True
+                )
+                Actividad_Encargado.objects.create(
+                    actividad=actividad,
+                    encargado=nuevo_encargado,
                     estado=True
                 )
 
                 ids_encargados_en_request.append(nuevo_encargado.id)
         encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad_id=actividad, estado=True).exclude(
-        id__in=ids_encargados_en_request)
-        # para cada fecha actrualizar estado a False
+        encargado__id__in=ids_encargados_en_request )
+        print (ids_encargados_en_request)
         conteo_eliminado = 0
-        for encargado in encargados_a_eliminar:
-            encargado.estado = False
-            encargado.save()
+        for relacion in encargados_a_eliminar:
+            print("Eliminando encargado:", encargado.nombre)
+            relacion.estado = False
+            relacion.save()
             conteo_eliminado += 1
         print(f"encargados eliminados: {conteo_eliminado}") # Muestra en consola
     return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
