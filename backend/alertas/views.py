@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from proyectos.models import Proyecto, Actividad, ActividadDifusion
 from django.db.models import Prefetch
 from django.http import JsonResponse
+import json
 
 
 # Create your views here.
@@ -32,6 +33,9 @@ def listado_alertas(request, proyecto_id):
     for actividad in actividades:
         fecha_activa = actividad.fechas.filter(estado=True).order_by('-fecha_fin').first()
         actividad.fecha_limite = fecha_activa.fecha_fin if fecha_activa else None
+        actividad.fecha_inicio = fecha_activa.fecha_inicio if fecha_activa else None
+        # Contar alertas pendientes (no enviadas)
+        actividad.alertas_pendientes_count = actividad.alertas.filter(enviado=False).count()
 
     return render(request, "alertas/listado_alertas.html", {
         "proyecto": proyecto,
@@ -57,3 +61,20 @@ def modificar_alerta(request):
         return redirect('listado_alertas', proyecto_id=alertas.first().actividad.linea_trabajo.proyecto.id)
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=400)
+
+def crear_alertas(request):
+    print("Crear alertas")
+    data = json.loads(request.body)
+    print("Datos recibidos:", data)
+    return JsonResponse({"status": "success"})
+
+def mover_alertas(request):
+    print("Modificar alertas")
+    data = json.loads(request.body)
+    print("Datos recibidos:", data)
+    return JsonResponse({"status": "success"})
+def eliminar_alertas(request):
+    print("Eliminar alertas")
+    data = json.loads(request.body)
+    print("Datos recibidos:", data)
+    return JsonResponse({"status": "success"})
