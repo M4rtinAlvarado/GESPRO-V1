@@ -16,7 +16,7 @@ def obtener_datos(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
     all_encargados_qs = Encargado.objects.filter(estado=True)
-    all_encargados = list(all_encargados_qs.values('id', 'nombre'))
+    all_encargados = list(all_encargados_qs.values('id', 'nombre', 'correo_electronico'))
     
     # SIN FILTRO DE ESTADO (como pediste)
     actividades_normales = Actividad.objects.filter(
