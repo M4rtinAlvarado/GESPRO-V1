@@ -30,7 +30,7 @@
                 <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1"
                         data-id="{{ act.id }}"
                         data-nombre="{{ act.nombre }}"
-                        data-encargados="{% for e in act.encargados %}{{ e.nombre }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                        data-encargados="{% for e in act.encargados %}{{ e.nombre }}|{{ e.correo_electronico }}{% if not forloop.last %},{% endif %}{% endfor %}"
                         data-periodos="{% for f in act.fechas %}{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
@@ -212,6 +212,7 @@ document.addEventListener("DOMContentLoaded", function() {
 let tempActivity = { encargados: [], periodos: [] };
 const allEncargados = {{ all_encargados|safe }};
 
+
 // ===============================
 // Abrir y cerrar modal
 // ===============================
@@ -219,17 +220,30 @@ function abrirModalEditar(button) {
     tempActivity.id = button.dataset.id;
     tempActivity.nombre = button.dataset.nombre;
 
-    const encNombres = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
-    tempActivity.encargados = encNombres
-        .map(nombre => allEncargados.find(e => e.nombre === nombre))
-        .filter(Boolean)
-        .map(e => ({ id: e.id, nombre: e.nombre, correo: e.correo }));
+    const rawEncargados = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
+    tempActivity.encargados = [];
+    if (button.dataset.encargados) {
+        const encList = button.dataset.encargados.split(',').map(e => e.trim());
+        encList.forEach(item => {
+            const [nombre, correo] = item.split('|'); // separa por |
+            const match = allEncargados.find(e => e.nombre === nombre);
+            tempActivity.encargados.push({
+                id: match?.id || null,
+                nombre: nombre,
+                correo: correo || match?.correo_electronico || ''
+            });
+        });
+    }
+    
 
     const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
     tempActivity.periodos = rawPeriodos.map(p => {
         const [f_inicio, f_fin] = p.split('|');
         return { id: "", f_inicio, f_fin };
     });
+
+    console.log("Dataset encargados:", button.dataset.encargados);
+    console.log("Temp activity encargados:", tempActivity.encargados);
 
     document.getElementById("modalNombre").value = tempActivity.nombre;
 
@@ -352,14 +366,14 @@ document.getElementById("modalEncargadosInput").addEventListener("input", e => {
     if (matches.length > 0) {
         matches.forEach(enc => {
             const li = document.createElement('li');
-            li.textContent = `${enc.nombre} (${enc.correo || 'sin correo'})`;
+            li.textContent = `${enc.nombre} (${enc.correo_electronico || 'sin correo'})`;
             li.classList.add('cursor-pointer', 'hover:bg-gray-100', 'p-1', 'rounded');
 
             li.addEventListener('click', () => {
                 tempActivity.encargados.push({
                     id: enc.id,
                     nombre: enc.nombre,
-                    correo: enc.correo
+                    correo: enc.correo_electronico || ''
                 });
                 actualizarEncargadosUI();
                 e.target.value = '';
@@ -713,9 +727,9 @@ document.getElementById("saveAddEncargado").addEventListener("click", () => {
     if (hasError) return;
 
     tempActivity.encargados.push({
-        id: "",
-        nombre: nombre,
-        correo: correo
+        id: enc.id,
+        nombre: enc.nombre,
+        correo: enc.correo_electronico
     });
 
     actualizarEncargadosUI();
