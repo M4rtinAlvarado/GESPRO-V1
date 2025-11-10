@@ -5,6 +5,12 @@
 
 {% block content %}
 {% csrf_token %}
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none">
+    <!-- Los toasts aparecerán aquí -->
+</div>
+
 <div class="container mx-auto mt-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 class="text-2xl font-bold">Alertas por Actividad</h2>
@@ -98,9 +104,9 @@
                                                 {% for alerta in actividad.alertas.all %}
                                                     <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-16 rounded-lg shadow-md overflow-hidden border
                                                                 {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500{% endif %}"
-                                                         data-alerta-id="{{ alerta.id }}"
-                                                         data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
-                                                         data-alerta-enviado="{{ alerta.enviado|lower }}">
+                                                        data-alerta-id="{{ alerta.id }}"
+                                                        data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
+                                                        data-alerta-enviado="{{ alerta.enviado|lower }}">
                                                         <!-- Mes y año arriba -->
                                                         <div class="w-full text-center text-white text-[10px] font-bold uppercase py-1
                                                                     {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
@@ -369,6 +375,63 @@
 
 <!-- Script para seleccionar/deseleccionar todo -->
 <script>
+    // Función para mostrar toasts
+    function showToast(message, type = 'success') {
+        console.log('showToast llamado:', message, type); // DEBUG
+        const toastContainer = document.getElementById('toast-container');
+        console.log('Toast container:', toastContainer); // DEBUG
+        
+        if (!toastContainer) {
+            console.error('No se encontró el contenedor de toasts');
+            return;
+        }
+        
+        const toast = document.createElement('div');
+        
+        // Estilos según el tipo (similar a los mensajes de Django)
+        let bgColor, textColor, borderColor, icon;
+        
+        if (type === 'success') {
+            bgColor = 'bg-green-100';
+            textColor = 'text-green-700';
+            borderColor = 'border-green-300';
+            icon = '✓';
+        } else if (type === 'error') {
+            bgColor = 'bg-red-100';
+            textColor = 'text-red-700';
+            borderColor = 'border-red-300';
+            icon = '✕';
+        } else {
+            bgColor = 'bg-yellow-100';
+            textColor = 'text-yellow-800';
+            borderColor = 'border-yellow-300';
+            icon = 'ℹ';
+        }
+        
+        toast.className = `${bgColor} ${textColor} border ${borderColor} px-4 py-3 rounded-lg text-sm font-medium shadow-lg flex items-center gap-3 min-w-[300px] pointer-events-auto`;
+        toast.style.cssText = 'transform: translateX(400px); opacity: 0; transition: all 0.3s ease-in-out;';
+        toast.innerHTML = `
+            <span class="text-lg font-bold">${icon}</span>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.remove()" class="${textColor} hover:opacity-70 font-bold text-xl leading-none">×</button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Animar entrada
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        }, 10);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(400px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
     const selectAll = document.getElementById('select-all');
     const checkboxes = document.querySelectorAll('.row-checkbox');
     const actionButtons = document.querySelectorAll('.bulk-action-btn');
@@ -559,16 +622,20 @@
             // Obtener fechas límite de la actividad para validación
             const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
             const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            const ahora = new Date();
             
-            // Validar que la alerta esté dentro del rango
+            // Validar que la alerta esté dentro del rango y no sea una fecha pasada
             let mensajeError = '';
             let colorClase = 'text-gray-900';
             
-            if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
-                mensajeError = '<span class="text-red-600 font-semibold">Previo a Fecha Inicio</span>';
+            if (fechaAlerta && fechaAlerta < ahora) {
+                mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
+                colorClase = 'text-red-600';
+            } else if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
+                mensajeError = '<span class="text-red-600 font-semibold">La alerta es anterior al inicio de la actividad</span>';
                 colorClase = 'text-red-600';
             } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
-                mensajeError = '<span class="text-red-600 font-semibold">Excede Fecha Límite</span>';
+                mensajeError = '<span class="text-red-600 font-semibold">La alerta es posterior al término de la actividad</span>';
                 colorClase = 'text-red-600';
             }
             
@@ -670,17 +737,25 @@
             }
             
             if (fechaAlerta) {
-                // Validar que la alerta esté dentro del rango de la actividad
+                // Validar que la alerta no sea una fecha pasada
+                const ahora = new Date();
                 const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
                 const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
                 
-                // Verificar si está fuera de rango
+                // Verificar si la fecha ya pasó
+                if (fechaAlerta < ahora) {
+                    console.warn(`Alerta inválida para ${nombreActividad}: la fecha calculada ya pasó`);
+                    alertasInvalidas++;
+                    return; // Skip esta alerta
+                }
+                
+                // Verificar si está fuera de rango de la actividad
                 if (fechaInicioBase && fechaAlerta < fechaInicioBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: previo a fecha inicio`);
+                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio de la actividad`);
                     alertasInvalidas++;
                     return; // Skip esta alerta
                 } else if (fechaFinBase && fechaAlerta > fechaFinBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: excede fecha límite`);
+                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es posterior al término de la actividad`);
                     alertasInvalidas++;
                     return; // Skip esta alerta
                 }
@@ -722,24 +797,36 @@
             })
             .then(response => {
                 console.log('Response status:', response.status); // DEBUG
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 return response.json();
             })
             .then(data => {
                 console.log('Response data:', data); // DEBUG
-                if (data.status === 'success') {
-                    // Recargar la página para ver las nuevas alertas
-                    window.location.reload();
+                if (data.success) {
+                    modalCrear.classList.add('hidden');
+                    const cantidad = alertas.length;
+                    const plural = cantidad === 1 ? 'alerta fue creada' : 'alertas fueron creadas';
+                    showToast(`${cantidad} ${plural} correctamente`, 'success');
+                    // Recargar la página después de mostrar el toast
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert('Error al crear alertas: ' + (data.message || 'Error desconocido'));
+                    showToast('Error al crear las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al crear alertas');
+                showToast('Error al crear las alertas: ' + error.message, 'error');
             });
         } else {
             console.log('No hay alertas para enviar'); // DEBUG
-            alert('No se pudieron calcular las fechas de las alertas');
+            if (alertasInvalidas > 0) {
+                const plural = alertasInvalidas === 1 ? 'alerta no pudo' : 'alertas no pudieron';
+                showToast(`${alertasInvalidas} ${plural} ser creada(s). Las fechas calculadas ya pasaron o están fuera del período de la actividad.`, 'error');
+            } else {
+                showToast('No se pudieron calcular las fechas de las alertas. Verifica los datos ingresados.', 'error');
+            }
         }
     });
 </script>
@@ -822,10 +909,10 @@
                 
                 if (fechaNueva && fechaInicioBase && fechaNueva < fechaInicioBase) {
                     esValida = false;
-                    mensajeError = '⚠ Previo a Fecha Inicio';
+                    mensajeError = 'Previo a Fecha Inicio';
                 } else if (fechaNueva && fechaFinBase && fechaNueva > fechaFinBase) {
                     esValida = false;
-                    mensajeError = '⚠ Excede Fecha Límite';
+                    mensajeError = 'Excede Fecha Límite';
                 }
                 
                 // Agrupar por actividad
@@ -993,20 +1080,27 @@
         })
         .then(response => {
             console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
         .then(data => {
             console.log('Response data:', data);
-            if (data.status === 'success') {
-                // Recargar la página para ver las alertas actualizadas
-                window.location.reload();
+            if (data.success) {
+                modalConfirmacionDesplazar.classList.add('hidden');
+                const totalAlertas = alertasADesplazar.reduce((sum, act) => sum + act.alertas.length, 0);
+                const plural = totalAlertas === 1 ? 'alerta fue desplazada' : 'alertas fueron desplazadas';
+                showToast(`${totalAlertas} ${plural} correctamente`, 'success');
+                // Recargar la página después de mostrar el toast
+                setTimeout(() => window.location.reload(), 1500);
             } else {
-                alert('Error al desplazar alertas: ' + (data.message || 'Error desconocido'));
+                showToast('Error al desplazar las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al desplazar alertas');
+            showToast('Error al desplazar las alertas: ' + error.message, 'error');
         });
     });
 </script>
@@ -1147,20 +1241,27 @@
         })
         .then(response => {
             console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
         .then(data => {
             console.log('Response data:', data);
-            if (data.status === 'success') {
-                // Recargar la página para ver las alertas eliminadas
-                window.location.reload();
+            if (data.success) {
+                modalConfirmacionEliminar.classList.add('hidden');
+                const totalAlertas = idsAlertas.length;
+                const plural = totalAlertas === 1 ? 'alerta fue eliminada' : 'alertas fueron eliminadas';
+                showToast(` ${totalAlertas} ${plural} correctamente`, 'success');
+                // Recargar la página después de mostrar el toast
+                setTimeout(() => window.location.reload(), 1500);
             } else {
-                alert('Error al eliminar alertas: ' + (data.message || 'Error desconocido'));
+                showToast('Error al eliminar las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar alertas');
+            showToast('Error al eliminar las alertas: ' + error.message, 'error');
         });
     });
 </script>

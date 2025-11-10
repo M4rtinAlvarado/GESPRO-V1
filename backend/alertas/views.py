@@ -38,9 +38,16 @@ def listado_alertas(request, proyecto_id):
     actividades = list(actividades_normales) + list(actividades_difusion)
 
     for actividad in actividades:
-        fecha_activa = actividad.fechas.filter(estado=True).order_by('-fecha_fin').first()
-        actividad.fecha_limite = fecha_activa.fecha_fin if fecha_activa else None
-        actividad.fecha_inicio = fecha_activa.fecha_inicio if fecha_activa else None
+        fechas_activas = actividad.fechas.filter(estado=True)
+        
+        # Obtener la primera fecha de inicio (la más temprana)
+        fecha_inicio_obj = fechas_activas.order_by('fecha_inicio').first()
+        actividad.fecha_inicio = fecha_inicio_obj.fecha_inicio if fecha_inicio_obj else None
+        
+        # Obtener la última fecha de fin (la más tardía)
+        fecha_fin_obj = fechas_activas.order_by('-fecha_fin').first()
+        actividad.fecha_limite = fecha_fin_obj.fecha_fin if fecha_fin_obj else None
+        
         # Contar alertas pendientes (no enviadas)
         actividad.alertas_pendientes_count = actividad.alertas.filter(enviado=False).count()
 
