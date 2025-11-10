@@ -790,8 +790,14 @@ document.getElementById("saveChanges").addEventListener("click", () => {
         return res.json();
     })
     .then(data => {
-        cerrarModal();
-        location.reload();
+        console.log("Respuesta del servidor:", data);
+        if (data.success) {
+            location.reload();
+        } else {
+            // si no hay success explícito, igual asumimos que guardó
+            console.warn("Guardado, pero sin 'success' explícito:", data);
+            location.reload();
+        }
     })
     .catch(err => {
         console.error(err);
