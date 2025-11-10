@@ -105,6 +105,7 @@ class Alerta(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_envio = models.DateTimeField(db_index=True)
     enviado = models.BooleanField(default=True)
+    estado = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["fecha_envio"]

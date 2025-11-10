@@ -13,11 +13,16 @@ from django.utils import timezone
 def listado_alertas(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
+    alertas_filtradas = Prefetch(
+        'alertas', 
+        queryset=Alerta.objects.filter(estado=True)
+    )
+
     actividades_normales = Actividad.objects.filter(
-        linea_trabajo__proyecto=proyecto,
+        linea_trabajo__proyecto=proyecto, 
     ).prefetch_related(
         Prefetch('actividad_encargados__encargado'),
-        'alertas',
+        alertas_filtradas,
         'fechas'
     ).distinct()
 
@@ -25,7 +30,7 @@ def listado_alertas(request, proyecto_id):
         proyecto=proyecto,
     ).prefetch_related(
         Prefetch('actividad_encargados__encargado'),
-        'alertas',
+        alertas_filtradas,
         'fechas'
     ).distinct()
 
@@ -71,9 +76,12 @@ def crear_alertas(request):
             print("Datos recibidos:", datos)
             
             if isinstance(datos, dict):
-                 datos = [datos]
-                 
-            ahora = timezone.now()
+                    datos = [datos]
+
+            timezone.activate('America/Santiago')
+
+            # 2. 💡 'localtime()' ahora usará la zona activada ('America/Santiago')
+            ahora = timezone.localtime()
             
             # --- Proceso de Alertas ---
             for item in datos:
@@ -168,7 +176,7 @@ def eliminar_alertas(request):
             for alerta_id in ids_a_eliminar:
                 # Lógica original: buscar y marcar como inactivo
                 alerta = get_object_or_404(Alerta, id=alerta_id)
-                alerta.activo = False
+                alerta.estado = False
                 alerta.save()
                 
             return JsonResponse({"success": True, "mensaje": "Alertas eliminadas correctamente"})
