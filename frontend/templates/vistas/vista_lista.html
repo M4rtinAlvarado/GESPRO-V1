@@ -85,7 +85,6 @@
         <div class="flex justify-between items-center mb-2">
         <label class="font-medium">Encargados</label>
         <button id="openAddEncargadoModal" class="ml-2 px-2 py-1 bg-green-500 text-white rounded">Crear</button>
-        </button>
         </div>
 
         <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-48 overflow-y-auto border p-2 rounded bg-gray-50 h-[20%]"></div>
@@ -166,11 +165,10 @@
 
     <div class="flex justify-end gap-2 mt-4">
       <button id="cancelAddEncargado" class="px-3 py-1 border rounded">Cancelar</button>
-      <button id="saveAddEncargado" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Agregar</button>
+      <button id="saveAddEncargado" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">AgregarX</button>
     </div>
   </div>
 </div>
-
 
 
 <script>
@@ -253,6 +251,11 @@ function abrirModalEditar(button) {
     document.getElementById("editModal").classList.remove("hidden");
     document.getElementById("modalOverlay").classList.remove("hidden");
     document.body.classList.add('overflow-hidden');
+
+    const searchInput = document.getElementById("modalEncargadosInput");
+    if (searchInput) {
+        searchInput.value = '';
+    }
 }
 
 function cerrarModal() {
@@ -727,9 +730,9 @@ document.getElementById("saveAddEncargado").addEventListener("click", () => {
     if (hasError) return;
 
     tempActivity.encargados.push({
-        id: enc.id,
-        nombre: enc.nombre,
-        correo: enc.correo_electronico
+        id: "", // <-- corregido
+        nombre: nombre, // <-- corregido
+        correo: correo  // <-- corregido
     });
 
     actualizarEncargadosUI();
