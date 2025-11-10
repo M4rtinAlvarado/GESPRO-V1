@@ -31,9 +31,10 @@
                         data-id="{{ act.id }}"
                         data-nombre="{{ act.nombre }}"
                         data-encargados="{% for e in act.encargados %}{{ e.nombre }}|{{ e.correo_electronico }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                        data-periodos="{% for f in act.fechas %}{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                        data-periodos="{% for f in act.fechas %}{{ f.id }}|{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"/>
                     </svg>
                 </button>
         
@@ -236,8 +237,8 @@ function abrirModalEditar(button) {
 
     const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
     tempActivity.periodos = rawPeriodos.map(p => {
-        const [f_inicio, f_fin] = p.split('|');
-        return { id: "", f_inicio, f_fin };
+        const [id, f_inicio, f_fin] = p.split('|');
+        return { id, f_inicio, f_fin };
     });
 
     console.log("Dataset encargados:", button.dataset.encargados);
@@ -628,6 +629,8 @@ document.getElementById("addPeriodo").addEventListener("click", () => {
     document.querySelectorAll("#modalPeriodosList > div").forEach(div => {
         div.classList.remove("bg-red-100", "border-red-400");
     });
+
+    if (!inicio && !fin) return;  // <-- nada que validar si ambos vacíos
 
     if (!inicio || !fin) {
         errorMsg.textContent = "Ambas fechas son obligatorias.";

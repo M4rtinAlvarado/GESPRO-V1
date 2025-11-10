@@ -246,134 +246,104 @@ def actualizar_estado(request):
             return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
     return JsonResponse({'success': False, 'error': 'Método no permitido'})   
 
-def editar_actividad(request):
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Método no permitido"}, status=405)
 
-    data = json.loads(request.body)
-    actividad_id = data.get('id')
-    nuevo_nombre = data.get('nombre')
-    periodos_request = data.get('periodos', [])
-    encargados_request = data.get('encargados', [])
 
-    # --- Obtener estado anterior ---
-    actividad_obj = get_object_or_404(ActividadBase, id=actividad_id)
-    periodos_anteriores = Fecha.objects.filter(actividad=actividad_obj, estado=True)
-    encargados_anteriores = Actividad_Encargado.objects.filter(actividad=actividad_obj, estado=True)
+def generar_diccionario_registro( data, estado_anterior_json):
+    cambios = {"actividad": {}, "encargados": [], "periodos": []}
 
-    estado_anterior_json = {
-        "id": actividad_obj.id,
-        "nombre": actividad_obj.nombre,
-        "periodos": [{"id": p.id, "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
-                      "f_fin": p.fecha_fin.strftime('%Y-%m-%d')} for p in periodos_anteriores],
-        "encargados": [{"id": e.encargado.id, "nombre": e.encargado.nombre, "correo": e.encargado.correo_electronico}
-                       for e in encargados_anteriores]
-    }
+    # --- Nombre de la actividad ---
+    nuevo_nombre = data.get("nombre")
+    if nuevo_nombre and nuevo_nombre != estado_anterior_json.get("nombre"):
+        cambios["actividad"]["nombre"] = {
+            "antes": estado_anterior_json.get("nombre"),
+            "despues": nuevo_nombre,
+            "tipo": "modificado"
+        }
 
-    cambios = {"actividad": {}, "periodos": {"modificados": [], "agregados": [], "eliminados": []},
-               "encargados": {"antes": [], "despues": [], "agregados": [], "eliminados": []}}
+    # --- Encargados ---
+    encargados_request = data.get("encargados", [])
+    encargados_anteriores = {e["id"]: e for e in estado_anterior_json.get("encargados", [])}
 
-    # --- ACTUALIZAR NOMBRE ---
-    if nuevo_nombre and nuevo_nombre != actividad_obj.nombre:
-        cambios["actividad"]["nombre"] = {"antes": actividad_obj.nombre, "despues": nuevo_nombre}
-        actividad_obj.nombre = nuevo_nombre
-        actividad_obj.save()
+    ids_en_request = []
+    for e in encargados_request:
+        eid = e.get("id")
+        ids_en_request.append(eid)
+        if not eid:
+            # agregado
+            cambios["encargados"].append({
+                "id": None,
+                "nombre": e.get("nombre"),
+                "correo": e.get("correo"),
+                "tipo": "agregado"
+            })
+        else:
+            anterior = encargados_anteriores.get(eid)
+            if anterior:
+                if anterior["nombre"] != e.get("nombre") or anterior["correo"] != e.get("correo"):
+                    cambios["encargados"].append({
+                        "id": eid,
+                        "nombre": e.get("nombre"),
+                        "correo": e.get("correo"),
+                        "tipo": "modificado"
+                    })
+    # eliminados
+    for eid, e in encargados_anteriores.items():
+        if eid not in ids_en_request:
+            cambios["encargados"].append({
+                "id": eid,
+                "nombre": e["nombre"],
+                "correo": e["correo"],
+                "tipo": "eliminado"
+            })
+            
+    # Normalizar IDs
+    def normalizar_id(pid):
+        try:
+            return int(pid)
+        except (TypeError, ValueError):
+            return None
 
-    # --- ACTUALIZAR PERIODOS ---
-    ids_presentes = []
-    periodos_anteriores_map = {str(p.id): p for p in periodos_anteriores}
+    # --- Periodos ---
+    periodos_request = data.get("periodos", [])
+    periodos_anteriores = {normalizar_id(p.get("id")): p for p in estado_anterior_json.get("periodos", []) if p.get("id")}
+    ids_periodos_request = []
 
-    for p_req in periodos_request:
-        pid = p_req.get("id")
-        f_inicio = p_req.get("f_inicio")
-        f_fin = p_req.get("f_fin")
+    for p in periodos_request:
+        if not p.get("f_inicio") and not p.get("f_fin"):
+            continue
 
-        if pid:  # actualizar existente
-            periodo_obj = get_object_or_404(Fecha, id=pid, actividad=actividad_obj)
-            modificado = False
-            detalle_mod = {"id": periodo_obj.id, "fecha_inicio": {}, "fecha_fin": {}}
-            if periodo_obj.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
-                modificado = True
-                detalle_mod["fecha_inicio"]["antes"] = periodo_obj.fecha_inicio.strftime('%Y-%m-%d')
-                detalle_mod["fecha_inicio"]["despues"] = f_inicio
-                periodo_obj.fecha_inicio = f_inicio
-            if periodo_obj.fecha_fin.strftime('%Y-%m-%d') != f_fin:
-                modificado = True
-                detalle_mod["fecha_fin"]["antes"] = periodo_obj.fecha_fin.strftime('%Y-%m-%d')
-                detalle_mod["fecha_fin"]["despues"] = f_fin
-                periodo_obj.fecha_fin = f_fin
-            periodo_obj.save()
-            if modificado:
-                cambios["periodos"]["modificados"].append(detalle_mod)
-            ids_presentes.append(str(periodo_obj.id))
-        else:  # crear nuevo
-            nuevo_p = Fecha.objects.create(
-                actividad=actividad_obj,
-                fecha_inicio=f_inicio,
-                fecha_fin=f_fin,
-                estado=True
-            )
-            cambios["periodos"]["agregados"].append({"id": None, "fecha_inicio": f_inicio, "fecha_fin": f_fin})
-            ids_presentes.append(str(nuevo_p.id))
+        pid = normalizar_id(p.get("id"))
+        ids_periodos_request.append(pid)
 
-    # marcar eliminados
-    for p_ant in periodos_anteriores:
-        if str(p_ant.id) not in ids_presentes:
-            p_ant.estado = False
-            p_ant.save()
-            cambios["periodos"]["eliminados"].append({
-                "id": p_ant.id,
-                "fecha_inicio": p_ant.fecha_inicio.strftime('%Y-%m-%d'),
-                "fecha_fin": p_ant.fecha_fin.strftime('%Y-%m-%d')
+        if pid is None:
+            # agregado
+            cambios["periodos"].append({
+                "id": None,
+                "fecha_inicio": {"antes": None, "despues": p.get("f_inicio")},
+                "fecha_fin": {"antes": None, "despues": p.get("f_fin")},
+                "tipo": "agregado"
+            })
+        else:
+            anterior = periodos_anteriores.get(pid)
+            if anterior and (anterior.get("f_inicio") != p.get("f_inicio") or anterior.get("f_fin") != p.get("f_fin")):
+                cambios["periodos"].append({
+                    "id": pid,
+                    "fecha_inicio": {"antes": anterior.get("f_inicio"), "despues": p.get("f_inicio")},
+                    "fecha_fin": {"antes": anterior.get("f_fin"), "despues": p.get("f_fin")},
+                    "tipo": "modificado"
+                })
+
+    # eliminados
+    for pid, p in periodos_anteriores.items():
+        if pid not in ids_periodos_request:
+            cambios["periodos"].append({
+                "id": pid,
+                "fecha_inicio": {"antes": p.get("f_inicio"), "despues": None},
+                "fecha_fin": {"antes": p.get("f_fin"), "despues": None},
+                "tipo": "eliminado"
             })
 
-    # --- ACTUALIZAR ENCARGADOS ---
-    ids_enc_presentes = []
-    encargados_anteriores_map = {str(e.encargado.id): e for e in encargados_anteriores}
-
-    for e_req in encargados_request:
-        eid = e_req.get("id")
-        nombre = e_req.get("nombre")
-        correo = e_req.get("correo")
-
-        if eid:  # existente
-            encargado_obj = get_object_or_404(Encargado, id=eid)
-            encargado_obj.nombre = nombre
-            encargado_obj.correo_electronico = correo
-            encargado_obj.save()
-            rel = encargados_anteriores_map.get(str(eid))
-            if rel and not rel.estado:
-                rel.estado = True
-                rel.save()
-            elif not rel:
-                Actividad_Encargado.objects.create(actividad=actividad_obj, encargado=encargado_obj, estado=True)
-            ids_enc_presentes.append(str(eid))
-        else:  # nuevo
-            nuevo_e = Encargado.objects.create(nombre=nombre, correo_electronico=correo, estado=True)
-            Actividad_Encargado.objects.create(actividad=actividad_obj, encargado=nuevo_e, estado=True)
-            cambios["encargados"]["agregados"].append({"id": None, "nombre": nombre, "correo": correo})
-            ids_enc_presentes.append(str(nuevo_e.id))
-
-    # marcar eliminados
-    for rel_ant in encargados_anteriores:
-        if str(rel_ant.encargado.id) not in ids_enc_presentes:
-            rel_ant.estado = False
-            rel_ant.save()
-            cambios["encargados"]["eliminados"].append({
-                "id": rel_ant.encargado.id,
-                "nombre": rel_ant.encargado.nombre,
-                "correo": rel_ant.encargado.correo_electronico
-            })
-
-    # registrar antes/despues completos
-    cambios["encargados"]["antes"] = [{"id": e.encargado.id, "nombre": e.encargado.nombre,
-                                       "correo": e.encargado.correo_electronico} for e in encargados_anteriores]
-    cambios["encargados"]["despues"] = encargados_request
-
-    # --- Registrar y notificar ---
-    registrar_y_notificar_cambios(actividad_obj, cambios)
-
-    return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
+    return cambios
 
 
 def editar_actividad(request):
@@ -397,6 +367,9 @@ def editar_actividad(request):
 
         #cargar json
         data = json.loads(request.body)
+        print("\n--- Datos recibidos en editar_actividad ---")
+        print(json.dumps(data, indent=4, ensure_ascii=False))
+        print("------------------------------------------\n")
 
 
         #obtener id de la actividad y el nombre
@@ -492,7 +465,7 @@ def editar_actividad(request):
             nombre = encargado_data.get('nombre')
             correo = encargado_data.get('correo')
             if encargado_id != '':
-                print("Actualizando encargado existente")
+                #print("Actualizando encargado existente")
                 # Actualizar encargado existente
                 encargado = get_object_or_404(Encargado, id=encargado_id)
                 #comparar fechas del request con las ya existentes
@@ -538,82 +511,20 @@ def editar_actividad(request):
             conteo_eliminado += 1
 
         try:
-            cambios = {}
+            cambios = generar_diccionario_registro( data, estado_anterior_json)
+            # Obtener estado actual para el correo
+            periodos_actuales = Fecha.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
+            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, estado=True)
 
-            # --- Información de la actividad ---
-            nombre_antes = estado_anterior_json.get("nombre")
-            nombre_despues = data.get("nombre")
-            cambios["actividad"] = {
-                "nombre": {"antes": nombre_antes, "despues": nombre_despues}
+            estado_actual = {
+                "nombre": actividad.nombre,
+                "encargados": [{"nombre": e.encargado.nombre, "correo": e.encargado.correo_electronico} for e in encargados_actuales],
+                "periodos": [{"f_inicio": p.fecha_inicio.strftime("%Y-%m-%d"), "f_fin": p.fecha_fin.strftime("%Y-%m-%d")} for p in periodos_actuales]
             }
 
-            # --- Encargados ---
-            enc_antes_list = estado_anterior_json.get("encargados", [])
-            enc_despues_list = data.get("encargados", [])
-
-            # IDs para detectar agregados/eliminados
-            ids_antes = {str(e["id"]) for e in enc_antes_list}
-            ids_despues = {str(e.get("id","")) for e in enc_despues_list if e.get("id")}
-
-            agregados_enc = [e for e in enc_despues_list if not e.get("id") or str(e["id"]) not in ids_antes]
-            eliminados_enc = [e for e in enc_antes_list if str(e["id"]) not in ids_despues]
-
-            cambios["encargados"] = {
-                "antes": enc_antes_list,
-                "despues": enc_despues_list,
-                "agregados": agregados_enc,
-                "eliminados": eliminados_enc
-            }
-
-            # --- Periodos ---
-            periodos_antes_list = estado_anterior_json.get("periodos", [])
-            periodos_despues_list = data.get("periodos", [])
-
-            modificados_p, agregados_p, eliminados_p = [], [], []
-
-            # Por ID: detectar modificados y eliminados
-            ids_anteriores = {str(p["id"]): p for p in periodos_antes_list if p.get("id")}
-            ids_nuevos = {str(p.get("id","")): p for p in periodos_despues_list if p.get("id")}
-
-            # Eliminados
-            for pid, p_antes in ids_anteriores.items():
-                if pid not in ids_nuevos:
-                    eliminados_p.append({
-                        "id": p_antes["id"],
-                        "fecha_inicio": p_antes["f_inicio"],
-                        "fecha_fin": p_antes["f_fin"]
-                    })
-
-            # Modificados
-            for pid, p_despues in ids_nuevos.items():
-                p_antes = ids_anteriores.get(pid)
-                if p_antes and (p_antes["f_inicio"] != p_despues["f_inicio"] or p_antes["f_fin"] != p_despues["f_fin"]):
-                    modificados_p.append({
-                        "id": p_antes["id"],
-                        "fecha_inicio": {"antes": p_antes["f_inicio"], "despues": p_despues["f_inicio"]},
-                        "fecha_fin": {"antes": p_antes["f_fin"], "despues": p_despues["f_fin"]}
-                    })
-
-            # Agregados (ID vacío o nuevo)
-            for p_despues in periodos_despues_list:
-                if not p_despues.get("id") or str(p_despues.get("id")) not in ids_anteriores:
-                    agregados_p.append({
-                        "id": None,
-                        "fecha_inicio": p_despues["f_inicio"],
-                        "fecha_fin": p_despues["f_fin"]
-                    })
-
-            cambios["periodos"] = {
-                "modificados": modificados_p,
-                "agregados": agregados_p,
-                "eliminados": eliminados_p
-            }
-
-            print("\n--- CAMBIOS DETECTADOS ---")
-            print(json.dumps(cambios, indent=4, ensure_ascii=False))
 
             # Registrar y notificar siempre
-            registrar_y_notificar_cambios(actividad, cambios)
+            registrar_y_notificar_cambios(actividad, cambios, estado_actual)
 
         except Exception as e:
             print(f"Error al registrar o notificar cambios: {e}")
