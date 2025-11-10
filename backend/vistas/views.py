@@ -38,8 +38,6 @@ def obtener_datos(request, proyecto_id):
         for fecha in actividad.fechas.filter(estado=True):
             inicio = fecha.fecha_inicio
             fin = fecha.fecha_fin
-            if inicio and fin and inicio == fin:
-                fin += timedelta(days=1)
             fechas_lista.append({
                 "id": fecha.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
@@ -79,8 +77,6 @@ def obtener_datos(request, proyecto_id):
         for fecha in actividad.fechas.filter(estado=True):
             inicio = fecha.fecha_inicio
             fin = fecha.fecha_fin
-            if inicio and fin and inicio == fin:
-                fin += timedelta(days=1)
             fechas_lista.append({
                 "id": fecha.id,
                 "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
@@ -247,8 +243,7 @@ def actualizar_estado(request):
     return JsonResponse({'success': False, 'error': 'Método no permitido'})   
 
 
-
-def generar_diccionario_registro( data, estado_anterior_json):
+def generar_diccionario_registro(data, estado_anterior_json):
     cambios = {"actividad": {}, "encargados": [], "periodos": []}
 
     # --- Nombre de la actividad ---
@@ -261,24 +256,29 @@ def generar_diccionario_registro( data, estado_anterior_json):
         }
 
     # --- Encargados ---
+    encargados_anteriores = {str(e["id"]): e for e in estado_anterior_json.get("encargados", [])}
     encargados_request = data.get("encargados", [])
-    encargados_anteriores = {e["id"]: e for e in estado_anterior_json.get("encargados", [])}
-
     ids_en_request = []
+
     for e in encargados_request:
         eid = e.get("id")
-        ids_en_request.append(eid)
-        if not eid:
-            # agregado
-            cambios["encargados"].append({
-                "id": None,
-                "nombre": e.get("nombre"),
-                "correo": e.get("correo"),
-                "tipo": "agregado"
-            })
+        str_eid = str(eid) if eid else None
+        ids_en_request.append(str_eid)
+
+        if not str_eid:  # encargado sin ID
+            # Solo agregar si no existía en la actividad antes
+            if not any(ec.get("nombre") == e.get("nombre") and ec.get("correo") == e.get("correo")
+                    for ec in estado_anterior_json.get("encargados", [])):
+                cambios["encargados"].append({
+                    "id": None,
+                    "nombre": e.get("nombre"),
+                    "correo": e.get("correo"),
+                    "tipo": "creado"
+                })
         else:
-            anterior = encargados_anteriores.get(eid)
+            anterior = encargados_anteriores.get(str_eid)
             if anterior:
+                # ya estaba en la actividad, revisar cambios de datos
                 if anterior["nombre"] != e.get("nombre") or anterior["correo"] != e.get("correo"):
                     cambios["encargados"].append({
                         "id": eid,
@@ -286,37 +286,44 @@ def generar_diccionario_registro( data, estado_anterior_json):
                         "correo": e.get("correo"),
                         "tipo": "modificado"
                     })
-    # eliminados
+            else:
+                # encargado existente agregado a la actividad
+                cambios["encargados"].append({
+                    "id": eid,
+                    "nombre": e.get("nombre"),
+                    "correo": e.get("correo"),
+                    "tipo": "agregado"
+                })
+
+    # Eliminados: los que estaban antes y ya no están en el request
     for eid, e in encargados_anteriores.items():
         if eid not in ids_en_request:
             cambios["encargados"].append({
-                "id": eid,
+                "id": int(eid) if eid.isdigit() else eid,
                 "nombre": e["nombre"],
                 "correo": e["correo"],
                 "tipo": "eliminado"
             })
-            
-    # Normalizar IDs
+
+    # --- Periodos ---
     def normalizar_id(pid):
         try:
             return int(pid)
         except (TypeError, ValueError):
             return None
 
-    # --- Periodos ---
     periodos_request = data.get("periodos", [])
     periodos_anteriores = {normalizar_id(p.get("id")): p for p in estado_anterior_json.get("periodos", []) if p.get("id")}
     ids_periodos_request = []
 
     for p in periodos_request:
         if not p.get("f_inicio") and not p.get("f_fin"):
-            continue
+            continue  # ignorar filas vacías
 
         pid = normalizar_id(p.get("id"))
         ids_periodos_request.append(pid)
 
         if pid is None:
-            # agregado
             cambios["periodos"].append({
                 "id": None,
                 "fecha_inicio": {"antes": None, "despues": p.get("f_inicio")},
@@ -522,7 +529,9 @@ def editar_actividad(request):
                 "periodos": [{"f_inicio": p.fecha_inicio.strftime("%Y-%m-%d"), "f_fin": p.fecha_fin.strftime("%Y-%m-%d")} for p in periodos_actuales]
             }
 
-
+            print("\n--- Cambios detectados ---")
+            print(json.dumps(cambios, indent=4, ensure_ascii=False))
+            print("------------------------------------------\n")
             # Registrar y notificar siempre
             registrar_y_notificar_cambios(actividad, cambios, estado_actual)
 
@@ -531,6 +540,48 @@ def editar_actividad(request):
 
 
     return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
+
+
+def obtener_historial(request, actividad_id):
+    """
+    Obtiene todos los registros de cambios de una actividad.
+    Devuelve una lista de cambios ordenados por fecha descendente.
+    """
+    if request.method == 'GET':
+        try:
+            # Obtener la actividad
+            actividad = get_object_or_404(ActividadBase, id=actividad_id)
+            
+            # Obtener todos los registros de cambios (ordenado por fecha_cambio desc)
+            registros = actividad.registros_cambio.all()
+            
+            if not registros.exists():
+                # No hay historial
+                return JsonResponse([], safe=False)
+            
+            # Construir lista de cambios con fecha
+            historial = []
+            for registro in registros:
+                print("Registro ID:", registro.id)
+                print("Fecha de cambio:", registro.fecha_cambio)
+                print("Cambios:", registro.cambios)
+                historial.append({
+                    'fecha_cambio': registro.fecha_cambio.strftime('%Y-%m-%d %H:%M:%S'),
+                    'cambios': registro.cambios
+                })
+
+
+            print("\n--- Historial completo ---")
+            print(json.dumps(historial, indent=4, ensure_ascii=False))
+            print("------------------------------------------\n")
+            # Retornar la lista completa
+            return JsonResponse(historial, safe=False)
+            
+        except Exception as e:
+            print(f"Error al obtener historial: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Método no permitido"}, status=405)
 
 
 

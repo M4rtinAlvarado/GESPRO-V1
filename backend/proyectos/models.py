@@ -168,7 +168,7 @@ class ActividadDifusion_Linea(models.Model):
 
 class RegistroCambioActividad(models.Model):
     actividad = models.ForeignKey(
-        'ActividadBase',  # o tu modelo base de actividades
+        'ActividadBase',
         on_delete=models.CASCADE,
         related_name='registros_cambio'
     )

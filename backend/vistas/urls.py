@@ -9,6 +9,7 @@ urlpatterns = [
     #path("actualizar_estado/<int:actividad_id>/", views.actualizar_estado_actividad, name="actualizar_estado_actividad"),
     path("actualizar_estado/", views.actualizar_estado, name="actualizar_estado"),
     path('editar_actividad/', views.editar_actividad, name='editar_actividad'),
+    path('historial/<int:actividad_id>/', views.obtener_historial, name='obtener_historial'),
 
 
 ]
