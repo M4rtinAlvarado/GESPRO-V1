@@ -324,13 +324,8 @@ def editar_actividad(request):
             actividad.save()
 
         # Actualizar periodos si se envió
-        #recorrer cada periodo
-        #traer de la base de datos
-        #comparar fechas y actualizar
-        #si id_perido es None, crear nuevo periodo
         periodos = data.get('periodos',[])
         ids_presentes_en_request = []
-        # print("Periodos recibidos:", periodos)
         for periodo_data in periodos:            
             periodo_id = periodo_data.get('id')
             if periodo_id != '':
@@ -374,7 +369,6 @@ def editar_actividad(request):
 
         encargados = data.get('encargados',[])
         ids_encargados_en_request = []
-        # print("Periodos recibidos:", periodos)
         for encargado_data in encargados:            
             encargado_id = encargado_data.get('id')
             if encargado_id != '':
@@ -430,12 +424,47 @@ def editar_actividad(request):
             relacion.save()
             conteo_eliminado += 1
         print(f"encargados eliminados: {conteo_eliminado}") # Muestra en consola
+
+        try:
+            cambios = {}
+
+            # --- Cambio de nombre ---
+            nombre_antes = estado_anterior_json.get("nombre")
+            nombre_despues = data.get("nombre")
+            if nombre_antes != nombre_despues:
+                cambios["actividad"] = {
+                    "nombre": {"antes": nombre_antes, "despues": nombre_despues}
+                }
+
+            # --- Cambios en encargados ---
+            enc_antes = {e["nombre"]: e for e in estado_anterior_json.get("encargados", [])}
+            enc_despues = {e["nombre"]: e for e in data.get("encargados", [])}
+            if enc_antes != enc_despues:
+                cambios["encargados"] = {
+                    "antes": list(enc_antes.values()),
+                    "despues": list(enc_despues.values())
+                }
+
+            # --- Cambios en periodos ---
+            periodos_antes = {str(p["id"]): p for p in estado_anterior_json.get("periodos", [])}
+            periodos_despues = {str(p.get("id", "")): p for p in data.get("periodos", [])}
+            if periodos_antes != periodos_despues:
+                cambios["periodos"] = {
+                    "antes": list(periodos_antes.values()),
+                    "despues": list(periodos_despues.values())
+                }
+
+            # Si hubo algo que cambió, registrar y notificar
+            if cambios:
+                from alerta_cambios import registrar_y_notificar_cambios
+                registrar_y_notificar_cambios(actividad, cambios)
+            else:
+                print("No se detectaron cambios relevantes para notificar.")
+        except Exception as e:
+            print(f"Error al registrar o notificar cambios: {e}")
+        # =====================================================
+
     return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
 
 
 
-
-def enviar_correo_cambios(info_antes, info_despues):
-    print("=== CAMBIOS EN ACTIVIDAD ===")
-    print("Antes:", info_antes)
-    print("Después:", info_despues)
