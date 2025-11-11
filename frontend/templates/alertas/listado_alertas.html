@@ -5,6 +5,12 @@
 
 {% block content %}
 {% csrf_token %}
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none">
+    <!-- Los toasts aparecerán aquí -->
+</div>
+
 <div class="container mx-auto mt-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 class="text-2xl font-bold">Alertas por Actividad</h2>
@@ -93,14 +99,15 @@
                             <td class="px-6 py-4 text-sm text-gray-900">
                                 <div class="flex items-center gap-2">
                                     {% if actividad.alertas.all %}
-                                        <div class="max-w-md overflow-x-auto">
-                                            <div class="flex gap-2 pb-1">
+                                        <div class="max-w-md overflow-x-auto py-2">
+                                            <div class="flex gap-2 px-2">
                                                 {% for alerta in actividad.alertas.all %}
-                                                    <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-16 rounded-lg shadow-md overflow-hidden border
-                                                                {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500{% endif %}"
-                                                         data-alerta-id="{{ alerta.id }}"
-                                                         data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
-                                                         data-alerta-enviado="{{ alerta.enviado|lower }}">
+                                                    <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-16 rounded-lg shadow-md overflow-hidden border transition-transform duration-200
+                                                                {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500 cursor-pointer hover:scale-110{% endif %}"
+                                                        data-alerta-id="{{ alerta.id }}"
+                                                        data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
+                                                        data-alerta-enviado="{{ alerta.enviado|lower }}"
+                                                        {% if not alerta.enviado %}title="Click para editar"{% endif %}>
                                                         <!-- Mes y año arriba -->
                                                         <div class="w-full text-center text-white text-[10px] font-bold uppercase py-1
                                                                     {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
@@ -367,8 +374,151 @@
     </div>
 </div>
 
+<!-- Modal Editar Alerta Individual -->
+<div id="modal-editar-alerta" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-20 mx-auto p-8 border w-[800px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-2xl font-bold text-center mb-6">Editar Alerta</h3>
+        
+        <div class="space-y-4 mb-6">
+            <!-- Selector de tipo de edición -->
+            <div class="flex items-center gap-4">
+                <label class="text-sm font-medium w-40">Tipo de edición</label>
+                <select id="editar-individual-tipo" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Tipo de edición">
+                    <option value="desplazar">Desplazar desde fecha original</option>
+                    <option value="fecha_exacta">Establecer fecha exacta</option>
+                </select>
+            </div>
+
+            <!-- Controles para desplazar -->
+            <div id="editar-individual-desplazar-container" class="space-y-2">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-40">Desplazar alerta</label>
+                    <div class="flex items-center gap-2 flex-1">
+                        <input type="number" id="editar-individual-offset-valor" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
+                        <select id="editar-individual-offset-unidad" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
+                            <option value="minutos">Minutos</option>
+                            <option value="horas">Horas</option>
+                            <option value="dias" selected>Días</option>
+                            <option value="semanas">Semanas</option>
+                            <option value="meses">Meses</option>
+                        </select>
+                        <select id="editar-individual-direccion" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Dirección">
+                            <option value="antes">Antes de la fecha original</option>
+                            <option value="despues">Después de la fecha original</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles para fecha exacta -->
+            <div id="editar-individual-fecha-exacta-container" class="hidden">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-40">Fecha y hora</label>
+                    <input type="datetime-local" id="editar-individual-fecha-exacta" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Fecha exacta">
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje de error de validación -->
+        <div id="editar-individual-error" class="hidden mb-4 bg-red-50 border border-red-200 rounded p-3">
+            <p class="text-sm text-red-700 font-medium"></p>
+        </div>
+
+        <!-- Información de la alerta -->
+        <div class="mb-6">
+            <h4 class="text-sm font-semibold mb-3">Alerta seleccionada:</h4>
+            <div class="border border-gray-200 rounded">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Nombre Actividad</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Alerta Anterior</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Alerta Nueva</th>
+                        </tr>
+                    </thead>
+                    <tbody id="editar-individual-alerta-info" class="bg-white">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-between gap-3">
+            <button type="button" id="btn-eliminar-alerta-individual" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold">
+                Eliminar
+            </button>
+            <div class="flex gap-3">
+                <button type="button" id="btn-cancelar-editar-individual" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                    Cancelar
+                </button>
+                <button type="button" id="btn-confirmar-editar-individual" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">
+                    Desplazar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Script para seleccionar/deseleccionar todo -->
 <script>
+    // Función para mostrar toasts
+    function showToast(message, type = 'success') {
+        console.log('showToast llamado:', message, type); // DEBUG
+        const toastContainer = document.getElementById('toast-container');
+        console.log('Toast container:', toastContainer); // DEBUG
+        
+        if (!toastContainer) {
+            console.error('No se encontró el contenedor de toasts');
+            return;
+        }
+        
+        const toast = document.createElement('div');
+        
+        // Estilos según el tipo (similar a los mensajes de Django)
+        let bgColor, textColor, borderColor, icon;
+        
+        if (type === 'success') {
+            bgColor = 'bg-green-100';
+            textColor = 'text-green-700';
+            borderColor = 'border-green-300';
+            icon = '✓';
+        } else if (type === 'error') {
+            bgColor = 'bg-red-100';
+            textColor = 'text-red-700';
+            borderColor = 'border-red-300';
+            icon = '✕';
+        } else {
+            bgColor = 'bg-yellow-100';
+            textColor = 'text-yellow-800';
+            borderColor = 'border-yellow-300';
+            icon = 'ℹ';
+        }
+        
+        toast.className = `${bgColor} ${textColor} border ${borderColor} px-4 py-3 rounded-lg text-sm font-medium shadow-lg flex items-center gap-3 min-w-[300px] pointer-events-auto`;
+        toast.style.cssText = 'transform: translateX(400px); opacity: 0; transition: all 0.3s ease-in-out;';
+        toast.innerHTML = `
+            <span class="text-lg font-bold">${icon}</span>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.remove()" class="${textColor} hover:opacity-70 font-bold text-xl leading-none">×</button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Animar entrada
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        }, 10);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(400px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
     const selectAll = document.getElementById('select-all');
     const checkboxes = document.querySelectorAll('.row-checkbox');
     const actionButtons = document.querySelectorAll('.bulk-action-btn');
@@ -559,16 +709,20 @@
             // Obtener fechas límite de la actividad para validación
             const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
             const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            const ahora = new Date();
             
-            // Validar que la alerta esté dentro del rango
+            // Validar que la alerta esté dentro del rango y no sea una fecha pasada
             let mensajeError = '';
             let colorClase = 'text-gray-900';
             
-            if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
-                mensajeError = '<span class="text-red-600 font-semibold">Previo a Fecha Inicio</span>';
+            if (fechaAlerta && fechaAlerta < ahora) {
+                mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
+                colorClase = 'text-red-600';
+            } else if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
+                mensajeError = '<span class="text-red-600 font-semibold">La alerta es anterior al inicio de la actividad</span>';
                 colorClase = 'text-red-600';
             } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
-                mensajeError = '<span class="text-red-600 font-semibold">Excede Fecha Límite</span>';
+                mensajeError = '<span class="text-red-600 font-semibold">La alerta es posterior al término de la actividad</span>';
                 colorClase = 'text-red-600';
             }
             
@@ -670,17 +824,25 @@
             }
             
             if (fechaAlerta) {
-                // Validar que la alerta esté dentro del rango de la actividad
+                // Validar que la alerta no sea una fecha pasada
+                const ahora = new Date();
                 const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
                 const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
                 
-                // Verificar si está fuera de rango
+                // Verificar si la fecha ya pasó
+                if (fechaAlerta < ahora) {
+                    console.warn(`Alerta inválida para ${nombreActividad}: la fecha calculada ya pasó`);
+                    alertasInvalidas++;
+                    return; // Skip esta alerta
+                }
+                
+                // Verificar si está fuera de rango de la actividad
                 if (fechaInicioBase && fechaAlerta < fechaInicioBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: previo a fecha inicio`);
+                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio de la actividad`);
                     alertasInvalidas++;
                     return; // Skip esta alerta
                 } else if (fechaFinBase && fechaAlerta > fechaFinBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: excede fecha límite`);
+                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es posterior al término de la actividad`);
                     alertasInvalidas++;
                     return; // Skip esta alerta
                 }
@@ -722,24 +884,36 @@
             })
             .then(response => {
                 console.log('Response status:', response.status); // DEBUG
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 return response.json();
             })
             .then(data => {
                 console.log('Response data:', data); // DEBUG
-                if (data.status === 'success') {
-                    // Recargar la página para ver las nuevas alertas
-                    window.location.reload();
+                if (data.success) {
+                    modalCrear.classList.add('hidden');
+                    const cantidad = alertas.length;
+                    const plural = cantidad === 1 ? 'alerta fue creada' : 'alertas fueron creadas';
+                    showToast(`${cantidad} ${plural} correctamente`, 'success');
+                    // Recargar la página después de mostrar el toast
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert('Error al crear alertas: ' + (data.message || 'Error desconocido'));
+                    showToast('Error al crear las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al crear alertas');
+                showToast('Error al crear las alertas: ' + error.message, 'error');
             });
         } else {
             console.log('No hay alertas para enviar'); // DEBUG
-            alert('No se pudieron calcular las fechas de las alertas');
+            if (alertasInvalidas > 0) {
+                const plural = alertasInvalidas === 1 ? 'alerta no pudo' : 'alertas no pudieron';
+                showToast(`${alertasInvalidas} ${plural} ser creada(s). Las fechas calculadas ya pasaron o están fuera del período de la actividad.`, 'error');
+            } else {
+                showToast('No se pudieron calcular las fechas de las alertas. Verifica los datos ingresados.', 'error');
+            }
         }
     });
 </script>
@@ -822,10 +996,10 @@
                 
                 if (fechaNueva && fechaInicioBase && fechaNueva < fechaInicioBase) {
                     esValida = false;
-                    mensajeError = '⚠ Previo a Fecha Inicio';
+                    mensajeError = 'Previo a Fecha Inicio';
                 } else if (fechaNueva && fechaFinBase && fechaNueva > fechaFinBase) {
                     esValida = false;
-                    mensajeError = '⚠ Excede Fecha Límite';
+                    mensajeError = 'Excede Fecha Límite';
                 }
                 
                 // Agrupar por actividad
@@ -993,20 +1167,27 @@
         })
         .then(response => {
             console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
         .then(data => {
             console.log('Response data:', data);
-            if (data.status === 'success') {
-                // Recargar la página para ver las alertas actualizadas
-                window.location.reload();
+            if (data.success) {
+                modalConfirmacionDesplazar.classList.add('hidden');
+                const totalAlertas = alertasADesplazar.reduce((sum, act) => sum + act.alertas.length, 0);
+                const plural = totalAlertas === 1 ? 'alerta fue desplazada' : 'alertas fueron desplazadas';
+                showToast(`${totalAlertas} ${plural} correctamente`, 'success');
+                // Recargar la página después de mostrar el toast
+                setTimeout(() => window.location.reload(), 1500);
             } else {
-                alert('Error al desplazar alertas: ' + (data.message || 'Error desconocido'));
+                showToast('Error al desplazar las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al desplazar alertas');
+            showToast('Error al desplazar las alertas: ' + error.message, 'error');
         });
     });
 </script>
@@ -1147,20 +1328,340 @@
         })
         .then(response => {
             console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
         .then(data => {
             console.log('Response data:', data);
-            if (data.status === 'success') {
-                // Recargar la página para ver las alertas eliminadas
-                window.location.reload();
+            if (data.success) {
+                modalConfirmacionEliminar.classList.add('hidden');
+                const totalAlertas = idsAlertas.length;
+                const plural = totalAlertas === 1 ? 'alerta fue eliminada' : 'alertas fueron eliminadas';
+                showToast(` ${totalAlertas} ${plural} correctamente`, 'success');
+                // Recargar la página después de mostrar el toast
+                setTimeout(() => window.location.reload(), 1500);
             } else {
-                alert('Error al eliminar alertas: ' + (data.message || 'Error desconocido'));
+                showToast('Error al eliminar las alertas: ' + (data.mensaje || 'Error desconocido'), 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar alertas');
+            showToast('Error al eliminar las alertas: ' + error.message, 'error');
+        });
+    });
+</script>
+
+<!-- Script para modal de editar alerta individual -->
+<script>
+    const modalEditarIndividual = document.getElementById('modal-editar-alerta');
+    const btnCancelarEditarIndividual = document.getElementById('btn-cancelar-editar-individual');
+    const btnConfirmarEditarIndividual = document.getElementById('btn-confirmar-editar-individual');
+    const btnEliminarIndividual = document.getElementById('btn-eliminar-alerta-individual');
+    
+    const editarIndividualTipo = document.getElementById('editar-individual-tipo');
+    const editarIndividualDesplazarContainer = document.getElementById('editar-individual-desplazar-container');
+    const editarIndividualFechaExactaContainer = document.getElementById('editar-individual-fecha-exacta-container');
+    const editarIndividualFechaExacta = document.getElementById('editar-individual-fecha-exacta');
+    const editarIndividualOffsetValor = document.getElementById('editar-individual-offset-valor');
+    const editarIndividualOffsetUnidad = document.getElementById('editar-individual-offset-unidad');
+    const editarIndividualDireccion = document.getElementById('editar-individual-direccion');
+    const editarIndividualAlertaInfo = document.getElementById('editar-individual-alerta-info');
+    const editarIndividualError = document.getElementById('editar-individual-error');
+    
+    let alertaIndividualActual = null;
+    
+    // Event listener para abrir modal al hacer click en alertas pendientes
+    document.addEventListener('click', function(e) {
+        const alertaCard = e.target.closest('.alerta-card');
+        if (alertaCard && alertaCard.dataset.alertaEnviado === 'false') {
+            abrirModalEditarIndividual(alertaCard);
+        }
+    });
+    
+    function abrirModalEditarIndividual(alertaCard) {
+        // Obtener datos de la alerta
+        const alertaId = alertaCard.dataset.alertaId;
+        const alertaFecha = alertaCard.dataset.alertaFecha;
+        
+        // Obtener datos de la actividad
+        const row = alertaCard.closest('tr');
+        const actividadId = row.dataset.actividadId;
+        const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+        
+        // Obtener fechas de inicio y fin de la actividad
+        const fechaInicioText = row.querySelector('td:nth-child(4)').textContent.trim();
+        const fechaFinText = row.querySelector('td:nth-child(5)').textContent.trim();
+        
+        // Parsear fecha original
+        const [fechaParte, horaParte] = alertaFecha.split(' ');
+        const [ano, mes, dia] = fechaParte.split('-').map(Number);
+        const [horas, minutos, segundos] = horaParte.split(':').map(Number);
+        const fechaOriginal = new Date(ano, mes - 1, dia, horas, minutos, segundos || 0);
+        
+        // Parsear fechas de la actividad
+        let fechaInicio = null;
+        let fechaFin = null;
+        
+        if (fechaInicioText && fechaInicioText !== 'No definida') {
+            const [diaI, mesI, anoI] = fechaInicioText.split('/').map(Number);
+            fechaInicio = new Date(anoI, mesI - 1, diaI);
+        }
+        
+        if (fechaFinText && fechaFinText !== 'No definida') {
+            const [diaF, mesF, anoF] = fechaFinText.split('/').map(Number);
+            fechaFin = new Date(anoF, mesF - 1, diaF, 23, 59, 59); // Fin del día
+        }
+        
+        // Guardar alerta actual
+        alertaIndividualActual = {
+            alertaId: alertaId,
+            actividadId: actividadId,
+            nombreActividad: nombreActividad,
+            fechaOriginal: fechaOriginal,
+            fechaInicio: fechaInicio,
+            fechaFin: fechaFin
+        };
+        
+        // Resetear valores
+        editarIndividualTipo.value = 'desplazar';
+        editarIndividualOffsetValor.value = 1;
+        editarIndividualOffsetUnidad.value = 'dias';
+        editarIndividualDireccion.value = 'antes';
+        editarIndividualFechaExacta.value = '';
+        
+        // Mostrar contenedor correcto
+        toggleEditarIndividualContainers();
+        
+        // Actualizar tabla
+        actualizarTablaEditarIndividual();
+        
+        // Mostrar modal
+        modalEditarIndividual.classList.remove('hidden');
+    }
+    
+    function toggleEditarIndividualContainers() {
+        if (editarIndividualTipo.value === 'desplazar') {
+            editarIndividualDesplazarContainer.classList.remove('hidden');
+            editarIndividualFechaExactaContainer.classList.add('hidden');
+        } else {
+            editarIndividualDesplazarContainer.classList.add('hidden');
+            editarIndividualFechaExactaContainer.classList.remove('hidden');
+        }
+        actualizarTablaEditarIndividual();
+    }
+    
+    function actualizarTablaEditarIndividual() {
+        if (!alertaIndividualActual) return;
+        
+        let fechaNueva;
+        let esValida = true;
+        let mensajeError = '';
+        
+        if (editarIndividualTipo.value === 'desplazar') {
+            const offsetVal = parseInt(editarIndividualOffsetValor.value) || 0;
+            const unidad = editarIndividualOffsetUnidad.value;
+            const direccion = editarIndividualDireccion.value;
+            
+            fechaNueva = calcularFechaAlerta(
+                alertaIndividualActual.fechaOriginal, 
+                offsetVal, 
+                unidad, 
+                direccion === 'antes'
+            );
+        } else {
+            // Fecha exacta
+            if (editarIndividualFechaExacta.value) {
+                fechaNueva = new Date(editarIndividualFechaExacta.value);
+            } else {
+                fechaNueva = alertaIndividualActual.fechaOriginal;
+            }
+        }
+        
+        // VALIDACIONES
+        const ahora = new Date();
+        
+        // 1. Validar que no sea en el pasado
+        if (fechaNueva < ahora) {
+            esValida = false;
+            mensajeError = '⚠️ La fecha calculada está en el pasado. Las alertas deben programarse para el futuro.';
+        }
+        
+        // 2. Validar que no sea antes de la fecha de inicio (si existe)
+        if (esValida && alertaIndividualActual.fechaInicio && fechaNueva < alertaIndividualActual.fechaInicio) {
+            esValida = false;
+            mensajeError = '⚠️ La alerta no puede ser anterior a la fecha de inicio de la actividad.';
+        }
+        
+        // 3. Validar que no sea después de la fecha de fin (si existe)
+        if (esValida && alertaIndividualActual.fechaFin && fechaNueva > alertaIndividualActual.fechaFin) {
+            esValida = false;
+            mensajeError = '⚠️ La alerta no puede ser posterior a la fecha de término de la actividad.';
+        }
+        
+        // Mostrar u ocultar error
+        if (esValida) {
+            editarIndividualError.classList.add('hidden');
+            btnConfirmarEditarIndividual.disabled = false;
+            btnConfirmarEditarIndividual.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            editarIndividualError.classList.remove('hidden');
+            editarIndividualError.querySelector('p').textContent = mensajeError;
+            btnConfirmarEditarIndividual.disabled = true;
+            btnConfirmarEditarIndividual.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        
+        // Actualizar tabla con color según validez
+        const colorClase = esValida ? 'text-gray-900' : 'text-red-600';
+        
+        editarIndividualAlertaInfo.innerHTML = `
+            <tr>
+                <td class="px-4 py-3 text-sm text-gray-900">${alertaIndividualActual.nombreActividad}</td>
+                <td class="px-4 py-3 text-sm text-center text-gray-700">${formatearFecha(alertaIndividualActual.fechaOriginal)}</td>
+                <td class="px-4 py-3 text-sm text-center font-semibold ${colorClase}">${formatearFecha(fechaNueva)}</td>
+            </tr>
+        `;
+    }
+    
+    // Event listeners para actualizar la tabla
+    editarIndividualTipo.addEventListener('change', toggleEditarIndividualContainers);
+    editarIndividualOffsetValor.addEventListener('input', actualizarTablaEditarIndividual);
+    editarIndividualOffsetUnidad.addEventListener('change', actualizarTablaEditarIndividual);
+    editarIndividualDireccion.addEventListener('change', actualizarTablaEditarIndividual);
+    editarIndividualFechaExacta.addEventListener('change', actualizarTablaEditarIndividual);
+    
+    // Cerrar modal
+    btnCancelarEditarIndividual.addEventListener('click', function() {
+        modalEditarIndividual.classList.add('hidden');
+    });
+    
+    modalEditarIndividual.addEventListener('click', function(e) {
+        if (e.target === modalEditarIndividual) {
+            modalEditarIndividual.classList.add('hidden');
+        }
+    });
+    
+    // Desplazar alerta
+    btnConfirmarEditarIndividual.addEventListener('click', function() {
+        if (!alertaIndividualActual || this.disabled) return;
+        
+        let fechaNueva;
+        
+        if (editarIndividualTipo.value === 'desplazar') {
+            const offsetVal = parseInt(editarIndividualOffsetValor.value) || 0;
+            const unidad = editarIndividualOffsetUnidad.value;
+            const direccion = editarIndividualDireccion.value;
+            
+            fechaNueva = calcularFechaAlerta(
+                alertaIndividualActual.fechaOriginal, 
+                offsetVal, 
+                unidad, 
+                direccion === 'antes'
+            );
+        } else {
+            // Fecha exacta
+            if (!editarIndividualFechaExacta.value) {
+                showToast('Por favor selecciona una fecha y hora', 'error');
+                return;
+            }
+            fechaNueva = new Date(editarIndividualFechaExacta.value);
+        }
+        
+        // Formatear fecha
+        const year = fechaNueva.getFullYear();
+        const month = String(fechaNueva.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaNueva.getDate()).padStart(2, '0');
+        const hours = String(fechaNueva.getHours()).padStart(2, '0');
+        const minutes = String(fechaNueva.getMinutes()).padStart(2, '0');
+        const seconds = String(fechaNueva.getSeconds()).padStart(2, '0');
+        const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        
+        // Construir payload
+        const payload = [{
+            actividad: alertaIndividualActual.actividadId,
+            alertas: [{
+                id_alerta: alertaIndividualActual.alertaId,
+                fecha: fechaFormateada
+            }]
+        }];
+        
+        console.log('Payload desplazar individual:', payload);
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        fetch('{% url "modificar_alertas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                modalEditarIndividual.classList.add('hidden');
+                showToast('Alerta desplazada correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Error al desplazar la alerta: ' + (data.mensaje || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error al desplazar la alerta: ' + error.message, 'error');
+        });
+    });
+    
+    // Eliminar alerta
+    btnEliminarIndividual.addEventListener('click', function() {
+        if (!alertaIndividualActual) return;
+        
+        if (!confirm('¿Estás seguro de que deseas eliminar esta alerta?')) {
+            return;
+        }
+        
+        // Formato correcto esperado por el backend: {'alertas_eliminar': ['24']}
+        const payload = {
+            alertas_eliminar: [alertaIndividualActual.alertaId]
+        };
+        
+        console.log('Payload eliminar individual:', payload);
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        fetch('{% url "eliminar_alertas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                modalEditarIndividual.classList.add('hidden');
+                showToast('Alerta eliminada correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Error al eliminar la alerta: ' + (data.mensaje || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error al eliminar la alerta: ' + error.message, 'error');
         });
     });
 </script>

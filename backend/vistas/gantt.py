@@ -154,16 +154,16 @@ def _calcular_posiciones_actividades(actividades, start_date, week_width):
 
 
 def _escalar_posicion_mensual(left_px_semanal):
-    return int((left_px_semanal * 35) / 100)
+    return int((left_px_semanal * 25) / 100)
 
 
 def _calcular_ancho_mensual(width_px_semanal):
-    width_escalado = int((width_px_semanal * 35) / 100)
-    return max(width_escalado, 25)
+    width_escalado = int((width_px_semanal * 25) / 100)
+    return max(width_escalado, 18)
 
 
 def _calcular_ancho_mensual_real(semanas_ocupadas):
     """Calcula el ancho real para vista mensual basado en semanas ocupadas"""
-    ancho_por_semana = 35  # 35px por semana en vista mensual
+    ancho_por_semana = 25  # 25px por semana en vista mensual
     ancho_total = semanas_ocupadas * ancho_por_semana
-    return max(ancho_total, 25)  # Mínimo 25px
+    return max(ancho_total, 18)  # Mínimo 18px
