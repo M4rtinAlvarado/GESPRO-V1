@@ -134,7 +134,11 @@
 
                                     <!-- Boton agregar alerta -->
                                     <button type="button"
-                                            class="flex-shrink-0 bg-blue-950 hover:bg-blue-600 text-white font-bold px-2 py-1 rounded-full text-sm">
+                                            class="btn-agregar-alerta flex-shrink-0 bg-blue-950 hover:bg-blue-600 text-white font-bold px-2 py-1 rounded-full text-sm"
+                                            data-actividad-id="{{ actividad.id }}"
+                                            data-actividad-nombre="{{ actividad.nombre }}"
+                                            data-fecha-inicio="{% if actividad.fecha_inicio %}{{ actividad.fecha_inicio|date:'Y-m-d' }}{% endif %}"
+                                            data-fecha-fin="{% if actividad.fecha_limite %}{{ actividad.fecha_limite|date:'Y-m-d' }}{% endif %}">
                                         +
                                     </button>
                                 </div>
@@ -369,6 +373,91 @@
             </button>
             <button type="button" id="btn-confirmar-confirmacion-eliminar" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold">
                 Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Alerta Individual -->
+<div id="modal-crear-alerta-individual" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-20 mx-auto p-8 border w-[700px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-2xl font-bold text-center mb-6">Crear alerta</h3>
+        
+        <div class="space-y-4 mb-6">
+            <!-- Selector tipo de fecha base -->
+            <div class="flex items-center gap-4">
+                <label class="text-sm font-medium w-32">A partir de</label>
+                <select id="tipo-fecha-individual" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Tipo de fecha base">
+                    <option value="fecha_especifica">Fecha específica</option>
+                    <option value="fecha_inicio">Fecha de inicio (Alerta después del inicio)</option>
+                    <option value="fecha_fin">Fecha de término (Alerta antes del término)</option>
+                </select>
+            </div>
+
+            <!-- Input fecha específica con hora -->
+            <div id="fecha-especifica-container-individual" class="space-y-2">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32">Fecha y hora</label>
+                    <input type="datetime-local" id="fecha-especifica-individual" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Fecha específica">
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32"></label>
+                    <p class="text-xs text-gray-500">La alerta se creará en la fecha y hora especificada</p>
+                </div>
+            </div>
+
+            <!-- Offset temporal para fechas de inicio/fin -->
+            <div id="offset-container-individual" class="hidden space-y-2">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32">Tiempo</label>
+                    <div class="flex items-center gap-2 flex-1">
+                        <input type="number" id="offset-valor-individual" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
+                        <select id="offset-unidad-individual" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
+                            <option value="minutos">Minutos</option>
+                            <option value="horas">Horas</option>
+                            <option value="dias" selected>Días</option>
+                            <option value="semanas">Semanas</option>
+                            <option value="meses">Meses</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32"></label>
+                    <p id="label-explicacion-individual" class="text-xs text-gray-500"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje de error de validación -->
+        <div id="crear-individual-error" class="hidden mb-4 bg-red-50 border border-red-200 rounded p-3">
+            <p class="text-sm text-red-700 font-medium"></p>
+        </div>
+
+        <!-- Información de la actividad -->
+        <div class="mb-6">
+            <h4 class="text-sm font-semibold mb-3">Actividad:</h4>
+            <div class="border border-gray-200 rounded">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Nombre Actividad</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">Nueva Alerta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crear-individual-alerta-info" class="bg-white divide-y divide-gray-200">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-crear-individual" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-crear-individual" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">
+                Confirmar
             </button>
         </div>
     </div>
@@ -675,7 +764,8 @@
         
         if (fechaTexto && fechaTexto !== 'No definida') {
             const [dia, mes, ano] = fechaTexto.split('/');
-            return new Date(`${ano}-${mes}-${dia}T00:00:00`);
+            // Establecer hora a las 9:00 AM para fechas de inicio y fin
+            return new Date(`${ano}-${mes}-${dia}T09:00:00`);
         }
         
         return null;
@@ -1349,6 +1439,261 @@
         .catch(error => {
             console.error('Error:', error);
             showToast('Error al eliminar las alertas: ' + error.message, 'error');
+        });
+    });
+</script>
+
+<!-- Script para modal de crear alerta individual -->
+<script>
+    const modalCrearIndividual = document.getElementById('modal-crear-alerta-individual');
+    const btnCancelarCrearIndividual = document.getElementById('btn-cancelar-crear-individual');
+    const btnConfirmarCrearIndividual = document.getElementById('btn-confirmar-crear-individual');
+    const crearIndividualAlertaInfo = document.getElementById('crear-individual-alerta-info');
+    const crearIndividualError = document.getElementById('crear-individual-error');
+    
+    const tipoFechaIndividual = document.getElementById('tipo-fecha-individual');
+    const fechaEspecificaContainerIndividual = document.getElementById('fecha-especifica-container-individual');
+    const fechaEspecificaIndividual = document.getElementById('fecha-especifica-individual');
+    const offsetContainerIndividual = document.getElementById('offset-container-individual');
+    const offsetValorIndividual = document.getElementById('offset-valor-individual');
+    const offsetUnidadIndividual = document.getElementById('offset-unidad-individual');
+    const labelExplicacionIndividual = document.getElementById('label-explicacion-individual');
+    
+    let actividadActualCrear = null;
+    
+    // Event listener para abrir modal desde el botón +
+    document.addEventListener('click', function(e) {
+        const btnAgregar = e.target.closest('.btn-agregar-alerta');
+        if (btnAgregar) {
+            abrirModalCrearIndividual(btnAgregar);
+        }
+    });
+    
+    function abrirModalCrearIndividual(btnAgregar) {
+        // Obtener datos de la actividad
+        const actividadId = btnAgregar.dataset.actividadId;
+        const nombreActividad = btnAgregar.dataset.actividadNombre;
+        const fechaInicio = btnAgregar.dataset.fechaInicio;
+        const fechaFin = btnAgregar.dataset.fechaFin;
+        
+        // Guardar actividad actual con hora a las 9:00 AM para fechas de inicio y fin
+        actividadActualCrear = {
+            actividadId: actividadId,
+            nombreActividad: nombreActividad,
+            fechaInicio: fechaInicio ? new Date(fechaInicio + 'T09:00:00') : null,
+            fechaFin: fechaFin ? new Date(fechaFin + 'T09:00:00') : null
+        };
+        
+        // Establecer fecha y hora actual por defecto
+        const ahora = new Date();
+        const year = ahora.getFullYear();
+        const month = String(ahora.getMonth() + 1).padStart(2, '0');
+        const day = String(ahora.getDate()).padStart(2, '0');
+        const hours = String(ahora.getHours()).padStart(2, '0');
+        const minutes = String(ahora.getMinutes()).padStart(2, '0');
+        fechaEspecificaIndividual.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Resetear valores
+        tipoFechaIndividual.value = 'fecha_especifica';
+        offsetValorIndividual.value = 1;
+        offsetUnidadIndividual.value = 'dias';
+        
+        // Mostrar contenedor correcto
+        toggleCrearIndividualContainers();
+        
+        // Actualizar tabla
+        actualizarTablaCrearIndividual();
+        
+        // Mostrar modal
+        modalCrearIndividual.classList.remove('hidden');
+    }
+    
+    function toggleCrearIndividualContainers() {
+        if (tipoFechaIndividual.value === 'fecha_especifica') {
+            fechaEspecificaContainerIndividual.classList.remove('hidden');
+            offsetContainerIndividual.classList.add('hidden');
+        } else {
+            fechaEspecificaContainerIndividual.classList.add('hidden');
+            offsetContainerIndividual.classList.remove('hidden');
+            
+            // Actualizar label explicativo
+            if (tipoFechaIndividual.value === 'fecha_inicio') {
+                labelExplicacionIndividual.textContent = 'La alerta se creará después de la fecha de inicio de la actividad';
+            } else {
+                labelExplicacionIndividual.textContent = 'La alerta se creará antes de la fecha de término de la actividad';
+            }
+        }
+        actualizarTablaCrearIndividual();
+    }
+    
+    function actualizarTablaCrearIndividual() {
+        if (!actividadActualCrear) return;
+        
+        let fechaAlerta;
+        let esValida = true;
+        let mensajeError = '';
+        
+        const tipoFecha = tipoFechaIndividual.value;
+        const offsetVal = offsetValorIndividual.value;
+        const unidad = offsetUnidadIndividual.value;
+        
+        if (tipoFecha === 'fecha_especifica') {
+            if (fechaEspecificaIndividual.value) {
+                fechaAlerta = new Date(fechaEspecificaIndividual.value);
+            }
+        } else if (tipoFecha === 'fecha_inicio') {
+            // Después del inicio (sumar)
+            if (actividadActualCrear.fechaInicio) {
+                fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, false);
+            } else {
+                mensajeError = 'La actividad no tiene fecha de inicio definida';
+                esValida = false;
+            }
+        } else { // fecha_fin
+            // Antes del término (restar)
+            if (actividadActualCrear.fechaFin) {
+                fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaFin, offsetVal, unidad, true);
+            } else {
+                mensajeError = 'La actividad no tiene fecha de término definida';
+                esValida = false;
+            }
+        }
+        
+        // VALIDACIONES
+        if (esValida && fechaAlerta) {
+            const ahora = new Date();
+            
+            // 1. Validar que no sea en el pasado
+            if (fechaAlerta < ahora) {
+                esValida = false;
+                mensajeError = 'La fecha calculada está en el pasado. Las alertas deben programarse para el futuro.';
+            }
+            
+            // 2. Validar que no sea antes de la fecha de inicio (si existe)
+            if (esValida && actividadActualCrear.fechaInicio && fechaAlerta < actividadActualCrear.fechaInicio) {
+                esValida = false;
+                mensajeError = 'La alerta no puede ser anterior a la fecha de inicio de la actividad.';
+            }
+            
+            // 3. Validar que no sea después de la fecha de fin (si existe)
+            if (esValida && actividadActualCrear.fechaFin && fechaAlerta > actividadActualCrear.fechaFin) {
+                esValida = false;
+                mensajeError = 'La alerta no puede ser posterior a la fecha de término de la actividad.';
+            }
+        }
+        
+        // Mostrar u ocultar error
+        if (esValida) {
+            crearIndividualError.classList.add('hidden');
+            btnConfirmarCrearIndividual.disabled = false;
+            btnConfirmarCrearIndividual.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            crearIndividualError.classList.remove('hidden');
+            crearIndividualError.querySelector('p').textContent = '⚠️ ' + mensajeError;
+            btnConfirmarCrearIndividual.disabled = true;
+            btnConfirmarCrearIndividual.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        
+        // Actualizar tabla
+        const colorClase = esValida ? 'text-gray-900' : 'text-red-600';
+        const textoFecha = fechaAlerta ? formatearFecha(fechaAlerta) : mensajeError;
+        
+        crearIndividualAlertaInfo.innerHTML = `
+            <tr>
+                <td class="px-4 py-3 text-sm text-gray-900">${actividadActualCrear.nombreActividad}</td>
+                <td class="px-4 py-3 text-sm text-right ${colorClase}">${textoFecha}</td>
+            </tr>
+        `;
+    }
+    
+    // Event listeners
+    tipoFechaIndividual.addEventListener('change', toggleCrearIndividualContainers);
+    fechaEspecificaIndividual.addEventListener('change', actualizarTablaCrearIndividual);
+    offsetValorIndividual.addEventListener('input', actualizarTablaCrearIndividual);
+    offsetUnidadIndividual.addEventListener('change', actualizarTablaCrearIndividual);
+    
+    // Cerrar modal
+    btnCancelarCrearIndividual.addEventListener('click', function() {
+        modalCrearIndividual.classList.add('hidden');
+    });
+    
+    modalCrearIndividual.addEventListener('click', function(e) {
+        if (e.target === modalCrearIndividual) {
+            modalCrearIndividual.classList.add('hidden');
+        }
+    });
+    
+    // Confirmar creación
+    btnConfirmarCrearIndividual.addEventListener('click', function() {
+        if (!actividadActualCrear || this.disabled) return;
+        
+        let fechaAlerta;
+        const tipoFecha = tipoFechaIndividual.value;
+        const offsetVal = offsetValorIndividual.value;
+        const unidad = offsetUnidadIndividual.value;
+        
+        if (tipoFecha === 'fecha_especifica') {
+            if (!fechaEspecificaIndividual.value) {
+                showToast('Por favor selecciona una fecha y hora', 'error');
+                return;
+            }
+            fechaAlerta = new Date(fechaEspecificaIndividual.value);
+        } else if (tipoFecha === 'fecha_inicio') {
+            fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, false);
+        } else {
+            fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaFin, offsetVal, unidad, true);
+        }
+        
+        if (!fechaAlerta) {
+            showToast('No se pudo calcular la fecha de la alerta', 'error');
+            return;
+        }
+        
+        // Formatear fecha
+        const year = fechaAlerta.getFullYear();
+        const month = String(fechaAlerta.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaAlerta.getDate()).padStart(2, '0');
+        const hours = String(fechaAlerta.getHours()).padStart(2, '0');
+        const minutes = String(fechaAlerta.getMinutes()).padStart(2, '0');
+        const seconds = String(fechaAlerta.getSeconds()).padStart(2, '0');
+        const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        
+        // Construir payload
+        const alertas = [{
+            actividad: actividadActualCrear.actividadId,
+            fecha: fechaFormateada
+        }];
+        
+        console.log('Payload crear individual:', alertas);
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        fetch('{% url "crear_alertas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify(alertas)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                modalCrearIndividual.classList.add('hidden');
+                showToast('Alerta creada correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Error al crear la alerta: ' + (data.mensaje || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error al crear la alerta: ' + error.message, 'error');
         });
     });
 </script>
