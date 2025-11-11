@@ -439,3 +439,32 @@ def enviar_correo_cambios(info_antes, info_despues):
     print("=== CAMBIOS EN ACTIVIDAD ===")
     print("Antes:", info_antes)
     print("Después:", info_despues)
+import json
+import urllib.parse
+
+# ID del dashboard y chart que quieres filtrar
+DASHBOARD_ID = "6xq4LRdgrba"
+CHART_ID = "13"  # ID del chart/filtro legacy en Superset
+
+def reportes(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    # 1️⃣ Creamos el filtro legacy dinámico
+    preselect_filters = {
+        CHART_ID: {
+            "project_id": [str(proyecto.id)]
+        }
+    }
+    print(preselect_filters)
+
+    filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
+
+    iframe_src = f"http://127.0.0.1:3004/superset/dashboard/p/{DASHBOARD_ID}/?preselect_filters={filters_encoded}"
+    print(iframe_src)
+
+    return render(request, 'vistas/reportes.html', {
+        'proyecto': proyecto,
+        'iframe_src': iframe_src
+    })
+
+

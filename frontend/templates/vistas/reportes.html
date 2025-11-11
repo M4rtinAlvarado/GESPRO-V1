@@ -1,0 +1,11 @@
+{% extends 'base/navbar2.html' %}
+{% block title %}Reportes - {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<iframe
+  src="{{ iframe_src }}"
+  width="100%"
+  height="90%"
+  frameborder="0"
+></iframe>
+{% endblock %}
