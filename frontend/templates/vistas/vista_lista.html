@@ -27,13 +27,22 @@
             <div class="text-2xl font-semibold">{{ act.nombre }}</div>
 
             <div class="flex items-center gap-4">
+                <button class="btn-historial border px-2 py-1 text-white rounded flex items-center gap-1"
+                        data-id="{{ act.id }}"
+                        title="Ver historial de cambios">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                
                 <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1"
                         data-id="{{ act.id }}"
                         data-nombre="{{ act.nombre }}"
                         data-encargados="{% for e in act.encargados %}{{ e.nombre }}|{{ e.correo_electronico }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                        data-periodos="{% for f in act.fechas %}{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                        data-periodos="{% for f in act.fechas %}{{ f.id }}|{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"/>
                     </svg>
                 </button>
         
@@ -79,6 +88,7 @@
         <div class="flex items-center gap-2 mb-3">
             <label for="modalNombre" class="font-medium">Nombre:</label>
             <input type="text" id="modalNombre" class="border p-1 rounded flex-1">
+            <p id="nombreError" class="text-red-600 font-medium mt-1 hidden">El nombre no puede estar vacío</p>
         </div>
 
         <!-- Encargados -->
@@ -165,9 +175,23 @@
 
     <div class="flex justify-end gap-2 mt-4">
       <button id="cancelAddEncargado" class="px-3 py-1 border rounded">Cancelar</button>
-      <button id="saveAddEncargado" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">AgregarX</button>
+      <button id="saveAddEncargado" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Agregar</button>
     </div>
   </div>
+</div>
+
+<!-- Modal de Historial de Cambios -->
+<div id="historialModal" class="hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-2/3 max-h-[80vh] overflow-y-auto rounded">
+    <h2 class="text-xl font-bold mb-4">Historial de Cambios</h2>
+    
+    <div id="historialContent" class="p-4">
+        <!-- El contenido se cargará dinámicamente aquí -->
+    </div>
+    
+    <!-- Botón cerrar -->
+    <div class="flex justify-end mt-4">
+        <button id="closeHistorialModal" class="px-3 py-1 border rounded">Cerrar</button>
+    </div>
 </div>
 
 
@@ -236,8 +260,8 @@ function abrirModalEditar(button) {
 
     const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
     tempActivity.periodos = rawPeriodos.map(p => {
-        const [f_inicio, f_fin] = p.split('|');
-        return { id: "", f_inicio, f_fin };
+        const [id, f_inicio, f_fin] = p.split('|');
+        return { id, f_inicio, f_fin };
     });
 
     console.log("Dataset encargados:", button.dataset.encargados);
@@ -629,6 +653,8 @@ document.getElementById("addPeriodo").addEventListener("click", () => {
         div.classList.remove("bg-red-100", "border-red-400");
     });
 
+    if (!inicio && !fin) return;  // <-- nada que validar si ambos vacíos
+
     if (!inicio || !fin) {
         errorMsg.textContent = "Ambas fechas son obligatorias.";
         return;
@@ -739,39 +765,56 @@ document.getElementById("saveAddEncargado").addEventListener("click", () => {
     document.getElementById("addEncargadoModal").classList.add("hidden");
 });
 
-
 // ===============================
 // Guardar cambios
 // ===============================
 document.getElementById("saveChanges").addEventListener("click", () => {
-    const nombre = document.getElementById("modalNombre").value.trim();
+    const nombreInput = document.getElementById("modalNombre");
+    const nombreError = document.getElementById("nombreError");
+    const nombre = nombreInput.value.trim();
 
     if (!nombre) {
-        alert("El nombre no puede estar vacío");
+        nombreError.textContent = "El nombre no puede estar vacío";
+        nombreError.classList.remove("hidden");  // <--- importante
+        nombreInput.focus();
         return;
+    } else {
+        nombreError.textContent = "";
+        nombreError.classList.add("hidden");      // ocultar si es válido
     }
 
-    for (let i = 0; i < tempActivity.periodos.length; i++) {
-        const a = tempActivity.periodos[i];
-        for (let j = i + 1; j < tempActivity.periodos.length; j++) {
-            const b = tempActivity.periodos[j];
+    // Validación de periodos solapados
+    const periodos = tempActivity.periodos;
+    for (let i = 0; i < periodos.length; i++) {
+        const a = periodos[i];
+        for (let j = i + 1; j < periodos.length; j++) {
+            const b = periodos[j];
             if (!(a.f_fin < b.f_inicio || a.f_inicio > b.f_fin)) {
-                alert("Los periodos no pueden solaparse");
+                // Mostrar error inline en lugar de alert
+                let periodoError = document.getElementById("periodoError");
+                if (!periodoError) {
+                    periodoError = document.createElement("p");
+                    periodoError.id = "periodoError";
+                    periodoError.classList.add("text-red-600", "font-medium", "mt-1");
+                    document.getElementById("modalPeriodosList").parentNode.insertBefore(periodoError, document.getElementById("modalPeriodosList").nextSibling);
+                }
+                periodoError.textContent = "Los periodos no pueden solaparse";
                 return;
             }
         }
     }
 
+    // Si pasa todas las validaciones, enviar datos
     const payload = {
-        id: tempActivity.id,  // siempre existente
+        id: tempActivity.id,
         nombre: nombre,
         encargados: tempActivity.encargados.map(e => ({
-            id: e.id || "",  // nuevo encargado -> id vacío
+            id: e.id || "",
             nombre: e.nombre,
             correo: e.correo || ""
         })),
         periodos: tempActivity.periodos.map(p => ({
-            id: p.id || "",  // nuevo periodo -> id vacío
+            id: p.id || "",
             f_inicio: p.f_inicio,
             f_fin: p.f_fin
         }))
@@ -790,13 +833,259 @@ document.getElementById("saveChanges").addEventListener("click", () => {
         return res.json();
     })
     .then(data => {
-        cerrarModal();
-        location.reload();
+        if (data.success) location.reload();
+        else location.reload();
     })
     .catch(err => {
         console.error(err);
         alert("Hubo un error al guardar la actividad");
     });
+});
+
+// ===============================
+// Modal de Historial
+// ===============================
+document.querySelectorAll(".btn-historial").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalHistorial(btn.dataset.id));
+});
+
+function abrirModalHistorial(actividadId) {
+    const modal = document.getElementById("historialModal");
+    const overlay = document.getElementById("modalOverlay");
+    const content = document.getElementById("historialContent");
+    
+    // Mostrar loading
+    content.innerHTML = `
+        <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600"></div>
+        </div>
+    `;
+    
+    modal.classList.remove("hidden");
+    overlay.classList.remove("hidden");
+    document.body.classList.add('overflow-hidden');
+    
+    // Obtener historial del servidor
+    fetch(`/vistas/historial/${actividadId}/`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data || data.length === 0) {
+            content.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <p>No se han realizado cambios en esta actividad</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Construir HTML para todos los registros
+        let html = '<div class="space-y-4">';
+        
+        data.forEach((registro, index) => {
+            const cambios = registro.cambios;
+            
+            html += `
+                <div class="border rounded">
+                    <div class="bg-gray-50 px-4 py-2 text-sm text-gray-700 font-medium border-b">
+                        ${formatearFechaCompleta(registro.fecha_cambio)}
+                    </div>
+                    
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr class="border-b">
+                                <th class="text-left py-2 px-3 font-medium text-gray-600 w-1/6">Campo</th>
+                                <th class="text-left py-2 px-3 font-medium text-gray-600 w-1/3">Antes</th>
+                                <th class="text-left py-2 px-3 font-medium text-gray-600 w-1/3">Después</th>
+                                <th class="text-left py-2 px-3 font-medium text-gray-600 w-1/6">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+            `;
+
+            // Cambios en la actividad (nombre)
+            if (cambios.actividad && Object.keys(cambios.actividad).length > 0) {
+                for (const [campo, detalle] of Object.entries(cambios.actividad)) {
+                    if (detalle.tipo === 'modificado') {
+                        html += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-3 font-medium">Nombre</td>
+                                <td class="py-3 px-3 text-gray-600">
+                                    <div class="truncate" title="${detalle.antes || '-'}">${detalle.antes || '-'}</div>
+                                </td>
+                                <td class="py-3 px-3">
+                                    <div class="truncate font-medium" title="${detalle.despues || '-'}">${detalle.despues || '-'}</div>
+                                </td>
+                                <td class="py-3 px-3">
+                                    <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs whitespace-nowrap">Modificado</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }
+            }
+
+            // Cambios en encargados
+            if (cambios.encargados && cambios.encargados.length > 0) {
+                cambios.encargados.forEach(enc => {
+                    let antes = '-';
+                    let despues = '-';
+                    let accionBadge = '';
+                    let antesTitle = '-';
+                    let despuesTitle = '-';
+                    
+                    if (enc.tipo === 'agregado') {
+                        despues = `${enc.nombre}`;
+                        despuesTitle = `${enc.nombre} (${enc.correo})`;
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Agregado</span>';
+                    } else if (enc.tipo === 'eliminado') {
+                        antes = `${enc.nombre}`;
+                        antesTitle = `${enc.nombre} (${enc.correo})`;
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap">Eliminado</span>';
+                    } else if (enc.tipo === 'modificado') {
+                        if (enc.antes) {
+                            antes = `${enc.antes.nombre}`;
+                            antesTitle = `${enc.antes.nombre} (${enc.antes.correo})`;
+                        }
+                        if (enc.despues) {
+                            despues = `${enc.despues.nombre}`;
+                            despuesTitle = `${enc.despues.nombre} (${enc.despues.correo})`;
+                        }
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs whitespace-nowrap">Modificado</span>';
+                    }
+                    
+                    html += `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-3 px-3 font-medium">Encargado</td>
+                            <td class="py-3 px-3 text-gray-600">
+                                <div class="truncate" title="${antesTitle}">${antes}</div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="truncate font-medium" title="${despuesTitle}">${despues}</div>
+                            </td>
+                            <td class="py-3 px-3">${accionBadge}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Cambios en periodos
+            if (cambios.periodos && cambios.periodos.length > 0) {
+                cambios.periodos.forEach(per => {
+                    let antes = '-';
+                    let despues = '-';
+                    let accionBadge = '';
+                    
+                    if (per.tipo === 'agregado') {
+                        const inicio = per.fecha_inicio?.despues ? formatearFecha(per.fecha_inicio.despues) : '-';
+                        const fin = per.fecha_fin?.despues ? formatearFecha(per.fecha_fin.despues) : '-';
+                        despues = `${inicio} → ${fin}`;
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Agregado</span>';
+                    } else if (per.tipo === 'eliminado') {
+                        const inicio = per.fecha_inicio?.antes ? formatearFecha(per.fecha_inicio.antes) : '-';
+                        const fin = per.fecha_fin?.antes ? formatearFecha(per.fecha_fin.antes) : '-';
+                        antes = `${inicio} → ${fin}`;
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap">Eliminado</span>';
+                    } else if (per.tipo === 'modificado') {
+                        const antesInicio = per.fecha_inicio?.antes ? formatearFecha(per.fecha_inicio.antes) : '-';
+                        const antesFin = per.fecha_fin?.antes ? formatearFecha(per.fecha_fin.antes) : '-';
+                        antes = `${antesInicio} → ${antesFin}`;
+                        
+                        const despuesInicio = per.fecha_inicio?.despues ? formatearFecha(per.fecha_inicio.despues) : '-';
+                        const despuesFin = per.fecha_fin?.despues ? formatearFecha(per.fecha_fin.despues) : '-';
+                        despues = `${despuesInicio} → ${despuesFin}`;
+                        
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs whitespace-nowrap">Modificado</span>';
+                    }
+                    
+                    html += `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-3 px-3 font-medium">Periodo</td>
+                            <td class="py-3 px-3 text-gray-600">
+                                <div class="truncate" title="${antes}">${antes}</div>
+                            </td>
+                            <td class="py-3 px-3">
+                                <div class="truncate font-medium" title="${despues}">${despues}</div>
+                            </td>
+                            <td class="py-3 px-3">${accionBadge}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        content.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error al cargar historial:', err);
+        content.innerHTML = `
+            <div class="text-center py-12 text-red-500">
+                <p>Error al cargar el historial de cambios</p>
+                <p class="text-sm mt-2 text-gray-500">${err.message}</p>
+            </div>
+        `;
+    });
+}
+
+function formatearFecha(fecha) {
+    if (!fecha) return 'No definida';
+    try {
+        // Extraer solo la parte de fecha si viene con hora
+        const soloFecha = fecha.includes(' ') ? fecha.split(' ')[0] : fecha;
+        const [y, m, d] = soloFecha.split('-');
+        if (!y || !m || !d) return fecha; // Si no se puede parsear, devolver original
+        return `${d}/${m}/${y}`;
+    } catch (e) {
+        console.error('Error al formatear fecha:', fecha, e);
+        return fecha;
+    }
+}
+
+function formatearFechaCompleta(fecha) {
+    if (!fecha) return 'No definida';
+    try {
+        const partes = fecha.split(' ');
+        if (partes.length < 2) return fecha; // Si no tiene hora, devolver original
+        
+        const [fechaParte, horaParte] = partes;
+        const [y, m, d] = fechaParte.split('-');
+        if (!y || !m || !d) return fecha;
+        
+        return `${d}/${m}/${y} a las ${horaParte}`;
+    } catch (e) {
+        console.error('Error al formatear fecha completa:', fecha, e);
+        return fecha;
+    }
+}
+
+// Cerrar modal de historial
+document.getElementById("closeHistorialModal").addEventListener("click", () => {
+    document.getElementById("historialModal").classList.add("hidden");
+    document.getElementById("modalOverlay").classList.add("hidden");
+    document.body.classList.remove('overflow-hidden');
+});
+
+// Cerrar al hacer click en el overlay
+document.getElementById("modalOverlay").addEventListener("click", () => {
+    if (!document.getElementById("editModal").classList.contains("hidden")) {
+        return; // No cerrar si el modal de editar está abierto
+    }
+    document.getElementById("historialModal").classList.add("hidden");
+    document.getElementById("modalOverlay").classList.add("hidden");
+    document.body.classList.remove('overflow-hidden');
 });
 
 </script>

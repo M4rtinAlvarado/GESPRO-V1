@@ -167,3 +167,17 @@ class ActividadDifusion_Linea(models.Model):
     
 
 
+class RegistroCambioActividad(models.Model):
+    actividad = models.ForeignKey(
+        'ActividadBase',
+        on_delete=models.CASCADE,
+        related_name='registros_cambio'
+    )
+    fecha_cambio = models.DateTimeField(auto_now_add=True)
+    cambios = models.JSONField() # JSON: {campo: {antes, despues}}
+
+    class Meta:
+        ordering = ['-fecha_cambio']
+
+    def __str__(self):
+        return f"Cambio en '{self.actividad.nombre}' el {self.fecha_cambio}"
