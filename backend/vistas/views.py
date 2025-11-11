@@ -587,12 +587,6 @@ def obtener_historial(request, actividad_id):
     return JsonResponse({"error": "Método no permitido"}, status=405)
 
 
-
-<<<<<<< HEAD
-def enviar_correo_cambios(info_antes, info_despues):
-    print("=== CAMBIOS EN ACTIVIDAD ===")
-    print("Antes:", info_antes)
-    print("Después:", info_despues)
 import json
 import urllib.parse
 
@@ -622,5 +616,3 @@ def reportes(request, proyecto_id):
     })
 
 
-=======
->>>>>>> H13
