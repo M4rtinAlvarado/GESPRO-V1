@@ -4,8 +4,31 @@
 {% load static tailwind_tags %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container mx-auto mt-6">
-    <h2 class="text-2xl font-bold mb-4">Alertas por Actividad</h2>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <h2 class="text-2xl font-bold">Alertas por Actividad</h2>
+        <div class="flex items-center gap-2">
+            <button type="button"
+                    id="btn-crear"
+                    class="bulk-action-btn bg-green-600 hover:bg-green-500 text-white font-semibold px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                Crear
+            </button>
+            <button type="button"
+                    id="btn-desplazar"
+                    class="bulk-action-btn bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                Desplazar
+            </button>
+            <button type="button"
+                    id="btn-eliminar"
+                    class="bulk-action-btn bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                Eliminar
+            </button>
+        </div>
+    </div>
 
     {% if actividades %}
         <div class="overflow-x-auto">
@@ -14,20 +37,24 @@
                     <tr>
                         <!-- Checkbox seleccionar todo -->
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4">
+                            <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4" aria-label="Seleccionar todas las actividades">
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsables</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha inicio</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha límite</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alertas</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for actividad in actividades %}
-                        <tr class="hover:bg-gray-50">
+                        <tr class="activity-row hover:bg-gray-50 transition-colors" 
+                            data-actividad-id="{{ actividad.id }}"
+                            data-alertas-count="{{ actividad.alertas.all|length }}"
+                            data-alertas-pendientes="{{ actividad.alertas_pendientes_count }}">
                             <!-- Checkbox individual -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4">
+                                <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4" aria-label="Seleccionar actividad {{ actividad.nombre }}">
                             </td>
 
                             <!-- Nombre -->
@@ -44,6 +71,15 @@
                                 {% endif %}
                             </td>
 
+                            <!-- Fecha inicio -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {% if actividad.fecha_inicio %}
+                                    {{ actividad.fecha_inicio|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-gray-400">No definida</span>
+                                {% endif %}
+                            </td>
+
                             <!-- Fecha límite -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {% if actividad.fecha_limite %}
@@ -54,17 +90,34 @@
                             </td>
 
                             <!-- Alertas -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <td class="px-6 py-4 text-sm text-gray-900">
                                 <div class="flex items-center gap-2">
                                     {% if actividad.alertas.all %}
-                                        <div class="max-w-2xl overflow-x-auto">
-                                            <div class="flex gap-2 min-w-max">
+                                        <div class="max-w-md overflow-x-auto">
+                                            <div class="flex gap-2 pb-1">
                                                 {% for alerta in actividad.alertas.all %}
-                                                    <span class="flex-shrink-0 px-2 py-1 inline-flex flex-col items-center text-sm leading-5 font-semibold rounded-full
-                                                                {% if alerta.enviado %}bg-green-700 text-white{% else %}bg-yellow-700 text-white{% endif %}">
-                                                        <span class="text-xs">{{ alerta.fecha_envio|date:"H:i" }}</span>
-                                                        <span class="text-sm">{{ alerta.fecha_envio|date:"d/m/Y" }}</span>
-                                                    </span>
+                                                    <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-16 rounded-lg shadow-md overflow-hidden border
+                                                                {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500{% endif %}"
+                                                         data-alerta-id="{{ alerta.id }}"
+                                                         data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
+                                                         data-alerta-enviado="{{ alerta.enviado|lower }}">
+                                                        <!-- Mes y año arriba -->
+                                                        <div class="w-full text-center text-white text-[10px] font-bold uppercase py-1
+                                                                    {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
+                                                            {% with mes=alerta.fecha_envio|date:"n" %}
+                                                                {% if mes == "1" %}ENE{% elif mes == "2" %}FEB{% elif mes == "3" %}MAR{% elif mes == "4" %}ABR{% elif mes == "5" %}MAY{% elif mes == "6" %}JUN{% elif mes == "7" %}JUL{% elif mes == "8" %}AGO{% elif mes == "9" %}SEP{% elif mes == "10" %}OCT{% elif mes == "11" %}NOV{% else %}DIC{% endif %}
+                                                            {% endwith %} {{ alerta.fecha_envio|date:"Y" }}
+                                                        </div>
+                                                        <!-- Día grande -->
+                                                        <div class="text-white text-2xl font-bold leading-none py-2">
+                                                            {{ alerta.fecha_envio|date:"d" }}
+                                                        </div>
+                                                        <!-- Hora con AM/PM -->
+                                                        <div class="w-full text-center text-white text-[10px] font-semibold py-1
+                                                                    {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
+                                                            {{ alerta.fecha_envio|date:"g:i A" }}
+                                                        </div>
+                                                    </div>
                                                 {% endfor %}
                                             </div>
                                         </div>
@@ -91,13 +144,1024 @@
     {% endif %}
 </div>
 
+<!-- Modal Crear Alertas -->
+<div id="modal-crear-alertas" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-20 mx-auto p-8 border w-[700px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-2xl font-bold text-center mb-6">Crear alertas</h3>
+        
+        <div class="space-y-4 mb-6">
+            <!-- Selector tipo de fecha base -->
+            <div class="flex items-center gap-4">
+                <label class="text-sm font-medium w-32">A partir de</label>
+                <select id="tipo-fecha" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Tipo de fecha base">
+                    <option value="fecha_especifica">Fecha específica</option>
+                    <option value="fecha_inicio">Fecha de inicio (Alerta después del inicio)</option>
+                    <option value="fecha_fin">Fecha de término (Alerta antes del término)</option>
+                </select>
+            </div>
+
+            <!-- Input fecha específica con hora -->
+            <div id="fecha-especifica-container" class="space-y-2">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32">Fecha y hora</label>
+                    <input type="datetime-local" id="fecha-especifica" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Fecha específica">
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32"></label>
+                    <p class="text-xs text-gray-500">La alerta se creará en la fecha y hora especificada</p>
+                </div>
+            </div>
+
+            <!-- Offset temporal para fechas de inicio/fin -->
+            <div id="offset-container" class="hidden space-y-2">
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32">Tiempo</label>
+                    <div class="flex items-center gap-2 flex-1">
+                        <input type="number" id="offset-valor" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
+                        <select id="offset-unidad" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
+                            <option value="minutos">Minutos</option>
+                            <option value="horas">Horas</option>
+                            <option value="dias" selected>Días</option>
+                            <option value="semanas">Semanas</option>
+                            <option value="meses">Meses</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="text-sm font-medium w-32"></label>
+                    <p id="label-explicacion" class="text-xs text-gray-500"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de actividades seleccionadas -->
+        <div class="mb-6">
+            <h4 class="text-sm font-semibold mb-3">Actividades seleccionadas:</h4>
+            <div class="border border-gray-200 rounded max-h-60 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Nombre Actividad</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">Nueva Alerta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="actividades-seleccionadas-list" class="bg-white divide-y divide-gray-200">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-crear" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-crear" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Desplazar Alertas -->
+<div id="modal-desplazar-alertas" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-20 mx-auto p-8 border w-[800px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-2xl font-bold text-center mb-6">Desplazar Alertas</h3>
+        
+        <div class="space-y-4 mb-6">
+            <div class="flex items-center gap-4">
+                <label class="text-sm font-medium w-40">Desplazar cada alerta</label>
+                <div class="flex items-center gap-2 flex-1">
+                    <input type="number" id="desplazar-offset-valor" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
+                    <select id="desplazar-offset-unidad" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
+                        <option value="minutos">Minutos</option>
+                        <option value="horas">Horas</option>
+                        <option value="dias" selected>Días</option>
+                        <option value="semanas">Semanas</option>
+                        <option value="meses">Meses</option>
+                    </select>
+                    <select id="desplazar-direccion" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Dirección">
+                        <option value="antes">Antes de la fecha original</option>
+                        <option value="despues">Después de la fecha original</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de alertas seleccionadas -->
+        <div class="mb-6">
+            <h4 class="text-sm font-semibold mb-3">Alertas seleccionadas:</h4>
+            <div class="border border-gray-200 rounded max-h-80 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Nombre Actividad</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Alerta Anterior</th>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Alerta Nueva</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desplazar-alertas-list" class="bg-white">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-desplazar" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-desplazar" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Desplazar -->
+<div id="modal-confirmacion-desplazar" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-32 mx-auto p-8 border w-[500px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-xl font-bold text-center mb-6">Desplazar Alertas</h3>
+        
+        <div class="mb-6 space-y-3">
+            <p class="text-sm font-medium">Estás seguro?</p>
+            <ul class="list-disc list-inside text-sm space-y-1 text-gray-700">
+                <li>Actividades afectadas: <span id="confirm-actividades-count" class="font-semibold"></span></li>
+                <li>Alertas modificadas: <span id="confirm-alertas-modificadas" class="font-semibold"></span></li>
+                <li>Alertas no modificadas: <span id="confirm-alertas-no-modificadas" class="font-semibold"></span></li>
+            </ul>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-confirmacion" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-confirmacion" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Alertas -->
+<div id="modal-eliminar-alertas" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-20 mx-auto p-8 border w-[700px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-xl font-bold text-center mb-6">Eliminar alertas</h3>
+        
+        <div class="mb-6">
+            <p class="text-sm font-medium mb-3">Actividades seleccionadas:</p>
+            
+            <!-- Tabla con actividades y alertas a eliminar -->
+            <div class="border border-gray-300 rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Nombre Actividad</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Alerta a eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eliminar-alertas-list">
+                        <!-- Se llenará dinámicamente con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-eliminar" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-eliminar" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminar -->
+<div id="modal-confirmacion-eliminar" class="hidden fixed inset-0 overflow-y-auto h-full w-full z-50" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="relative top-32 mx-auto p-8 border w-[500px] shadow-lg rounded-lg bg-white">
+        <h3 class="text-xl font-bold text-center mb-6">Eliminar Alertas</h3>
+        
+        <div class="mb-6 space-y-3">
+            <p class="text-sm font-medium">Estás seguro?</p>
+            <ul class="list-disc list-inside text-sm space-y-1 text-gray-700">
+                <li>Actividades afectadas: <span id="confirm-eliminar-actividades" class="font-semibold"></span></li>
+                <li>Alertas eliminadas: <span id="confirm-eliminar-alertas" class="font-semibold"></span></li>
+            </ul>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-3">
+            <button type="button" id="btn-cancelar-confirmacion-eliminar" class="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-semibold">
+                Cancelar
+            </button>
+            <button type="button" id="btn-confirmar-confirmacion-eliminar" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Script para seleccionar/deseleccionar todo -->
 <script>
     const selectAll = document.getElementById('select-all');
     const checkboxes = document.querySelectorAll('.row-checkbox');
+    const actionButtons = document.querySelectorAll('.bulk-action-btn');
+    const btnCrear = document.getElementById('btn-crear');
+    const btnDesplazar = document.getElementById('btn-desplazar');
+    const btnEliminar = document.getElementById('btn-eliminar');
 
-    selectAll.addEventListener('change', function() {
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    // Actualizar contadores y estado de botones
+    const updateActionButtons = () => {
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        const anyChecked = checkedCheckboxes.length > 0;
+        
+        // Calcular cantidad de actividades seleccionadas
+        const selectedCount = checkedCheckboxes.length;
+        
+        // Calcular total de alertas PENDIENTES (no enviadas) de las actividades seleccionadas
+        let totalAlertasPendientes = 0;
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const alertasPendientes = parseInt(row.dataset.alertasPendientes || '0');
+            totalAlertasPendientes += alertasPendientes;
+        });
+        
+        // Actualizar texto de botones
+        if (anyChecked) {
+            btnCrear.textContent = `Crear (${selectedCount})`;
+            btnDesplazar.textContent = `Desplazar (${totalAlertasPendientes})`;
+            btnEliminar.textContent = `Eliminar (${totalAlertasPendientes})`;
+        } else {
+            btnCrear.textContent = 'Crear';
+            btnDesplazar.textContent = 'Desplazar';
+            btnEliminar.textContent = 'Eliminar';
+        }
+        
+        // Habilitar/deshabilitar botones
+        // Crear: se habilita cuando hay actividades seleccionadas
+        btnCrear.disabled = !anyChecked;
+        
+        // Desplazar y Eliminar: se habilitan solo cuando hay alertas pendientes
+        btnDesplazar.disabled = totalAlertasPendientes === 0;
+        btnEliminar.disabled = totalAlertasPendientes === 0;
+    };
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateActionButtons();
+            // Actualizar colores de fila
+            checkboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (selectAll.checked) {
+                    row.classList.add('bg-blue-50');
+                    row.classList.remove('hover:bg-gray-50');
+                } else {
+                    row.classList.remove('bg-blue-50');
+                    row.classList.add('hover:bg-gray-50');
+                }
+            });
+        });
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateActionButtons);
+    });
+
+    // Cambio de color de fila al seleccionar
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const row = this.closest('tr');
+            if (this.checked) {
+                row.classList.add('bg-blue-50');
+                row.classList.remove('hover:bg-gray-50');
+            } else {
+                row.classList.remove('bg-blue-50');
+                row.classList.add('hover:bg-gray-50');
+            }
+        });
+    });
+
+    updateActionButtons();
+</script>
+
+<!-- Script para modal de crear alertas -->
+<script>
+    const modalCrear = document.getElementById('modal-crear-alertas');
+    const btnCrearAlerta = document.getElementById('btn-crear');
+    const btnCancelarCrear = document.getElementById('btn-cancelar-crear');
+    const actividadesListBody = document.getElementById('actividades-seleccionadas-list');
+    
+    // Elementos del formulario
+    const tipoFechaSelect = document.getElementById('tipo-fecha');
+    const fechaEspecificaContainer = document.getElementById('fecha-especifica-container');
+    const fechaEspecificaInput = document.getElementById('fecha-especifica');
+    const offsetContainer = document.getElementById('offset-container');
+    const offsetValor = document.getElementById('offset-valor');
+    const offsetUnidad = document.getElementById('offset-unidad');
+    const labelExplicacion = document.getElementById('label-explicacion');
+
+    // Función para calcular la fecha resultante
+    function calcularFechaAlerta(fechaBase, offsetVal, unidad, esAntes) {
+        if (!fechaBase) return null;
+        
+        const fecha = new Date(fechaBase);
+        const valor = parseInt(offsetVal) || 0;
+        const multiplicador = esAntes ? -1 : 1;
+        
+        switch(unidad) {
+            case 'minutos':
+                fecha.setMinutes(fecha.getMinutes() + (valor * multiplicador));
+                break;
+            case 'horas':
+                fecha.setHours(fecha.getHours() + (valor * multiplicador));
+                break;
+            case 'dias':
+                fecha.setDate(fecha.getDate() + (valor * multiplicador));
+                break;
+            case 'semanas':
+                fecha.setDate(fecha.getDate() + (valor * 7 * multiplicador));
+                break;
+            case 'meses':
+                fecha.setMonth(fecha.getMonth() + (valor * multiplicador));
+                break;
+        }
+        
+        return fecha;
+    }
+
+    // Función para formatear fecha
+    function formatearFecha(fecha) {
+        if (!fecha) return 'Fecha no definida';
+        const dia = fecha.getDate().toString().padStart(2, '0');
+        const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+        const ano = fecha.getFullYear();
+        const hora = fecha.getHours().toString().padStart(2, '0');
+        const minutos = fecha.getMinutes().toString().padStart(2, '0');
+        return `${hora}:${minutos} ${dia}/${mes}/${ano}`;
+    }
+
+    // Función para obtener fecha base de una actividad
+    function obtenerFechaBase(row, tipoFecha) {
+        if (tipoFecha === 'fecha_especifica') {
+            const fechaInput = fechaEspecificaInput.value;
+            return fechaInput ? new Date(fechaInput) : null;
+        }
+        
+        // Columnas: 1=checkbox, 2=actividad, 3=responsables, 4=fecha_inicio, 5=fecha_limite, 6=alertas
+        // Para fecha_inicio: columna 4
+        // Para fecha_fin: columna 5
+        const columnIndex = tipoFecha === 'fecha_inicio' ? 4 : 5;
+        const fechaCell = row.querySelector(`td:nth-child(${columnIndex})`);
+        const fechaTexto = fechaCell?.textContent.trim();
+        
+        if (fechaTexto && fechaTexto !== 'No definida') {
+            const [dia, mes, ano] = fechaTexto.split('/');
+            return new Date(`${ano}-${mes}-${dia}T00:00:00`);
+        }
+        
+        return null;
+    }
+
+    // Función para actualizar la lista de actividades en el modal
+    function actualizarListaActividades() {
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        const tipoFecha = tipoFechaSelect.value;
+        const offsetVal = offsetValor.value;
+        const unidad = offsetUnidad.value;
+        
+        actividadesListBody.innerHTML = '';
+        
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+            let fechaBase = obtenerFechaBase(row, tipoFecha);
+            let fechaAlerta;
+            
+            if (tipoFecha === 'fecha_especifica') {
+                fechaAlerta = fechaBase; // Sin offset, es la fecha exacta
+            } else if (tipoFecha === 'fecha_inicio') {
+                // Después del inicio (sumar)
+                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
+            } else { // fecha_fin
+                // Antes del término (restar)
+                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true);
+            }
+            
+            // Obtener fechas límite de la actividad para validación
+            const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
+            const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            
+            // Validar que la alerta esté dentro del rango
+            let mensajeError = '';
+            let colorClase = 'text-gray-900';
+            
+            if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
+                mensajeError = '<span class="text-red-600 font-semibold">Previo a Fecha Inicio</span>';
+                colorClase = 'text-red-600';
+            } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
+                mensajeError = '<span class="text-red-600 font-semibold">Excede Fecha Límite</span>';
+                colorClase = 'text-red-600';
+            }
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm text-gray-900">${nombreActividad}</td>
+                <td class="px-4 py-3 text-sm text-right ${fechaAlerta ? colorClase : 'text-red-500'}">
+                    ${mensajeError || formatearFecha(fechaAlerta)}
+                </td>
+            `;
+            actividadesListBody.appendChild(tr);
+        });
+    }
+
+    // Cambiar vista según tipo de fecha
+    tipoFechaSelect.addEventListener('change', function() {
+        if (this.value === 'fecha_especifica') {
+            fechaEspecificaContainer.classList.remove('hidden');
+            offsetContainer.classList.add('hidden');
+        } else {
+            fechaEspecificaContainer.classList.add('hidden');
+            offsetContainer.classList.remove('hidden');
+            
+            // Actualizar label explicativo
+            if (this.value === 'fecha_inicio') {
+                labelExplicacion.textContent = 'La alerta se creará después de la fecha de inicio de cada actividad';
+            } else {
+                labelExplicacion.textContent = 'La alerta se creará antes de la fecha de término de cada actividad';
+            }
+        }
+        actualizarListaActividades();
+    });
+
+    // Event listeners para actualizar la lista cuando cambian los valores
+    fechaEspecificaInput.addEventListener('change', actualizarListaActividades);
+    offsetValor.addEventListener('input', actualizarListaActividades);
+    offsetUnidad.addEventListener('change', actualizarListaActividades);
+
+    // Abrir modal
+    btnCrearAlerta.addEventListener('click', function() {
+        // Establecer fecha y hora actual por defecto
+        const ahora = new Date();
+        const year = ahora.getFullYear();
+        const month = String(ahora.getMonth() + 1).padStart(2, '0');
+        const day = String(ahora.getDate()).padStart(2, '0');
+        const hours = String(ahora.getHours()).padStart(2, '0');
+        const minutes = String(ahora.getMinutes()).padStart(2, '0');
+        fechaEspecificaInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Resetear a fecha específica
+        tipoFechaSelect.value = 'fecha_especifica';
+        fechaEspecificaContainer.classList.remove('hidden');
+        offsetContainer.classList.add('hidden');
+        
+        actualizarListaActividades();
+        modalCrear.classList.remove('hidden');
+    });
+
+    // Cerrar modal
+    btnCancelarCrear.addEventListener('click', function() {
+        modalCrear.classList.add('hidden');
+    });
+
+    // Cerrar modal al hacer click fuera
+    modalCrear.addEventListener('click', function(e) {
+        if (e.target === modalCrear) {
+            modalCrear.classList.add('hidden');
+        }
+    });
+
+    // Confirmar creación de alertas
+    const btnConfirmarCrear = document.getElementById('btn-confirmar-crear');
+    btnConfirmarCrear.addEventListener('click', function() {
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        const tipoFecha = tipoFechaSelect.value;
+        const offsetVal = offsetValor.value;
+        const unidad = offsetUnidad.value;
+        
+        // Construir array de alertas
+        const alertas = [];
+        let alertasInvalidas = 0;
+        
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const actividadId = row.dataset.actividadId;
+            const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+            let fechaBase = obtenerFechaBase(row, tipoFecha);
+            let fechaAlerta;
+            
+            console.log('Actividad ID:', actividadId); // DEBUG
+            console.log('Fecha base:', fechaBase); // DEBUG
+            
+            if (tipoFecha === 'fecha_especifica') {
+                fechaAlerta = fechaBase;
+            } else if (tipoFecha === 'fecha_inicio') {
+                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
+            } else {
+                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true);
+            }
+            
+            if (fechaAlerta) {
+                // Validar que la alerta esté dentro del rango de la actividad
+                const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
+                const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+                
+                // Verificar si está fuera de rango
+                if (fechaInicioBase && fechaAlerta < fechaInicioBase) {
+                    console.warn(`Alerta inválida para ${nombreActividad}: previo a fecha inicio`);
+                    alertasInvalidas++;
+                    return; // Skip esta alerta
+                } else if (fechaFinBase && fechaAlerta > fechaFinBase) {
+                    console.warn(`Alerta inválida para ${nombreActividad}: excede fecha límite`);
+                    alertasInvalidas++;
+                    return; // Skip esta alerta
+                }
+                
+                // Si pasó las validaciones, formatear y agregar
+                const year = fechaAlerta.getFullYear();
+                const month = String(fechaAlerta.getMonth() + 1).padStart(2, '0');
+                const day = String(fechaAlerta.getDate()).padStart(2, '0');
+                const hours = String(fechaAlerta.getHours()).padStart(2, '0');
+                const minutes = String(fechaAlerta.getMinutes()).padStart(2, '0');
+                const seconds = String(fechaAlerta.getSeconds()).padStart(2, '0');
+                const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                
+                alertas.push({
+                    actividad: actividadId,
+                    fecha: fechaFormateada
+                });
+            }
+        });
+        
+        console.log('Alertas a enviar:', alertas); // DEBUG
+        console.log('JSON:', JSON.stringify(alertas)); // DEBUG
+        
+        // Enviar POST request
+        if (alertas.length > 0) {
+            // Obtener CSRF token
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            
+            console.log('CSRF Token:', csrftoken); // DEBUG
+            console.log('URL:', '{% url "crear_alertas" %}'); // DEBUG
+            
+            fetch('{% url "crear_alertas" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken || ''
+                },
+                body: JSON.stringify(alertas)
+            })
+            .then(response => {
+                console.log('Response status:', response.status); // DEBUG
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data); // DEBUG
+                if (data.status === 'success') {
+                    // Recargar la página para ver las nuevas alertas
+                    window.location.reload();
+                } else {
+                    alert('Error al crear alertas: ' + (data.message || 'Error desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al crear alertas');
+            });
+        } else {
+            console.log('No hay alertas para enviar'); // DEBUG
+            alert('No se pudieron calcular las fechas de las alertas');
+        }
+    });
+</script>
+
+<!-- Script para modal de desplazar alertas -->
+<script>
+    const modalDesplazar = document.getElementById('modal-desplazar-alertas');
+    const modalConfirmacionDesplazar = document.getElementById('modal-confirmacion-desplazar');
+    const btnDesplazarAlerta = document.getElementById('btn-desplazar');
+    const btnCancelarDesplazar = document.getElementById('btn-cancelar-desplazar');
+    const btnConfirmarDesplazar = document.getElementById('btn-confirmar-desplazar');
+    const btnCancelarConfirmacion = document.getElementById('btn-cancelar-confirmacion');
+    const btnConfirmarConfirmacion = document.getElementById('btn-confirmar-confirmacion');
+    const desplazarAlertasList = document.getElementById('desplazar-alertas-list');
+    
+    // Elementos del formulario
+    const desplazarOffsetValor = document.getElementById('desplazar-offset-valor');
+    const desplazarOffsetUnidad = document.getElementById('desplazar-offset-unidad');
+    const desplazarDireccion = document.getElementById('desplazar-direccion');
+    
+    // Variable para guardar los datos de las alertas a desplazar
+    let alertasADesplazar = [];
+
+    // Función para obtener alertas pendientes de una actividad (desde el DOM)
+    function obtenerAlertasPendientes(row) {
+        const alertas = [];
+        const actividadId = row.dataset.actividadId;
+        const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+        
+        // Buscar todas las tarjetas de alerta que NO estén enviadas (usando data attributes)
+        const alertasCards = row.querySelectorAll('.alerta-card[data-alerta-enviado="false"]');
+        
+        alertasCards.forEach(card => {
+            const alertaId = card.dataset.alertaId;
+            const fechaStr = card.dataset.alertaFecha; // Formato: "2025-11-05 14:30:00"
+            
+            // Parsear fecha directamente (formato ISO simplificado)
+            const [fechaParte, horaParte] = fechaStr.split(' ');
+            const [ano, mes, dia] = fechaParte.split('-').map(Number);
+            const [horas, minutos, segundos] = horaParte.split(':').map(Number);
+            
+            // Crear objeto Date (mes - 1 porque Date usa 0-11)
+            const fechaOriginal = new Date(ano, mes - 1, dia, horas, minutos, segundos || 0);
+            
+            alertas.push({
+                alertaId: alertaId,
+                actividadId: actividadId,
+                nombreActividad: nombreActividad,
+                fechaOriginal: fechaOriginal
+            });
+        });
+        
+        return alertas;
+    }
+
+    // Función para actualizar la lista de alertas a desplazar
+    function actualizarListaDesplazar() {
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        const offsetVal = parseInt(desplazarOffsetValor.value) || 0;
+        const unidad = desplazarOffsetUnidad.value;
+        const direccion = desplazarDireccion.value;
+        
+        desplazarAlertasList.innerHTML = '';
+        alertasADesplazar = [];
+        
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const alertasPendientes = obtenerAlertasPendientes(row);
+            
+            // Obtener fechas límite de la actividad
+            const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
+            const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            
+            alertasPendientes.forEach(alerta => {
+                const fechaNueva = calcularFechaAlerta(alerta.fechaOriginal, offsetVal, unidad, direccion === 'antes');
+                
+                // Validar que la nueva fecha esté dentro del rango
+                let esValida = true;
+                let mensajeError = '';
+                
+                if (fechaNueva && fechaInicioBase && fechaNueva < fechaInicioBase) {
+                    esValida = false;
+                    mensajeError = '⚠ Previo a Fecha Inicio';
+                } else if (fechaNueva && fechaFinBase && fechaNueva > fechaFinBase) {
+                    esValida = false;
+                    mensajeError = '⚠ Excede Fecha Límite';
+                }
+                
+                // Agrupar por actividad
+                let actividadExistente = alertasADesplazar.find(a => a.actividadId === alerta.actividadId);
+                if (!actividadExistente) {
+                    actividadExistente = {
+                        actividadId: alerta.actividadId,
+                        nombreActividad: alerta.nombreActividad,
+                        alertas: []
+                    };
+                    alertasADesplazar.push(actividadExistente);
+                }
+                
+                actividadExistente.alertas.push({
+                    alertaId: alerta.alertaId,
+                    fechaOriginal: alerta.fechaOriginal,
+                    fechaNueva: fechaNueva,
+                    esValida: esValida,
+                    mensajeError: mensajeError
+                });
+            });
+        });
+        
+        // Renderizar la tabla
+        alertasADesplazar.forEach((actividad, actIndex) => {
+            actividad.alertas.forEach((alerta, index) => {
+                const colorClase = alerta.esValida ? 'text-gray-900' : 'text-red-600';
+                const textoFechaNueva = alerta.esValida 
+                    ? formatearFecha(alerta.fechaNueva) 
+                    : `<span class="font-semibold">${alerta.mensajeError}</span>`;
+                
+                // Agregar borde superior solo en la primera alerta de cada actividad (excepto la primera actividad)
+                const borderClass = (index === 0 && actIndex > 0) ? 'border-t-2 border-gray-300' : '';
+                
+                const tr = document.createElement('tr');
+                tr.className = borderClass;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-gray-900 ${borderClass}">${index === 0 ? actividad.nombreActividad : ''}</td>
+                    <td class="px-4 py-3 text-sm text-center text-gray-700 ${borderClass}">${formatearFecha(alerta.fechaOriginal)}</td>
+                    <td class="px-4 py-3 text-sm text-center font-semibold ${colorClase} ${borderClass}">${textoFechaNueva}</td>
+                `;
+                desplazarAlertasList.appendChild(tr);
+            });
+        });
+    }
+
+    // Event listeners para actualizar la lista
+    desplazarOffsetValor.addEventListener('input', actualizarListaDesplazar);
+    desplazarOffsetUnidad.addEventListener('change', actualizarListaDesplazar);
+    desplazarDireccion.addEventListener('change', actualizarListaDesplazar);
+
+    // Abrir modal de desplazar
+    btnDesplazarAlerta.addEventListener('click', function() {
+        actualizarListaDesplazar();
+        modalDesplazar.classList.remove('hidden');
+    });
+
+    // Cerrar modal de desplazar
+    btnCancelarDesplazar.addEventListener('click', function() {
+        modalDesplazar.classList.add('hidden');
+    });
+
+    // Cerrar modal al hacer click fuera
+    modalDesplazar.addEventListener('click', function(e) {
+        if (e.target === modalDesplazar) {
+            modalDesplazar.classList.add('hidden');
+        }
+    });
+
+    // Confirmar desplazamiento (abrir modal de confirmación)
+    btnConfirmarDesplazar.addEventListener('click', function() {
+        // Filtrar solo alertas válidas
+        const alertasValidas = alertasADesplazar.map(actividad => {
+            return {
+                ...actividad,
+                alertas: actividad.alertas.filter(alerta => alerta.esValida)
+            };
+        }).filter(actividad => actividad.alertas.length > 0);
+        
+        // Actualizar la variable global para usar solo las válidas
+        alertasADesplazar = alertasValidas;
+        
+        // Calcular estadísticas con solo alertas válidas
+        let totalActividades = alertasValidas.length;
+        let totalAlertasModificadas = 0;
+        
+        alertasValidas.forEach(actividad => {
+            totalAlertasModificadas += actividad.alertas.length;
+        });
+        
+        // Calcular alertas no modificadas (ya enviadas)
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        let totalAlertas = 0;
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            totalAlertas += parseInt(row.dataset.alertasCount || '0');
+        });
+        const alertasNoModificadas = totalAlertas - totalAlertasModificadas;
+        
+        // Actualizar modal de confirmación
+        document.getElementById('confirm-actividades-count').textContent = totalActividades;
+        document.getElementById('confirm-alertas-modificadas').textContent = totalAlertasModificadas;
+        document.getElementById('confirm-alertas-no-modificadas').textContent = alertasNoModificadas;
+        
+        // Cerrar modal de desplazar y abrir modal de confirmación
+        modalDesplazar.classList.add('hidden');
+        modalConfirmacionDesplazar.classList.remove('hidden');
+    });
+
+    // Cerrar modal de confirmación
+    btnCancelarConfirmacion.addEventListener('click', function() {
+        modalConfirmacionDesplazar.classList.add('hidden');
+        // Volver a abrir el modal de desplazar
+        modalDesplazar.classList.remove('hidden');
+    });
+
+    // Cerrar modal de confirmación al hacer click fuera
+    modalConfirmacionDesplazar.addEventListener('click', function(e) {
+        if (e.target === modalConfirmacionDesplazar) {
+            modalConfirmacionDesplazar.classList.add('hidden');
+            modalDesplazar.classList.remove('hidden');
+        }
+    });
+
+    // Confirmar definitivamente (enviar al backend)
+    btnConfirmarConfirmacion.addEventListener('click', function() {
+        console.log('Alertas a desplazar:', alertasADesplazar);
+        
+        // Construir el JSON en el formato requerido
+        const payload = alertasADesplazar.map(actividad => {
+            return {
+                actividad: actividad.actividadId,
+                alertas: actividad.alertas.map(alerta => {
+                    // Formatear fecha como YYYY-MM-DD HH:MM:SS
+                    const year = alerta.fechaNueva.getFullYear();
+                    const month = String(alerta.fechaNueva.getMonth() + 1).padStart(2, '0');
+                    const day = String(alerta.fechaNueva.getDate()).padStart(2, '0');
+                    const hours = String(alerta.fechaNueva.getHours()).padStart(2, '0');
+                    const minutes = String(alerta.fechaNueva.getMinutes()).padStart(2, '0');
+                    const seconds = String(alerta.fechaNueva.getSeconds()).padStart(2, '0');
+                    const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    
+                    return {
+                        id_alerta: alerta.alertaId,
+                        fecha: fechaFormateada
+                    };
+                })
+            };
+        });
+        
+        console.log('Payload a enviar:', payload);
+        console.log('JSON:', JSON.stringify(payload));
+        
+        // Obtener CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        // Enviar POST request
+        fetch('{% url "modificar_alertas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.status === 'success') {
+                // Recargar la página para ver las alertas actualizadas
+                window.location.reload();
+            } else {
+                alert('Error al desplazar alertas: ' + (data.message || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al desplazar alertas');
+        });
+    });
+</script>
+
+<!-- Script para modal de eliminar alertas -->
+<script>
+    const modalEliminar = document.getElementById('modal-eliminar-alertas');
+    const btnEliminarAlerta = document.getElementById('btn-eliminar');
+    const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
+    const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+    const eliminarAlertasList = document.getElementById('eliminar-alertas-list');
+    
+    const modalConfirmacionEliminar = document.getElementById('modal-confirmacion-eliminar');
+    const btnCancelarConfirmacionEliminar = document.getElementById('btn-cancelar-confirmacion-eliminar');
+    const btnConfirmarConfirmacionEliminar = document.getElementById('btn-confirmar-confirmacion-eliminar');
+    
+    let alertasAEliminar = [];
+    
+    // Función para actualizar la lista de alertas a eliminar
+    function actualizarListaEliminar() {
+        const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+        
+        eliminarAlertasList.innerHTML = '';
+        alertasAEliminar = [];
+        
+        checkedCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            const alertasPendientes = obtenerAlertasPendientes(row);
+            
+            if (alertasPendientes.length > 0) {
+                // Agregar a la lista global
+                alertasAEliminar.push({
+                    actividadId: row.dataset.actividadId,
+                    nombreActividad: row.querySelector('td:nth-child(2)').textContent.trim(),
+                    alertas: alertasPendientes
+                });
+            }
+        });
+        
+        // Renderizar todas las actividades con sus alertas
+        alertasAEliminar.forEach((actividad, actIndex) => {
+            actividad.alertas.forEach((alerta, index) => {
+                // Agregar borde superior solo en la primera alerta de cada actividad (excepto la primera actividad)
+                const borderClass = (index === 0 && actIndex > 0) ? 'border-t-2 border-gray-300' : '';
+                
+                const tr = document.createElement('tr');
+                tr.className = borderClass;
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-gray-900 ${borderClass}">${index === 0 ? actividad.nombreActividad : ''}</td>
+                    <td class="px-4 py-3 text-sm text-center text-gray-700 ${borderClass}">${formatearFecha(alerta.fechaOriginal)}</td>
+                `;
+                eliminarAlertasList.appendChild(tr);
+            });
+        });
+    }
+    
+    // Abrir modal de eliminar
+    btnEliminarAlerta.addEventListener('click', function() {
+        actualizarListaEliminar();
+        modalEliminar.classList.remove('hidden');
+    });
+    
+    // Cerrar modal de eliminar
+    btnCancelarEliminar.addEventListener('click', function() {
+        modalEliminar.classList.add('hidden');
+    });
+    
+    // Cerrar modal al hacer click fuera
+    modalEliminar.addEventListener('click', function(e) {
+        if (e.target === modalEliminar) {
+            modalEliminar.classList.add('hidden');
+        }
+    });
+    
+    // Abrir modal de confirmación
+    btnConfirmarEliminar.addEventListener('click', function() {
+        // Calcular estadísticas
+        let totalActividades = alertasAEliminar.length;
+        let totalAlertasEliminar = 0;
+        
+        alertasAEliminar.forEach(actividad => {
+            totalAlertasEliminar += actividad.alertas.length;
+        });
+        
+        // Actualizar modal de confirmación
+        document.getElementById('confirm-eliminar-actividades').textContent = totalActividades;
+        document.getElementById('confirm-eliminar-alertas').textContent = totalAlertasEliminar;
+        
+        // Cerrar modal de eliminar y abrir modal de confirmación
+        modalEliminar.classList.add('hidden');
+        modalConfirmacionEliminar.classList.remove('hidden');
+    });
+    
+    // Cerrar modal de confirmación
+    btnCancelarConfirmacionEliminar.addEventListener('click', function() {
+        modalConfirmacionEliminar.classList.add('hidden');
+        // Volver a abrir el modal de eliminar
+        modalEliminar.classList.remove('hidden');
+    });
+    
+    // Cerrar modal de confirmación al hacer click fuera
+    modalConfirmacionEliminar.addEventListener('click', function(e) {
+        if (e.target === modalConfirmacionEliminar) {
+            modalConfirmacionEliminar.classList.add('hidden');
+            modalEliminar.classList.remove('hidden');
+        }
+    });
+    
+    // Confirmar eliminación definitiva (enviar al backend)
+    btnConfirmarConfirmacionEliminar.addEventListener('click', function() {
+        // Construir array con solo los IDs de alertas a eliminar
+        const idsAlertas = [];
+        
+        alertasAEliminar.forEach(actividad => {
+            actividad.alertas.forEach(alerta => {
+                idsAlertas.push(alerta.alertaId);
+            });
+        });
+        
+        const payload = {
+            alertas_eliminar: idsAlertas
+        };
+        
+        console.log('Payload a enviar:', payload);
+        console.log('JSON:', JSON.stringify(payload));
+        
+        // Obtener CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        
+        // Enviar POST request
+        fetch('{% url "eliminar_alertas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.status === 'success') {
+                // Recargar la página para ver las alertas eliminadas
+                window.location.reload();
+            } else {
+                alert('Error al eliminar alertas: ' + (data.message || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al eliminar alertas');
+        });
     });
 </script>
 
