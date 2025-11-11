@@ -411,6 +411,10 @@ def editar_actividad(request):
             "periodos": periodos_json_anteriores
         }
         
+        # Revisar cambios antes de hacer nada
+        cambios = generar_diccionario_registro(data, estado_anterior_json)
+        if not cambios["actividad"] and not cambios["encargados"] and not cambios["periodos"]:
+            return JsonResponse({"success": True, "message": "No hay cambios para guardar"})
 
 
 
@@ -518,7 +522,6 @@ def editar_actividad(request):
             conteo_eliminado += 1
 
         try:
-            cambios = generar_diccionario_registro( data, estado_anterior_json)
             # Obtener estado actual para el correo
             periodos_actuales = Fecha.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
             encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, estado=True)

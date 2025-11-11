@@ -88,6 +88,7 @@
         <div class="flex items-center gap-2 mb-3">
             <label for="modalNombre" class="font-medium">Nombre:</label>
             <input type="text" id="modalNombre" class="border p-1 rounded flex-1">
+            <p id="nombreError" class="text-red-600 font-medium mt-1 hidden">El nombre no puede estar vacío</p>
         </div>
 
         <!-- Encargados -->
@@ -764,39 +765,56 @@ document.getElementById("saveAddEncargado").addEventListener("click", () => {
     document.getElementById("addEncargadoModal").classList.add("hidden");
 });
 
-
 // ===============================
 // Guardar cambios
 // ===============================
 document.getElementById("saveChanges").addEventListener("click", () => {
-    const nombre = document.getElementById("modalNombre").value.trim();
+    const nombreInput = document.getElementById("modalNombre");
+    const nombreError = document.getElementById("nombreError");
+    const nombre = nombreInput.value.trim();
 
     if (!nombre) {
-        alert("El nombre no puede estar vacío");
+        nombreError.textContent = "El nombre no puede estar vacío";
+        nombreError.classList.remove("hidden");  // <--- importante
+        nombreInput.focus();
         return;
+    } else {
+        nombreError.textContent = "";
+        nombreError.classList.add("hidden");      // ocultar si es válido
     }
 
-    for (let i = 0; i < tempActivity.periodos.length; i++) {
-        const a = tempActivity.periodos[i];
-        for (let j = i + 1; j < tempActivity.periodos.length; j++) {
-            const b = tempActivity.periodos[j];
+    // Validación de periodos solapados
+    const periodos = tempActivity.periodos;
+    for (let i = 0; i < periodos.length; i++) {
+        const a = periodos[i];
+        for (let j = i + 1; j < periodos.length; j++) {
+            const b = periodos[j];
             if (!(a.f_fin < b.f_inicio || a.f_inicio > b.f_fin)) {
-                alert("Los periodos no pueden solaparse");
+                // Mostrar error inline en lugar de alert
+                let periodoError = document.getElementById("periodoError");
+                if (!periodoError) {
+                    periodoError = document.createElement("p");
+                    periodoError.id = "periodoError";
+                    periodoError.classList.add("text-red-600", "font-medium", "mt-1");
+                    document.getElementById("modalPeriodosList").parentNode.insertBefore(periodoError, document.getElementById("modalPeriodosList").nextSibling);
+                }
+                periodoError.textContent = "Los periodos no pueden solaparse";
                 return;
             }
         }
     }
 
+    // Si pasa todas las validaciones, enviar datos
     const payload = {
-        id: tempActivity.id,  // siempre existente
+        id: tempActivity.id,
         nombre: nombre,
         encargados: tempActivity.encargados.map(e => ({
-            id: e.id || "",  // nuevo encargado -> id vacío
+            id: e.id || "",
             nombre: e.nombre,
             correo: e.correo || ""
         })),
         periodos: tempActivity.periodos.map(p => ({
-            id: p.id || "",  // nuevo periodo -> id vacío
+            id: p.id || "",
             f_inicio: p.f_inicio,
             f_fin: p.f_fin
         }))
@@ -815,14 +833,8 @@ document.getElementById("saveChanges").addEventListener("click", () => {
         return res.json();
     })
     .then(data => {
-        console.log("Respuesta del servidor:", data);
-        if (data.success) {
-            location.reload();
-        } else {
-            // si no hay success explícito, igual asumimos que guardó
-            console.warn("Guardado, pero sin 'success' explícito:", data);
-            location.reload();
-        }
+        if (data.success) location.reload();
+        else location.reload();
     })
     .catch(err => {
         console.error(err);
