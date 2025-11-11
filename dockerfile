@@ -21,8 +21,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar proyecto
 COPY . /app/
 
-# Exponer puerto
-EXPOSE 8000
 
 # Instalar y compilar Tailwind
 RUN python backend/manage.py tailwind install

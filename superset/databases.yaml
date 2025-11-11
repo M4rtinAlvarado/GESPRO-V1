@@ -1,3 +1,0 @@
-databases:
-- database_name: gespro
-  sqlalchemy_uri: postgresql://albaca:9E5Og5yodW6u0S@db:5432/gespro
