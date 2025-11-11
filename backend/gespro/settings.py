@@ -163,11 +163,18 @@ Q_CLUSTER = {
 
 load_dotenv()
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("SMTP_SERVER")
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("EMAIL")
-EMAIL_HOST_PASSWORD = os.getenv("PASSWORD_APP")
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_MODE = os.getenv("EMAIL_MODE", "dummy")
+
+if EMAIL_MODE == "dummy":
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+elif EMAIL_MODE == "console":
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("SMTP_SERVER")
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv("EMAIL")
+    EMAIL_HOST_PASSWORD = os.getenv("PASSWORD_APP")
+    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 

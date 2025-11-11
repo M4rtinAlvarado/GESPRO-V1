@@ -887,6 +887,7 @@ function abrirModalHistorial(actividadId) {
         // Construir HTML para todos los registros
         let html = '<div class="space-y-4">';
         
+        console.log("Historial data:", data);
         data.forEach((registro, index) => {
             const cambios = registro.cambios;
             
