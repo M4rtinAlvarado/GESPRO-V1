@@ -112,10 +112,10 @@
         
         <!-- Gantt con columnas mensuales (oculto por defecto) -->
         <div id="gantt-mensual" class="gantt-wrapper border rounded-lg hidden">
-            <div class="gantt-container" style="min-width: calc(320px + {% widthratio gantt_data.total_weeks 1 35 %}px);">
+            <div class="gantt-container" style="min-width: calc(200px + {{ gantt_data.total_weeks|add:'0' }}px * 25);">
                 <!-- Header con fechas mensuales -->
                 <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300 sticky top-0 z-100">
-                    <div class="activity-header w-80 font-bold text-gray-700 border-r border-gray-300 bg-gray-100 sticky left-0 z-101">
+                    <div class="activity-header w-48 font-bold text-gray-700 border-r border-gray-300 bg-gray-100 sticky left-0 z-101 text-xs">
                         Actividad
                     </div>
                     <div class="flex">
@@ -124,8 +124,8 @@
                             {% regroup gantt_data.columnas_semanales by month_name as monthly_groups %}
                             {% for month_group in monthly_groups %}
                                 <div class="month-container border-r border-gray-300">
-                                    <!-- Header del mes con nombre completo (columnas de 35px) -->
-                                    <div class="month-header text-center bg-blue-50 border-b border-gray-300 py-2 px-1 font-bold text-xs text-gray-700" style="width: {% widthratio month_group.list|length 1 35 %}px; min-width: {% widthratio month_group.list|length 1 35 %}px;">
+                                    <!-- Header del mes con nombre completo (columnas de 25px) -->
+                                    <div class="month-header text-center bg-blue-50 border-b border-gray-300 py-2 px-1 font-bold text-xs text-gray-700" style="width: calc({{ month_group.list|length }} * 25px); min-width: calc({{ month_group.list|length }} * 25px); box-sizing: border-box;">
                                         {% if month_group.grouper == 'Ene' %}Enero
                                         {% elif month_group.grouper == 'Feb' %}Febrero
                                         {% elif month_group.grouper == 'Mar' %}Marzo
@@ -140,10 +140,10 @@
                                         {% elif month_group.grouper == 'Dic' %}Diciembre
                                         {% else %}{{ month_group.grouper }}{% endif %}
                                     </div>
-                                    <!-- Subheader con semanas de 35px -->
-                                    <div class="weeks-subheader flex">
+                                    <!-- Subheader con semanas de 25px -->
+                                    <div class="weeks-subheader flex" style="box-sizing: border-box;">
                                         {% for week in month_group.list %}
-                                            <div class="week-subcolumn text-center border-r border-gray-200 bg-gray-50" style="width: 35px; min-width: 35px; max-width: 35px; flex: none; box-sizing: border-box;">
+                                            <div class="week-subcolumn text-center border-r border-gray-200 bg-gray-50" style="width: 25px; min-width: 25px; max-width: 25px; flex: none; box-sizing: border-box;">
                                                 <div class="text-xs text-gray-500">{{ week.day_number }}</div>
                                             </div>
                                         {% endfor %}
@@ -160,54 +160,36 @@
                         <!-- Separador de línea de trabajo -->
                         {% if actividad.mostrar_separador %}
                             <div class="work-line-separator flex bg-gradient-to-r from-gray-100 to-gray-50 border-b border-gray-300">
-                                <div class="work-line-label px-3 py-2 w-80 font-semibold text-sm text-gray-700 flex items-center bg-gradient-to-r from-gray-100 to-gray-50">
+                                <div class="work-line-label-monthly px-2 py-1 w-48 font-semibold text-xs text-gray-700 flex items-center bg-gradient-to-r from-gray-100 to-gray-50">
                                     {% if actividad.tipo == 'Normal' %}
-                                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
                                     {% else %}
-                                        <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                        <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
                                     {% endif %}
-                                    {{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}
+                                    {{ actividad.linea_trabajo|default:'Sin línea' }}
                                 </div>
                                 <div class="work-line-fill flex-1 bg-gradient-to-r from-gray-100 to-gray-50"></div>
                             </div>
                         {% endif %}
                         
                         <!-- Fila de actividad -->
-                        <div class="gantt-row flex border-b border-gray-200 hover:bg-gray-50"
+                        <div class="gantt-row gantt-row-monthly flex border-b border-gray-200 hover:bg-gray-50"
                             data-linea-trabajo="{{ actividad.linea_trabajo|default:'sin-linea' }}">
                             
-                            <!-- Información de actividad (idéntica a la vista semanal) -->
-                            <div class="activity-info w-80 border-r border-gray-300 bg-white">
-                                <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
-                                <div class="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-2">
-                                    <!-- Mostrar rango completo de fechas -->
-                                    <span>
-                                        {% if actividad.fechas %}
-                                            {% with actividad.fechas|first as primera_fecha %}
-                                            {% with actividad.fechas|last as ultima_fecha %}
-                                                {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
-                                            {% endwith %}
-                                            {% endwith %}
-                                        {% endif %}
-                                    </span>
-                                    <span class="px-2 py-1 rounded text-xs {% if actividad.tipo == 'Normal' %}bg-blue-100 text-blue-800{% else %}bg-green-100 text-green-800{% endif %}">
-                                        {{ actividad.tipo }}
-                                    </span>
-                                    {% if actividad.fechas|length > 1 %}
-                                        <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
-                                            {{ actividad.fechas|length }} período{% if actividad.fechas|length > 1 %}s{% endif %}
-                                        </span>
-                                    {% endif %}
+                            <!-- Información de actividad compacta para vista mensual -->
+                            <div class="activity-info-monthly w-48 border-r border-gray-300 bg-white px-2 py-1">
+                                <div class="font-medium text-gray-800 text-xs truncate" title="{{ actividad.nombre }}">
+                                    {{ actividad.nombre }}
                                 </div>
                             </div>
                             
-                            <!-- Timeline con múltiples barras (ajustado para columnas de 35px) -->
-                            <div class="timeline-container relative bg-gray-50" 
-                                style="min-height: 70px; height: auto; width: {% widthratio gantt_data.total_weeks 1 35 %}px; min-width: {% widthratio gantt_data.total_weeks 1 35 %}px;">
+                            <!-- Timeline con múltiples barras (ajustado para columnas de 25px) -->
+                            <div class="timeline-container-monthly relative bg-gray-50" 
+                                style="min-height: 40px; height: auto; width: calc({{ gantt_data.total_weeks }} * 25px); min-width: calc({{ gantt_data.total_weeks }} * 25px);">
                                 {% for periodo in actividad.periodos_calculados %}
-                                    <div class="gantt-bar gantt-bar-monthly absolute top-3 rounded flex items-center justify-center text-white font-medium
+                                    <div class="gantt-bar gantt-bar-monthly absolute rounded flex items-center justify-center text-white font-medium
                                                 {% if actividad.estado == 'PEN' %}bg-red-500{% elif actividad.estado == 'LPC' %}bg-yellow-500{% elif actividad.estado == 'EPR' %}bg-blue-500{% elif actividad.estado == 'COM' %}bg-green-500{% elif actividad.estado == 'TER' %}bg-purple-500{% else %}bg-gray-500{% endif %}"
-                                        style="left: {{ periodo.left_px_monthly }}px; width: {{ periodo.width_px_monthly }}px; font-size: 10px;"
+                                        style="left: {{ periodo.left_px_monthly }}px; width: {{ periodo.width_px_monthly }}px; font-size: 9px; top: 5px;"
                                         data-activity-name="{{ actividad.nombre }}"
                                         data-activity-type="{{ actividad.tipo }}"
                                         data-activity-status="{{ actividad.estado }}"
@@ -286,9 +268,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('#gantt-semanal .timeline-container').forEach(container => {
             container.style.backgroundImage = 'repeating-linear-gradient(to right, transparent 0px, transparent 99px, rgba(0,0,0,0.1) 99px, rgba(0,0,0,0.1) 100px)';
         });
-        // Mensual: paso de 35px
+        // Mensual: paso de 25px
         document.querySelectorAll('#gantt-mensual .timeline-container').forEach(container => {
-            container.style.backgroundImage = 'repeating-linear-gradient(to right, transparent 0px, transparent 34px, rgba(0,0,0,0.08) 34px, rgba(0,0,0,0.08) 35px)';
+            container.style.backgroundImage = 'repeating-linear-gradient(to right, transparent 0px, transparent 24px, rgba(0,0,0,0.08) 24px, rgba(0,0,0,0.08) 25px)';
         });
     }
     aplicarGridFondo();
@@ -487,9 +469,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Ancho mínimo para barras en vista mensual */
 .gantt-bar-monthly {
-    min-width: 25px !important;
-    height: 50px !important;
-    min-height: 50px !important;
+    min-width: 18px !important;
+    height: 30px !important;
+    min-height: 30px !important;
 }
 
 .gantt-bar span {
@@ -546,11 +528,13 @@ document.addEventListener('DOMContentLoaded', function() {
     max-width: 100px !important;
 }
 
-/* Vista mensual: subcolumnas de 35px exactos */
+/* Vista mensual: subcolumnas de 25px exactos */
 #gantt-mensual .week-subcolumn {
-    width: 35px !important;
-    min-width: 35px !important;
-    max-width: 35px !important;
+    width: 25px !important;
+    min-width: 25px !important;
+    max-width: 25px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
 }
 
 /* Timeline containers con anchos calculados exactos */
@@ -657,6 +641,41 @@ document.addEventListener('DOMContentLoaded', function() {
     min-height: 70px;
 }
 
+/* Filas compactas en vista mensual */
+.gantt-row-monthly {
+    min-height: 40px !important;
+}
+
+/* Columna de información compacta en vista mensual */
+.activity-info-monthly {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    left: 0;
+    z-index: 50;
+    background: white;
+}
+
+/* Timeline container compacto en vista mensual */
+.timeline-container-monthly {
+    position: relative;
+    border-left: 0;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+/* Header de actividades compacto en vista mensual */
+#gantt-mensual .activity-header {
+    width: 12rem !important; /* w-48 = 192px */
+}
+
+/* Label de línea de trabajo compacto en vista mensual */
+.work-line-label-monthly {
+    position: sticky;
+    left: 0;
+    z-index: 70;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
 /* Separadores de línea de trabajo */
 .work-line-separator {
     position: relative;
@@ -702,26 +721,30 @@ document.addEventListener('DOMContentLoaded', function() {
 .month-container {
     display: flex;
     flex-direction: column;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .month-header {
     position: sticky;
     top: 0;
     z-index: 90;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
 }
 
 .weeks-subheader {
     position: sticky;
     top: 32px;
     z-index: 85;
+    box-sizing: border-box !important;
 }
 
 .week-subcolumn {
-    /* Subcolumnas de 35px en vista mensual, incluyendo bordes */
+    /* Subcolumnas de 25px en vista mensual, incluyendo bordes */
     box-sizing: border-box;
-    min-width: 35px;
-    max-width: 35px;
+    min-width: 25px;
+    max-width: 25px;
 }
 
 /* Ocultar elementos */
