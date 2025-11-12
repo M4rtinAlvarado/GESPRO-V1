@@ -26,7 +26,7 @@ def registrar_y_notificar_cambios(actividad, cambios, estado_actual):
     from django.core.mail import send_mail
     from django.conf import settings
 
-    # 1. Guardar registro en la DB
+    # --- 1. Guardar registro en la DB ---
     try:
         RegistroCambioActividad.objects.create(
             actividad=actividad,
@@ -36,55 +36,69 @@ def registrar_y_notificar_cambios(actividad, cambios, estado_actual):
     except Exception as e:
         print(f"[ERROR] No se pudo crear el registro en DB: {e}")
 
-    #printar cambios para debug
     print(f"[INFO] Cambios registrados para actividad {actividad.id}: {json.dumps(cambios, indent=2)}")
 
-    # 2. Preparar correo
+    # --- 2. Preparar correo ---
     asunto = f"Cambios en la actividad: {actividad.nombre}"
     cuerpo = f"Se han realizado cambios en la actividad '{actividad.nombre}':\n\n"
 
     # --- Nombre de la actividad ---
-    if 'nombre' in cambios.get("actividad", {}):
+    if "nombre" in cambios.get("actividad", {}):
         antes = cambios["actividad"]["nombre"]["antes"]
         despues = cambios["actividad"]["nombre"]["despues"]
-        cuerpo += f"Nombre: {antes} → {despues}\n\n"
+        cuerpo += f"Nombre: {antes or '—'} → {despues or '—'}\n\n"
     else:
         cuerpo += f"Nombre: {estado_actual['nombre']}\n\n"
 
-    # --- Encargados ---
-    cuerpo += "Encargados:\n"
+    # --- Encargados actuales ---
+    cuerpo += "Encargados actuales:\n"
     destinatarios = set()
-    # Correos de los encargados actuales (estado actual)
+
     for e in estado_actual.get("encargados", []):
-        cuerpo += f"  - {e['nombre']} ({e.get('correo', 'sin correo')})\n"
         correo = e.get("correo")
+        cuerpo += f"  - {e['nombre']} ({correo or 'sin correo'})\n"
         if correo:
             destinatarios.add(correo)
 
-    # Agregar también los correos de los encargados eliminados
+    # --- Incluir los eliminados como destinatarios también ---
     for e in cambios.get("encargados", []):
-        if e.get("tipo") == "eliminado" and e.get("correo"):
-            destinatarios.add(e["correo"])
+        if e.get("tipo") == "eliminado":
+            correo_antes = e.get("correo", {}).get("antes")
+            if correo_antes:
+                destinatarios.add(correo_antes)
 
+    # --- Cambios en encargados ---
+    cambios_visibles = [e for e in cambios.get("encargados", []) if e["tipo"] in ("agregado", "eliminado", "modificado", "creado")]
+    if cambios_visibles:
+        cuerpo += "\nCambios en encargados:\n"
+        for e in cambios_visibles:
+            nombre_antes = e["nombre"].get("antes")
+            nombre_despues = e["nombre"].get("despues")
+            correo_antes = e["correo"].get("antes")
+            correo_despues = e["correo"].get("despues")
+            tipo = e["tipo"]
 
-    if cambios.get("encargados"):
-        cambios_visibles = [e for e in cambios["encargados"] if e["tipo"] in ("agregado", "eliminado", "modificado")]
-        if cambios_visibles:
-            cuerpo += "\nCambios en encargados:\n"
-            for e in cambios_visibles:
-                if e["tipo"] == "agregado":
-                    cuerpo += f"  + Agregado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
-                elif e["tipo"] == "eliminado":
-                    cuerpo += f"  - Eliminado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
-                elif e["tipo"] == "modificado":
-                    cuerpo += f"  * Modificado: {e['nombre']}\n"
+            if tipo == "agregado":
+                cuerpo += f"  + Agregado: {nombre_despues} ({correo_despues or 'sin correo'})\n"
+            elif tipo == "eliminado":
+                cuerpo += f"  - Eliminado: {nombre_antes} ({correo_antes or 'sin correo'})\n"
+            elif tipo == "modificado":
+                cuerpo += f"  * Modificado:\n"
+                if nombre_antes != nombre_despues:
+                    cuerpo += f"      Nombre: {nombre_antes} → {nombre_despues}\n"
+                if correo_antes != correo_despues:
+                    cuerpo += f"      Correo: {correo_antes or '—'} → {correo_despues or '—'}\n"
+            elif tipo == "creado":
+                cuerpo += f"  + Creado: {nombre_despues} ({correo_despues or 'sin correo'})\n"
+
     cuerpo += "\n"
 
-    # --- Periodos ---
+    # --- Periodos actuales ---
     cuerpo += "Periodos actuales:\n"
     for p in estado_actual.get("periodos", []):
         cuerpo += f"  - {p['f_inicio']} → {p['f_fin']}\n"
 
+    # --- Cambios en periodos ---
     if cambios.get("periodos"):
         cuerpo += "\nCambios en periodos:\n"
         for p in cambios["periodos"]:
@@ -101,7 +115,8 @@ def registrar_y_notificar_cambios(actividad, cambios, estado_actual):
                 )
 
     cuerpo += "\n."
-    # 3. Enviar correo
+
+    # --- 3. Enviar correo ---
     if destinatarios:
         try:
             send_mail_async(
@@ -110,6 +125,7 @@ def registrar_y_notificar_cambios(actividad, cambios, estado_actual):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=list(destinatarios),
             )
+            print(f"[INFO] Correo enviado a: {', '.join(destinatarios)}")
         except Exception as e:
             print(f"[ERROR] Error al enviar correo: {e}")
     else:
