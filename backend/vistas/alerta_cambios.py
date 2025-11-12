@@ -54,23 +54,30 @@ def registrar_y_notificar_cambios(actividad, cambios, estado_actual):
     # --- Encargados ---
     cuerpo += "Encargados:\n"
     destinatarios = set()
+    # Correos de los encargados actuales (estado actual)
     for e in estado_actual.get("encargados", []):
         cuerpo += f"  - {e['nombre']} ({e.get('correo', 'sin correo')})\n"
         correo = e.get("correo")
         if correo:
             destinatarios.add(correo)
 
+    # Agregar también los correos de los encargados eliminados
+    for e in cambios.get("encargados", []):
+        if e.get("tipo") == "eliminado" and e.get("correo"):
+            destinatarios.add(e["correo"])
+
+
     if cambios.get("encargados"):
-        cuerpo += "\nCambios en encargados:\n"
-        for e in cambios["encargados"]:
-            tipo = e["tipo"]
-            if tipo == "agregado":
-                cuerpo += f"  + Agregado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
-            elif tipo == "eliminado":
-                cuerpo += f"  - Eliminado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
-            elif tipo == "modificado":
-                antes = e.get("antes", {})
-                cuerpo += f"  * Modificado: {e['nombre']} (correo: {antes.get('correo', 'sin correo')} → {e.get('correo', '')})\n"
+        cambios_visibles = [e for e in cambios["encargados"] if e["tipo"] in ("agregado", "eliminado", "modificado")]
+        if cambios_visibles:
+            cuerpo += "\nCambios en encargados:\n"
+            for e in cambios_visibles:
+                if e["tipo"] == "agregado":
+                    cuerpo += f"  + Agregado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
+                elif e["tipo"] == "eliminado":
+                    cuerpo += f"  - Eliminado: {e['nombre']} ({e.get('correo', 'sin correo')})\n"
+                elif e["tipo"] == "modificado":
+                    cuerpo += f"  * Modificado: {e['nombre']}\n"
     cuerpo += "\n"
 
     # --- Periodos ---
