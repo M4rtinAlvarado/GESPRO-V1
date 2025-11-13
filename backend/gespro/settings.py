@@ -14,6 +14,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+# Cargar variables desde .env lo antes posible para que estén disponibles
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(BASE_DIR / "frontend"))
@@ -87,11 +90,11 @@ WSGI_APPLICATION = 'gespro.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'gespro',
-        'USER': 'albaca',
-        'PASSWORD': '9E5Og5yodW6u0S',
-        'HOST': 'db',
-        'PORT': '5432',
+        'NAME': os.getenv('POSTGRES_DB', 'gespro'),
+        'USER': os.getenv('POSTGRES_USER', 'albaca'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '9E5Og5yodW6u0S'),
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 
@@ -160,8 +163,6 @@ Q_CLUSTER = {
     "bulk": 10,
     "orm": "default",
 }
-
-load_dotenv()
 
 EMAIL_MODE = os.getenv("EMAIL_MODE", "dummy")
 

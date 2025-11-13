@@ -607,7 +607,7 @@ def reportes(request, proyecto_id):
 
     filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
 
-    iframe_src = f"http://127.0.0.1:3004/superset/dashboard/p/{DASHBOARD_ID}/?preselect_filters={filters_encoded}"
+    iframe_src = f"http://localhost:3004/superset/dashboard/p/Qky7RJn7m0g/"
     print(iframe_src)
 
     return render(request, 'vistas/reportes.html', {
