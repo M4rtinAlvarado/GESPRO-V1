@@ -70,7 +70,11 @@
                     Sin encargados
                 {% endif %}
             </p>
-            <p><strong>Línea:</strong> {{ act.linea_trabajo }}</p>
+            {% if act.tipo == "Difusión" %}
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo|join:" - " }}</p>
+            {% else %} 
+                <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo }}</p>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
@@ -887,7 +891,6 @@ function abrirModalHistorial(actividadId) {
         // Construir HTML para todos los registros
         let html = '<div class="space-y-4">';
         
-        console.log("Historial data:", data);
         data.forEach((registro, index) => {
             const cambios = registro.cambios;
             
@@ -939,35 +942,78 @@ function abrirModalHistorial(actividadId) {
                     let accionBadge = '';
                     let antesTitle = '-';
                     let despuesTitle = '-';
+                    let campo = 'Encargado';
                     
                     if (enc.tipo === 'agregado') {
-                        despues = `${enc.nombre}`;
-                        despuesTitle = `${enc.nombre} (${enc.correo})`;
+                        // Estructura nueva: enc.nombre y enc.correo son strings directos
+                        const nombre = enc.nombre?.despues || enc.nombre || '';
+                        const correo = enc.correo?.despues || enc.correo || '';
+                        despues = `${nombre}`;
+                        despuesTitle = `${nombre} (${correo || 'Sin correo'})`;
                         accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Agregado</span>';
+                    }else if (enc.tipo === 'creado') {
+                        // Estructura antigua: enc.nombre y enc.correo son strings directos
+                        const nombre = enc.nombre.despues || '';
+                        const correo = enc.correo.despues || '';
+                        despues = `${nombre}`;
+                        despuesTitle = `${nombre} (${correo || 'Sin correo'})`;
+                        accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Creado</span>';
                     } else if (enc.tipo === 'eliminado') {
-                        antes = `${enc.nombre}`;
-                        antesTitle = `${enc.nombre} (${enc.correo})`;
+                        // Estructura nueva: enc.nombre y enc.correo son strings directos
+                        const nombre = enc.nombre?.antes || enc.nombre || '';
+                        const correo = enc.correo?.antes || enc.correo || '';
+                        antes = `${nombre}`;
+                        antesTitle = `${nombre} (${correo || 'Sin correo'})`;
                         accionBadge = '<span class="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap">Eliminado</span>';
                     } else if (enc.tipo === 'modificado') {
-                        if (enc.antes) {
-                            antes = `${enc.antes.nombre}`;
-                            antesTitle = `${enc.antes.nombre} (${enc.antes.correo})`;
+                        // Nueva estructura: enc.nombre y enc.correo son objetos {antes, despues}
+                        const nombreAntes = enc.nombre?.antes || '';
+                        const nombreDespues = enc.nombre?.despues || '';
+                        const correoAntes = enc.correo?.antes || '';
+                        const correoDespues = enc.correo?.despues || '';
+                        
+                        // Determinar qué cambió
+                        const nombreCambio = nombreAntes !== nombreDespues;
+                        const correoCambio = correoAntes !== correoDespues;
+                        
+                        if (nombreCambio && correoCambio) {
+                            // Ambos cambiaron - mostrar nombre y correo
+                            campo = 'Encargado';
+                            const correoAntesDisplay = correoAntes || 'Sin correo';
+                            const correoDespuesDisplay = correoDespues || 'Sin correo';
+                            antes = `${nombreAntes}<br><span class="text-xs text-gray-500">${correoAntesDisplay}</span>`;
+                            antesTitle = `${nombreAntes} (${correoAntesDisplay})`;
+                            despues = `${nombreDespues}<br><span class="text-xs text-gray-500">${correoDespuesDisplay}</span>`;
+                            despuesTitle = `${nombreDespues} (${correoDespuesDisplay})`;
+                        } else if (nombreCambio) {
+                            // Solo nombre cambió
+                            campo = 'Encargado (Nombre)';
+                            antes = `${nombreAntes}`;
+                            antesTitle = `${nombreAntes} (${correoAntes || 'Sin correo'})`;
+                            despues = `${nombreDespues}`;
+                            despuesTitle = `${nombreDespues} (${correoDespues || 'Sin correo'})`;
+                        } else if (correoCambio) {
+                            // Solo correo cambió
+                            campo = 'Encargado (Correo)';
+                            const correoAntesDisplay = correoAntes || 'Sin correo';
+                            const correoDespuesDisplay = correoDespues || 'Sin correo';
+                            antes = `${correoAntesDisplay}`;
+                            antesTitle = `${nombreAntes} (${correoAntesDisplay})`;
+                            despues = `${correoDespuesDisplay}`;
+                            despuesTitle = `${nombreDespues} (${correoDespuesDisplay})`;
                         }
-                        if (enc.despues) {
-                            despues = `${enc.despues.nombre}`;
-                            despuesTitle = `${enc.despues.nombre} (${enc.despues.correo})`;
-                        }
+                        
                         accionBadge = '<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs whitespace-nowrap">Modificado</span>';
                     }
                     
                     html += `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="py-3 px-3 font-medium">Encargado</td>
+                            <td class="py-3 px-3 font-medium">${campo}</td>
                             <td class="py-3 px-3 text-gray-600">
-                                <div class="truncate" title="${antesTitle}">${antes}</div>
+                                <div title="${antesTitle}">${antes}</div>
                             </td>
                             <td class="py-3 px-3">
-                                <div class="truncate font-medium" title="${despuesTitle}">${despues}</div>
+                                <div class="font-medium" title="${despuesTitle}">${despues}</div>
                             </td>
                             <td class="py-3 px-3">${accionBadge}</td>
                         </tr>
