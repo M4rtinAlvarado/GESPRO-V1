@@ -40,8 +40,8 @@ Variables usadas en el código y ejemplos:
    - Ejemplo: `DB_HOST=db`
  - DJANGO_HOST_PORT: Puerto del host para mapear el servidor Django (host:container). Default `3003`.
    - Ejemplo: `DJANGO_HOST_PORT=3003`
- - SUPERSET_HOST_PORT: Puerto del host para mapear Superset (host:container). Default `3004`.
-   - Ejemplo: `SUPERSET_HOST_PORT=3004`
+ - SUPERSET_HOST_PORT: Puerto del host para mapear Superset (host:container). Default `4003`.
+   - Ejemplo: `SUPERSET_HOST_PORT=4003`
  - SUPERSET_ADMIN_USERNAME: Usuario admin que se creará en Superset (default: `admin`).
    - Ejemplo: `SUPERSET_ADMIN_USERNAME=admin`
  - SUPERSET_ADMIN_PASSWORD: Contraseña del admin de Superset (default: `adminpass123`).
@@ -73,7 +73,7 @@ DB_HOST=db
 
 # Puertos en el host
 DJANGO_HOST_PORT=3003
-SUPERSET_HOST_PORT=3004
+SUPERSET_HOST_PORT=4003
  
 # Credenciales admin Superset (creadas al iniciar el contenedor)
 SUPERSET_ADMIN_USERNAME=admin
@@ -92,7 +92,7 @@ Asegúrate de tener instaladas las siguientes herramientas en tu máquina:
 - Docker (Engine) v20+ compatible con Compose v2.
 - Docker Compose (incluido en Docker Desktop o como plugin docker-compose v2).
 - Al menos 2-4 GB de memoria disponible para los contenedores; Superset y Postgres requieren memoria.
-- Puerto 3003 libre (Django) y 3004 libre (Superset) en la máquina host o ajustar en `docker-compose.yml`.
+- Puerto 3003 libre (Django) y 4003 libre (Superset) en la máquina host o ajustar en `docker-compose.yml`.
 
 Recomendación: ejecutar `docker --version` y `docker compose version` antes de comenzar.
 
@@ -112,14 +112,14 @@ Esto hará:
 - Construir la imagen de la aplicación y de Superset.
 - Crear un contenedor para Postgres con la base de datos `gespro`.
 - Ejecutar las migraciones de Django y levantar el servidor en `0.0.0.0:3003`.
-- Iniciar Superset en el puerto `8088` dentro del contenedor, mapeado al `3004` del host (según `docker-compose.yml`).
+- Iniciar Superset en el puerto `8088` dentro del contenedor, mapeado al `4003` del host (según `docker-compose.yml`).
 
 
 
 3. Acceder a las aplicaciones desde el navegador:
 
 - Aplicación Django: http://localhost:3003/
-- Superset: http://localhost:3004/ (usuario admin/adminpass123, creado automáticamente por el comando de arranque de Superset en el compose)
+- Superset: http://localhost:4003/ (usuario admin/adminpass123, creado automáticamente por el comando de arranque de Superset en el compose)
 
 4. Parar y limpiar:
 
