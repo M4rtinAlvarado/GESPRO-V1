@@ -93,8 +93,8 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB', 'gespro'),
         'USER': os.getenv('POSTGRES_USER', 'albaca'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', '9E5Og5yodW6u0S'),
-        'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'HOST': os.getenv('DB_HOST', 'gespro-db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5003'),
     }
 }
 

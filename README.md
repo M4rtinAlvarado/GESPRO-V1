@@ -34,10 +34,10 @@ Variables usadas en el código y ejemplos:
    - Ejemplo: `POSTGRES_USER=albaca`
  - POSTGRES_PASSWORD: Contraseña de Postgres (default incluido en compose). Reemplazar en producción.
    - Ejemplo: `POSTGRES_PASSWORD=secreto_postgres`
- - POSTGRES_PORT: Puerto interno de Postgres (default: `5432`).
-   - Ejemplo: `POSTGRES_PORT=5432`
- - DB_HOST: Host del servicio de BD desde Django (default: `db`).
-   - Ejemplo: `DB_HOST=db`
+ - POSTGRES_PORT: Puerto interno de Postgres (default: `5003`).
+   - Ejemplo: `POSTGRES_PORT=5003`
+ - DB_HOST: Host del servicio de BD desde Django (default: `gespro-db`).
+   - Ejemplo: `DB_HOST=gespro-db`
  - DJANGO_HOST_PORT: Puerto del host para mapear el servidor Django (host:container). Default `3003`.
    - Ejemplo: `DJANGO_HOST_PORT=3003`
  - SUPERSET_HOST_PORT: Puerto del host para mapear Superset (host:container). Default `4003`.
@@ -45,7 +45,7 @@ Variables usadas en el código y ejemplos:
  - SUPERSET_ADMIN_USERNAME: Usuario admin que se creará en Superset (default: `admin`).
    - Ejemplo: `SUPERSET_ADMIN_USERNAME=admin`
  - SUPERSET_ADMIN_PASSWORD: Contraseña del admin de Superset (default: `adminpass123`).
-   - Ejemplo: `SUPERSET_ADMIN_PASSWORD=adminpass123`
+   - Ejemplo: `SUPERSET_ADMIN_PASSWORD=contraseña_segura`
  - SUPERSET_ADMIN_FIRSTNAME: Nombre del admin (default: `Super`).
    - Ejemplo: `SUPERSET_ADMIN_FIRSTNAME=Super`
  - SUPERSET_ADMIN_LASTNAME: Apellido del admin (default: `Admin`).

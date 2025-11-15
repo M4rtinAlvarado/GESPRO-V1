@@ -27,6 +27,3 @@ EXPOSE 3003
 # Instalar y compilar Tailwind
 RUN python backend/manage.py tailwind install
 RUN python backend/manage.py tailwind build
-
-# Ejecutar Django
-CMD ["python", "backend/manage.py", "runserver", "0.0.0.0:3003"]

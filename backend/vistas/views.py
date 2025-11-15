@@ -265,43 +265,44 @@ def generar_diccionario_registro(data, estado_anterior_json):
         str_eid = str(eid) if eid else None
         ids_en_request.append(str_eid)
 
-        if not str_eid:  # encargado sin ID
-            # Solo agregar si no existía en la actividad antes
+        if not str_eid:  # encargado nuevo sin ID
             if not any(ec.get("nombre") == e.get("nombre") and ec.get("correo") == e.get("correo")
-                    for ec in estado_anterior_json.get("encargados", [])):
+                       for ec in estado_anterior_json.get("encargados", [])):
                 cambios["encargados"].append({
                     "id": None,
-                    "nombre": e.get("nombre"),
-                    "correo": e.get("correo"),
+                    "nombre": {"antes": None, "despues": e.get("nombre")},
+                    "correo": {"antes": None, "despues": e.get("correo")},
                     "tipo": "creado"
                 })
         else:
             anterior = encargados_anteriores.get(str_eid)
             if anterior:
-                # ya estaba en la actividad, revisar cambios de datos
-                if anterior["nombre"] != e.get("nombre") or anterior["correo"] != e.get("correo"):
+                nombre_antes, correo_antes = anterior["nombre"], anterior["correo"]
+                nombre_despues, correo_despues = e.get("nombre"), e.get("correo")
+
+                if nombre_antes != nombre_despues or correo_antes != correo_despues:
                     cambios["encargados"].append({
                         "id": eid,
-                        "nombre": e.get("nombre"),
-                        "correo": e.get("correo"),
+                        "nombre": {"antes": nombre_antes, "despues": nombre_despues},
+                        "correo": {"antes": correo_antes, "despues": correo_despues},
                         "tipo": "modificado"
                     })
             else:
                 # encargado existente agregado a la actividad
                 cambios["encargados"].append({
                     "id": eid,
-                    "nombre": e.get("nombre"),
-                    "correo": e.get("correo"),
+                    "nombre": {"antes": None, "despues": e.get("nombre")},
+                    "correo": {"antes": None, "despues": e.get("correo")},
                     "tipo": "agregado"
                 })
 
-    # Eliminados: los que estaban antes y ya no están en el request
+    # --- Eliminados: los que estaban antes y ya no están en el request ---
     for eid, e in encargados_anteriores.items():
         if eid not in ids_en_request:
             cambios["encargados"].append({
                 "id": int(eid) if eid.isdigit() else eid,
-                "nombre": e["nombre"],
-                "correo": e["correo"],
+                "nombre": {"antes": e.get("nombre"), "despues": None},
+                "correo": {"antes": e.get("correo"), "despues": None},
                 "tipo": "eliminado"
             })
 
@@ -313,7 +314,11 @@ def generar_diccionario_registro(data, estado_anterior_json):
             return None
 
     periodos_request = data.get("periodos", [])
-    periodos_anteriores = {normalizar_id(p.get("id")): p for p in estado_anterior_json.get("periodos", []) if p.get("id")}
+    periodos_anteriores = {
+        normalizar_id(p.get("id")): p
+        for p in estado_anterior_json.get("periodos", [])
+        if p.get("id")
+    }
     ids_periodos_request = []
 
     for p in periodos_request:
@@ -340,7 +345,7 @@ def generar_diccionario_registro(data, estado_anterior_json):
                     "tipo": "modificado"
                 })
 
-    # eliminados
+    # --- Eliminados ---
     for pid, p in periodos_anteriores.items():
         if pid not in ids_periodos_request:
             cambios["periodos"].append({
@@ -607,7 +612,7 @@ def reportes(request, proyecto_id):
 
     filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
 
-    iframe_src = f"http://localhost:3004/superset/dashboard/p/Qky7RJn7m0g/"
+    iframe_src = f"http://localhost:4003/superset/dashboard/p/PrpZqOEkDmy/"
     print(iframe_src)
 
     return render(request, 'vistas/reportes.html', {
