@@ -612,7 +612,7 @@ def reportes(request, proyecto_id):
 
     filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
 
-    iframe_src = f"http://localhost:4003/superset/dashboard/p/PrpZqOEkDmy/"
+    iframe_src = f"http://localhost:4003/superset"
     print(iframe_src)
 
     return render(request, 'vistas/reportes.html', {

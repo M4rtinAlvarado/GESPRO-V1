@@ -31,7 +31,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    Red del servidor
+    #Red del servidor
     networks:
       - red_taller_software
 
@@ -56,7 +56,7 @@ services:
     networks:
       red_taller_software:
         aliases:
-          - gespro-db # Alias para ser accesible por otros servicios
+    #       - gespro-db # Alias para ser accesible por otros servicios
     ports:
       - "${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}" # Puerto expuesto en el servidor
     command: postgres -c "port=${POSTGRES_PORT:-5432}" # Comando para cambiar el puerto de Postgres dentro del contenedor
