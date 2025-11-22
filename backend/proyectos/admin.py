@@ -12,8 +12,8 @@ admin.site.register(Periodo)
 admin.site.register(Alerta)
 admin.site.register(Encargado)
 admin.site.register(Actividad_Encargado)
-admin.site.register(ActividadDifusion_Producto)
 admin.site.register(ActividadDifusion_Linea)
+admin.site.register(RegistroCambioActividad)
 #admin.site.register(ActividadDifusion_Encargado)
 
 
