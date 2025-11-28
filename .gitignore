@@ -4,5 +4,6 @@ __pycache__/
 gespro-env/
 
 databases/*.sqlite3
+frontend/*.css
 
 .env
