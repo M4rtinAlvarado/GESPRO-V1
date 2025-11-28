@@ -16,7 +16,7 @@ from vistas.alerta_cambios import registrar_y_notificar_cambios
 def obtener_datos(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    all_encargados_qs = Encargado.objects.filter(estado=True)
+    all_encargados_qs = Encargado.objects.filter(activo=True)
     all_encargados = list(all_encargados_qs.values('id', 'nombre', 'correo_electronico'))
     
     # SIN FILTRO DE ESTADO (como pediste)
@@ -35,7 +35,7 @@ def obtener_datos(request, proyecto_id):
     for actividad in actividades_normales:
         fechas_lista = []
         # Este filtro SÍ se aplica (correcto)
-        for fecha in actividad.fechas.filter(estado=True):
+        for fecha in actividad.fechas.filter(activo=True):
             inicio = fecha.fecha_inicio
             fin = fecha.fecha_fin
             fechas_lista.append({
@@ -47,7 +47,7 @@ def obtener_datos(request, proyecto_id):
         # <-- CAMBIO AQUÍ: Filtramos solo encargados activos en esta relación
         consulta_2 = Actividad_Encargado.objects.filter(
             actividad=actividad, 
-            estado=True  # <-- FILTRO AÑADIDO
+            activo=True  # <-- FILTRO AÑADIDO
         ).select_related('encargado')
         
         encargados = [
@@ -66,7 +66,7 @@ def obtener_datos(request, proyecto_id):
             'tipo': 'Normal',
             'encargados': encargados,
             'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
-            'estado_valor': actividad.estado, 
+            'activo': actividad.activo, 
             'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
         })
 
@@ -74,7 +74,7 @@ def obtener_datos(request, proyecto_id):
     for actividad in actividades_difusion:
         fechas_lista = []
         # Este filtro SÍ se aplica (correcto)
-        for fecha in actividad.fechas.filter(estado=True):
+        for fecha in actividad.fechas.filter(activo=True):
             inicio = fecha.fecha_inicio
             fin = fecha.fecha_fin
             fechas_lista.append({
@@ -89,7 +89,7 @@ def obtener_datos(request, proyecto_id):
         # <-- CAMBIO AQUÍ: Filtramos solo encargados activos en esta relación
         consulta_2 = Actividad_Encargado.objects.filter(
             actividad=actividad,
-            estado=True  # <-- FILTRO AÑADIDO
+            activo=True  # <-- FILTRO AÑADIDO
         ).select_related('encargado')
         
         encargados = [
@@ -121,7 +121,7 @@ def obtener_datos(request, proyecto_id):
             'tipo': 'Difusión',
             'encargados': encargados,
             'periodos': periodos,
-            'estado_valor': actividad.estado, 
+            'activo': actividad.activo, 
             'linea_trabajo': lineas_trabajo,
         })
 
@@ -158,7 +158,7 @@ def vista_gantt(request, proyecto_id):
     todas_actividades = []
 
     for actividad in actividades_normales:
-        fechas = actividad.fechas.filter(estado=True)
+        fechas = actividad.fechas.filter(activo=True)
         
         fechas_lista = []
         for fecha in fechas:
@@ -179,7 +179,7 @@ def vista_gantt(request, proyecto_id):
         })
     
     for actividad in actividades_difusion:
-        fechas = actividad.fechas.filter(estado=True)
+        fechas = actividad.fechas.filter(activo=True)
         
         fechas_lista = []
         for fecha in fechas:
