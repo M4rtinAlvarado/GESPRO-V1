@@ -16,7 +16,7 @@ from vistas.alerta_cambios import registrar_y_notificar_cambios
 def obtener_datos(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    all_encargados_qs = Encargado.objects.filter(estado=True)
+    all_encargados_qs = Encargado.objects.filter(activo=True)
     all_encargados = list(all_encargados_qs.values('id', 'nombre', 'correo_electronico'))
     
     # SIN FILTRO DE ESTADO (como pediste)
@@ -33,21 +33,12 @@ def obtener_datos(request, proyecto_id):
 
     # Actividades normales
     for actividad in actividades_normales:
-        fechas_lista = []
-        # Este filtro SÍ se aplica (correcto)
-        for fecha in actividad.fechas.filter(estado=True):
-            inicio = fecha.fecha_inicio
-            fin = fecha.fecha_fin
-            fechas_lista.append({
-                "id": fecha.id,
-                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
-                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
-            })
+
 
         # <-- CAMBIO AQUÍ: Filtramos solo encargados activos en esta relación
         consulta_2 = Actividad_Encargado.objects.filter(
             actividad=actividad, 
-            estado=True  # <-- FILTRO AÑADIDO
+            activo=True  # <-- FILTRO AÑADIDO
         ).select_related('encargado')
         
         encargados = [
@@ -59,29 +50,33 @@ def obtener_datos(request, proyecto_id):
             for rel in consulta_2
         ]
 
+        # obtenemos los periodos de la actividad, con su respectivo estado
+        consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True)
+        periodos = [
+            {
+                'id': periodo.id,
+                'fecha_inicio': periodo.fecha_inicio,
+                'fecha_fin': periodo.fecha_fin,
+                'estado_valor': periodo.estado,  # <-- código almacenado en la BD (PEN, EPR, ...)
+                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'  # etiqueta para mostrar
+            }
+            for periodo in consulta_3
+        ]
+
+
         todas_actividades.append({
             'id': actividad.id,
             'nombre': actividad.nombre or f"Actividad {actividad.id}",
-            'fechas': fechas_lista,
             'tipo': 'Normal',
             'encargados': encargados,
-            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
-            'estado_valor': actividad.estado, 
+            'periodos': periodos,
+            #'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            #'estado_valor': actividad.estado, 
             'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
         })
 
     # Actividades de difusión
     for actividad in actividades_difusion:
-        fechas_lista = []
-        # Este filtro SÍ se aplica (correcto)
-        for fecha in actividad.fechas.filter(estado=True):
-            inicio = fecha.fecha_inicio
-            fin = fecha.fecha_fin
-            fechas_lista.append({
-                "id": fecha.id,
-                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
-                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
-            })
 
         consulta= ActividadDifusion_Linea.objects.filter(actividad=actividad).select_related('linea_trabajo')
         lineas_trabajo = [rel.linea_trabajo.nombre for rel in consulta]
@@ -89,7 +84,7 @@ def obtener_datos(request, proyecto_id):
         # <-- CAMBIO AQUÍ: Filtramos solo encargados activos en esta relación
         consulta_2 = Actividad_Encargado.objects.filter(
             actividad=actividad,
-            estado=True  # <-- FILTRO AÑADIDO
+            activo=True  # <-- FILTRO AÑADIDO
         ).select_related('encargado')
         
         encargados = [
@@ -101,14 +96,15 @@ def obtener_datos(request, proyecto_id):
             for rel in consulta_2
         ]
 
-    # obtenemos los periodos de la actividad, con su respectivo estado
+        # obtenemos los periodos de la actividad, con su respectivo estado
         consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True)
-        periodos=[
+        periodos = [
             {
                 'id': periodo.id,
                 'fecha_inicio': periodo.fecha_inicio,
                 'fecha_fin': periodo.fecha_fin,
-                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'
+                'estado_valor': periodo.estado,  # <-- código almacenado en la BD (PEN, EPR, ...)
+                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'  # etiqueta para mostrar
             }
             for periodo in consulta_3
         ]
@@ -117,11 +113,11 @@ def obtener_datos(request, proyecto_id):
         todas_actividades.append({
             'id': actividad.id,
             'nombre': actividad.nombre or f"Actividad Difusión {actividad.id}",
-            'fechas': fechas_lista,
+
             'tipo': 'Difusión',
             'encargados': encargados,
             'periodos': periodos,
-            'estado_valor': actividad.estado, 
+            #'estado_valor': actividad.estado, 
             'linea_trabajo': lineas_trabajo,
         })
 
@@ -241,19 +237,30 @@ def vista_tablero(request, proyecto_id):
 
 
 
-@csrf_exempt
+ 
+
 def actualizar_estado(request):
-    if request.method == 'POST':
-        actividad_id = request.POST.get('actividad_id')
-        nuevo_estado = request.POST.get('nuevo_estado')
-        try:
-            actividad = ActividadBase.objects.get(id=actividad_id)
-            actividad.estado = nuevo_estado
-            actividad.save()
-            return JsonResponse({'success': True})
-        except ActividadBase.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Actividad no encontrada'})
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})   
+    periodo_id = request.POST.get('periodo_id')
+    nuevo_estado = request.POST.get('nuevo_estado')
+
+    if not (periodo_id and nuevo_estado):
+        return JsonResponse({'success': False, 'error': 'Faltan parámetros'})
+
+    try:
+        periodo = Periodo.objects.get(id=periodo_id)
+        # validar que nuevo_estado esté en las opciones (opcional pero recomendable)
+        valid_values = [v for v, _ in EstadoActividad.choices]
+        if nuevo_estado not in valid_values:
+            return JsonResponse({'success': False, 'error': 'Valor de estado inválido'})
+
+        periodo.estado = nuevo_estado
+        periodo.save()
+        return JsonResponse({'success': True, 'new_label': periodo.get_estado_display()})
+    except Periodo.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Periodo no encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 
 def generar_diccionario_registro(data, estado_anterior_json):
@@ -327,10 +334,11 @@ def generar_diccionario_registro(data, estado_anterior_json):
             return None
 
     periodos_request = data.get("periodos", [])
+
     periodos_anteriores = {
         normalizar_id(p.get("id")): p
         for p in estado_anterior_json.get("periodos", [])
-        if p.get("id")
+        if p.get("id") is not None
     }
     ids_periodos_request = []
 
@@ -402,7 +410,7 @@ def editar_actividad(request):
         nuevo_nombre = data.get('nombre')
 
         # 1. Obtener Periodos ANTES de la modificación
-        periodos_anteriores = Fecha.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
+        periodos_anteriores = Periodo.objects.filter(actividad=actividad, activo=True).order_by('fecha_inicio')
         periodos_json_anteriores = [{
             "id": p.id,
             "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
@@ -410,7 +418,7 @@ def editar_actividad(request):
         } for p in periodos_anteriores]
         
         # 2. Obtener Encargados ANTES de la modificación (usando la relación inversa)
-        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad, estado=True)
+        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad, activo=True)
         encargados_json_anteriores = []
         for relacion in relaciones_encargados:
              encargados_json_anteriores.append({
@@ -451,11 +459,11 @@ def editar_actividad(request):
             periodo_id = periodo_data.get('id')
             if periodo_id != '':
                 ids_presentes_en_request.append(periodo_id)
-            f_inicio = periodo_data.get('f_inicio')
-            f_fin = periodo_data.get('f_fin')
+            f_inicio = periodo_data.get('fecha_inicio')
+            f_fin = periodo_data.get('fecha_fin')
             if periodo_id:
                 # Actualizar periodo existente
-                periodo = get_object_or_404(Fecha, id=periodo_id, actividad=actividad)
+                periodo = get_object_or_404(Periodo, id=periodo_id, actividad=actividad)
                 #comparar fechas del request con las ya existentes
                 if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
                     periodo.fecha_inicio = f_inicio
@@ -464,21 +472,21 @@ def editar_actividad(request):
                 periodo.save()
             else:
                 # Crear nuevo periodo
-                nuevo_periodo = Fecha.objects.create(
+                nuevo_periodo = Periodo.objects.create(
                     actividad=actividad,
                     fecha_inicio=f_inicio,
                     fecha_fin=f_fin,
-                    estado=True
+                    activo=True
                 )
 
                 ids_presentes_en_request.append(nuevo_periodo.id)
-        Fechas_a_eliminar = Fecha.objects.filter(actividad=actividad, estado=True).exclude(
+        Fechas_a_eliminar = Periodo.objects.filter(actividad=actividad, activo=True).exclude(
         id__in=ids_presentes_en_request)
         
         # para cada fecha actrualizar estado a False
         conteo_eliminado = 0
         for fecha in Fechas_a_eliminar:
-            fecha.estado = False
+            fecha.activo = False
             fecha.save()
             conteo_eliminado += 1
 
@@ -507,13 +515,13 @@ def editar_actividad(request):
                     Actividad_Encargado.objects.create(
                         actividad=actividad,
                         encargado=encargado,
-                        estado=True
+                        activo=True
                     ) 
                 else:
                     # Asegurarse de que la relación esté activa
                     relacion = Actividad_Encargado.objects.get(actividad=actividad, encargado=encargado)
-                    if not relacion.estado:
-                        relacion.estado = True
+                    if not relacion.activo:
+                        relacion.activo = True
                         relacion.save()
         
             else:
@@ -521,28 +529,28 @@ def editar_actividad(request):
                 nuevo_encargado = Encargado.objects.create(
                     nombre=nombre,
                     correo_electronico=correo,
-                    estado=True
+                    activo=True
                 )
                 Actividad_Encargado.objects.create(
                     actividad=actividad,
                     encargado=nuevo_encargado,
-                    estado=True
+                    activo=True
                 )
 
                 ids_encargados_en_request.append(nuevo_encargado.id)
-        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad_id=actividad, estado=True).exclude(
+        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad_id=actividad, activo=True).exclude(
         encargado__id__in=ids_encargados_en_request )
         conteo_eliminado = 0
         for relacion in encargados_a_eliminar:
             # print("Eliminando encargado:", encargado.nombre)
-            relacion.estado = False
+            relacion.activo = False
             relacion.save()
             conteo_eliminado += 1
 
         try:
             # Obtener estado actual para el correo
-            periodos_actuales = Fecha.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
-            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, estado=True)
+            periodos_actuales = Periodo.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
+            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, activo=True)
 
             estado_actual = {
                 "nombre": actividad.nombre,

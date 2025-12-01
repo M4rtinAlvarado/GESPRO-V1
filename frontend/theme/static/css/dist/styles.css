@@ -343,6 +343,87 @@
     transform: translateX(-50%) translateY(var(--tt-pos, 0.25rem));
     inset: auto auto var(--tt-tail) 50%;
   }
+  .dropdown {
+    position: relative;
+    display: inline-block;
+    position-area: var(--anchor-v, bottom) var(--anchor-h, span-right);
+  }
+  .dropdown > *:not(summary):focus {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  @media (forced-colors: active) {
+    .dropdown > *:not(summary):focus {
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+    }
+  }
+  .dropdown .dropdown-content {
+    position: absolute;
+  }
+  .dropdown:not(details, .dropdown-open, .dropdown-hover:hover, :focus-within) .dropdown-content {
+    display: none;
+    transform-origin: top;
+    opacity: 0%;
+    scale: 95%;
+  }
+  .dropdown[popover], .dropdown .dropdown-content {
+    z-index: 999;
+    animation: dropdown 0.2s;
+    transition-property: opacity, scale, display;
+    transition-behavior: allow-discrete;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @starting-style {
+    .dropdown[popover], .dropdown .dropdown-content {
+      scale: 95%;
+      opacity: 0;
+    }
+  }
+  .dropdown.dropdown-open > [tabindex]:first-child, .dropdown:not(.dropdown-hover):focus > [tabindex]:first-child, .dropdown:focus-within > [tabindex]:first-child {
+    pointer-events: none;
+  }
+  .dropdown.dropdown-open .dropdown-content, .dropdown:not(.dropdown-hover):focus .dropdown-content, .dropdown:focus-within .dropdown-content {
+    opacity: 100%;
+  }
+  .dropdown.dropdown-hover:hover .dropdown-content {
+    opacity: 100%;
+    scale: 100%;
+  }
+  .dropdown:is(details) summary::-webkit-details-marker {
+    display: none;
+  }
+  .dropdown.dropdown-open .dropdown-content, .dropdown:focus .dropdown-content, .dropdown:focus-within .dropdown-content {
+    scale: 100%;
+  }
+  .dropdown:where([popover]) {
+    background: #0000;
+  }
+  .dropdown[popover] {
+    position: fixed;
+    color: inherit;
+  }
+  @supports not (position-area: bottom) {
+    .dropdown[popover] {
+      margin: auto;
+    }
+    .dropdown[popover].dropdown-open:not(:popover-open) {
+      display: none;
+      transform-origin: top;
+      opacity: 0%;
+      scale: 95%;
+    }
+    .dropdown[popover]::backdrop {
+      background-color: color-mix(in oklab, #000 30%, #0000);
+    }
+  }
+  .dropdown[popover]:not(.dropdown-open, :popover-open) {
+    display: none;
+    transform-origin: top;
+    opacity: 0%;
+    scale: 95%;
+  }
   :where(.btn) {
     width: unset;
   }
@@ -514,6 +595,9 @@
   }
   .pointer-events-none {
     pointer-events: none;
+  }
+  .visible {
+    visibility: visible;
   }
   .list {
     display: flex;
@@ -1361,6 +1445,9 @@
     --tw-translate-y: calc(calc(1/2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
+  .rotate-180 {
+    rotate: 180deg;
+  }
   .transform {
     transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
   }
@@ -1420,6 +1507,9 @@
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
+  }
+  .gap-80 {
+    gap: calc(var(--spacing) * 80);
   }
   :where(.space-y-1 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
@@ -1552,6 +1642,9 @@
   }
   .border-gray-300 {
     border-color: var(--color-gray-300);
+  }
+  .border-gray-400 {
+    border-color: var(--color-gray-400);
   }
   .border-gray-500 {
     border-color: var(--color-gray-500);
@@ -1763,6 +1856,9 @@
   }
   .pr-10 {
     padding-right: calc(var(--spacing) * 10);
+  }
+  .pb-4 {
+    padding-bottom: calc(var(--spacing) * 4);
   }
   .pl-8 {
     padding-left: calc(var(--spacing) * 8);
@@ -2084,6 +2180,21 @@
   }
   .disabled\:opacity-50:disabled {
     opacity: 50%;
+  }
+  @media (width >= 40rem) {
+    .sm\:mr-auto {
+      margin-right: auto;
+    }
+  }
+  @media (width >= 40rem) {
+    .sm\:ml-4 {
+      margin-left: calc(var(--spacing) * 4);
+    }
+  }
+  @media (width >= 40rem) {
+    .sm\:w-32 {
+      width: calc(var(--spacing) * 32);
+    }
   }
   @media (width >= 40rem) {
     .sm\:flex-row {

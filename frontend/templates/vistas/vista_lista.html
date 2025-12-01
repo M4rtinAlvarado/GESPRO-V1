@@ -27,7 +27,7 @@
             <div class="text-2xl font-semibold">{{ act.nombre }}</div>
 
             <div class="flex items-center gap-4">
-                <button class="btn-historial border px-2 py-1 text-white rounded flex items-center gap-1"
+                <button class="btn-historial border px-2 py-1 text-white rounded flex items-center gap-1 border-gray-500"
                         data-id="{{ act.id }}"
                         title="Ver historial de cambios">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,30 +35,31 @@
                     </svg>
                 </button>
                 
-                <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1"
+                <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1 border-gray-500"
                         data-id="{{ act.id }}"
                         data-nombre="{{ act.nombre }}"
                         data-encargados="{% for e in act.encargados %}{{ e.nombre }}|{{ e.correo_electronico }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                        data-periodos="{% for f in act.fechas %}{{ f.id }}|{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"/>
-                    </svg>
+                        data-periodos="{% for f in act.periodos %}
+                            {{ f.id }}|{{ f.fecha_inicio|date:'Y-m-d' }}|{{ f.fecha_fin|date:'Y-m-d' }}|{{ f.estado_valor }}
+                            {% if not forloop.last %},{% endif %}
+                        {% endfor %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"/>
+                        </svg>
                 </button>
         
-                <div class="estado-actividad">
-                    <select name="estado" class="border border-gray-600 text-sm rounded p-1"
-                            data-actividad-id="{{ act.id }}">
-                        {% for value, label in estados %}
-                            <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                <!-- Botón de dropdown de periodos -->
+                <button class="toggle-periodos flex items-center gap-1 text-gray-700 border border-gray-500 px-2 py-1 rounded"
+                        data-id="{{ act.id }}">
+                    <svg class="h-5 w-5 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
             </div>
-        </div>
 
+        </div>
         <div class="mt-3 text-sm flex gap-6">
             <p><strong>Tipo:</strong> {{ act.tipo }}</p>
             <p><strong>Encargados:</strong>
@@ -76,9 +77,46 @@
                 <p><span class="font-bold">Línea:</span> {{ act.linea_trabajo }}</p>
             {% endif %}
         </div>
+        <!-- Dropdown gigante de periodos -->
+        <div id="periodos-{{ act.id }}" class="periodos-panel hidden mt-4 p-4 border border-gray-400 rounded bg-gray-100">
+
+            {% if act.periodos %}
+                <div class="space-y-3">
+                    {% for p in act.periodos %}
+                        <div class="p-3 rounded flex flex-col sm:flex-row sm:items-center gap-3
+                                    {% if not forloop.last %} border-b border-gray-300 pb-4 {% endif %}">
+
+                            <span class="font-semibold sm:w-32">
+                                Periodo {{ forloop.counter }}
+                            </span>
+
+                            <div class="flex flex-row flex-wrap items-center text-sm gap-80 sm:ml-4 sm:mr-auto">
+                                <span><strong>Inicio:</strong> {{ p.fecha_inicio|date:"d/m/Y" }}</span>
+                                <span><strong>Fin:</strong> {{ p.fecha_fin|date:"d/m/Y" }}</span>
+                                <select name="estado_periodo"
+                                        class="border border-gray-600 text-sm rounded p-1"
+                                        data-periodo-id="{{ p.id }}">
+                                    {% for value, label in estados %}
+                                        <option value="{{ value }}" {% if value == p.estado_valor %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-600">No hay periodos registrados.</p>
+            {% endif %}
+        </div>
+
+        <!-- Fin dropdown de periodos -->
     </div>
     {% endfor %}
 </div>
+
 
 <!-- Overlay -->
 <div id="modalOverlay" class="hidden fixed inset-0 bg-black/30 z-40"></div>
@@ -201,15 +239,35 @@
 
 <script>
 
+// ===============================
+// Toggle panel de periodos
+document.querySelectorAll(".toggle-periodos").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const panel = document.getElementById(`periodos-${id}`);
+        const icon = btn.querySelector("svg");
+
+        panel.classList.toggle("hidden");
+        icon.classList.toggle("rotate-180");
+    });
+});
+// ===============================
+
+
+// ===============================
+// Actualizar estado de periodo
+
 document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll("select[name='estado']").forEach(select => {
-        let valorInicial = select.value
+    document.querySelectorAll("select[name='estado_periodo']").forEach(select => {
+        let valorInicial = select.value;
 
         select.addEventListener("change", function() {
-            const actividadId = select.dataset.actividadId
-            const nuevoEstado = select.value
+            const periodoId = select.dataset.periodoId;
+            const nuevoEstado = select.value;
 
-            if (nuevoEstado === valorInicial) return
+            if (nuevoEstado === valorInicial) return;
+
+            console.log("Enviando cambio estado_periodo:", { periodoId, nuevoEstado });
 
             fetch("{% url 'actualizar_estado' %}", {
                 method: "POST",
@@ -217,22 +275,43 @@ document.addEventListener("DOMContentLoaded", function() {
                     "Content-Type": "application/x-www-form-urlencoded",
                     "X-CSRFToken": "{{ csrf_token }}"
                 },
-                body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+                body: `periodo_id=${encodeURIComponent(periodoId)}&nuevo_estado=${encodeURIComponent(nuevoEstado)}`
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    valorInicial = nuevoEstado
+            .then(async res => {
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error("Respuesta no JSON del servidor:", text);
+                    throw new Error("Invalid JSON response");
+                }
+                return { ok: res.ok, status: res.status, data };
+            })
+            .then(({ ok, status, data }) => {
+                console.log("Respuesta actualizar_estado_periodo:", status, data);
+                if (ok && data.success) {
+                    valorInicial = nuevoEstado; // confirmar cambio
+                    // opcional: actualizar label visible si lo usas
+                    // let labelSpan = select.closest('.periodo-row')?.querySelector('.estado-label');
+                    // if (labelSpan) labelSpan.textContent = data.new_label || select.options[select.selectedIndex].text;
                 } else {
-                    select.value = valorInicial 
+                    // revertir y mostrar error en consola
+                    console.warn("No se pudo actualizar el periodo:", data.error || data);
+                    select.value = valorInicial;
+                    alert(data.error || "No se pudo actualizar el estado del periodo.");
                 }
             })
             .catch(err => {
-                select.value = valorInicial
-            })
-        })
-    })
-})
+                console.error("Error en fetch actualizar_estado_periodo:", err);
+                select.value = valorInicial;
+                alert("Error de red o respuesta inválida. Revisa la consola para más detalles.");
+            });
+        });
+    });
+});
+
+// ===============================
 
 
 let tempActivity = { encargados: [], periodos: [] };
@@ -260,13 +339,42 @@ function abrirModalEditar(button) {
             });
         });
     }
+
+
+    function estadoToCode(estado) {
+        switch (estado) {
+            case "Pendiente": return "PEN";
+            case "Listo para comenzar": return "LPC";
+            case "En progreso": return "EPR";
+            case "Completada": return "COM";
+            case "Terminada": return "TER";
+            default: return "PEN";
+        }
+    }
+    const raw = button.dataset.periodos || "";
+    const rawPeriodos = raw
+        .split(",")
+        .filter(Boolean)
+        .map(p => {
+            const [id, inicio, fin, estado] = p.split("|");
+            return {
+                id: id || "",
+                fecha_inicio: inicio || "",
+                fecha_fin: fin || "",
+                estado: estado || "Pendiente",
+                estado_valor: estadoToCode(estado), // si quieres usar PEN/LPC/EPR/...
+            };
+        });
+    tempActivity.periodos = rawPeriodos;
+    console.log("dataset periodos:", button.dataset.periodos);
+    
     
 
-    const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
-    tempActivity.periodos = rawPeriodos.map(p => {
-        const [id, f_inicio, f_fin] = p.split('|');
-        return { id, f_inicio, f_fin };
-    });
+//    const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
+//    tempActivity.periodos = rawPeriodos.map(p => {
+//        const [id, f_inicio, f_fin] = p.split('|');
+//        return { id, f_inicio, f_fin };
+//    });
 
     console.log("Dataset encargados:", button.dataset.encargados);
     console.log("Temp activity encargados:", tempActivity.encargados);
@@ -556,19 +664,19 @@ function actualizarPeriodosUI() {
 
         const inputInicio = document.createElement('input');
         inputInicio.type = 'date';
-        inputInicio.value = p.f_inicio || '';
+        inputInicio.value = p.fecha_inicio || '';
         inputInicio.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputInicio.addEventListener('input', (e) => {
-            tempActivity.periodos[i].f_inicio = e.target.value;
+            tempActivity.periodos[i].fecha_inicio = e.target.value;
             validarSolapamientos();
         });
 
         const inputFin = document.createElement('input');
         inputFin.type = 'date';
-        inputFin.value = p.f_fin || '';
+        inputFin.value = p.fecha_fin || '';
         inputFin.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputFin.addEventListener('input', (e) => {
-            tempActivity.periodos[i].f_fin = e.target.value;
+            tempActivity.periodos[i].fecha_fin = e.target.value;
             validarSolapamientos();
         });
 
@@ -613,17 +721,17 @@ function validarSolapamientos() {
 
     for (let i = 0; i < tempActivity.periodos.length; i++) {
         const a = tempActivity.periodos[i];
-        if (!a.f_inicio || !a.f_fin) continue;
+        if (!a.fecha_inicio || !a.fecha_fin) continue;
 
-        const inicioA = new Date(a.f_inicio);
-        const finA = new Date(a.f_fin);
+        const inicioA = new Date(a.fecha_inicio);
+        const finA = new Date(a.fecha_fin);
 
         for (let j = i + 1; j < tempActivity.periodos.length; j++) {
             const b = tempActivity.periodos[j];
-            if (!b.f_inicio || !b.f_fin) continue;
+            if (!b.fecha_inicio || !b.fecha_fin) continue;
 
-            const inicioB = new Date(b.f_inicio);
-            const finB = new Date(b.f_fin);
+            const inicioB = new Date(b.fecha_inicio);
+            const finB = new Date(b.fecha_fin);
 
             // Si se solapan
             if (inicioA <= finB && finA >= inicioB) {
@@ -674,8 +782,8 @@ document.getElementById("addPeriodo").addEventListener("click", () => {
 
     const periodosSolapados = [];
     tempActivity.periodos.forEach((p, i) => {
-        const inicioExistente = new Date(p.f_inicio);
-        const finExistente = new Date(p.f_fin);
+        const inicioExistente = new Date(p.fecha_inicio);
+        const finExistente = new Date(p.fecha_fin);
 
         const seSolapan =
             (nuevoInicio <= finExistente) && (nuevoFin >= inicioExistente);
@@ -699,7 +807,13 @@ document.getElementById("addPeriodo").addEventListener("click", () => {
         return;
     }
 
-    tempActivity.periodos.push({ id: "", f_inicio: inicio, f_fin: fin });
+    tempActivity.periodos.push({
+        id: "",
+        fecha_inicio: inicio,
+        fecha_fin: fin,
+        estado_valor: "PEN",
+        estado: "Pendiente"
+    });
     actualizarPeriodosUI();
 
 
@@ -793,7 +907,7 @@ document.getElementById("saveChanges").addEventListener("click", () => {
         const a = periodos[i];
         for (let j = i + 1; j < periodos.length; j++) {
             const b = periodos[j];
-            if (!(a.f_fin < b.f_inicio || a.f_inicio > b.f_fin)) {
+            if (!(a.fecha_fin < b.fecha_inicio || a.fecha_inicio > b.fecha_fin)) {
                 // Mostrar error inline en lugar de alert
                 let periodoError = document.getElementById("periodoError");
                 if (!periodoError) {
@@ -818,9 +932,9 @@ document.getElementById("saveChanges").addEventListener("click", () => {
             correo: e.correo || ""
         })),
         periodos: tempActivity.periodos.map(p => ({
-            id: p.id || "",
-            f_inicio: p.f_inicio,
-            f_fin: p.f_fin
+            id: p.id ? String(p.id).trim() : None,
+            fecha_inicio: p.fecha_inicio,
+            fecha_fin: p.fecha_fin
         }))
     };
 
