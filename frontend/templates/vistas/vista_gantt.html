@@ -55,12 +55,12 @@
                             <div class="activity-info w-80 p-2 border-r border-gray-300 bg-white">
                                 <div class="font-medium text-gray-800">{{ actividad.nombre }}</div>
                                 <div class="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-2">
-                                    <!-- Mostrar rango completo de fechas -->
+                                    <!-- Mostrar rango completo de periodos -->
                                     <span>
-                                        {% if actividad.fechas %}
-                                            {% with actividad.fechas|first as primera_fecha %}
-                                            {% with actividad.fechas|last as ultima_fecha %}
-                                                {{ primera_fecha.fecha_inicio }} - {{ ultima_fecha.fecha_fin }}
+                                        {% if actividad.periodos %}
+                                            {% with actividad.periodos|first as primer_periodo %}
+                                            {% with actividad.periodos|last as ultimo_periodo %}
+                                                {{ primer_periodo.fecha_inicio }} - {{ ultimo_periodo.fecha_fin }}
                                             {% endwith %}
                                             {% endwith %}
                                         {% endif %}
@@ -68,9 +68,9 @@
                                     <span class="px-2 py-1 rounded text-xs {% if actividad.tipo == 'Normal' %}bg-blue-100 text-blue-800{% else %}bg-green-100 text-green-800{% endif %}">
                                         {{ actividad.tipo }}
                                     </span>
-                                    {% if actividad.fechas|length > 1 %}
+                                    {% if actividad.periodos|length > 1 %}
                                         <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
-                                            {{ actividad.fechas|length }} período{% if actividad.fechas|length > 1 %}s{% endif %}
+                                            {{ actividad.periodos|length }} período{% if actividad.periodos|length > 1 %}s{% endif %}
                                         </span>
                                     {% endif %}
                                 </div>
@@ -80,12 +80,11 @@
                             <div class="timeline-container relative bg-gray-50" 
                                 style="min-height: 70px; height: auto; width: {{ gantt_data.total_weeks }}00px; min-width: {{ gantt_data.total_weeks }}00px;">
                                 {% for periodo in actividad.periodos_calculados %}
-                                    <div class="gantt-bar absolute top-3 rounded flex items-center justify-center text-white text-xs font-medium
-                                                {% if actividad.estado == 'PEN' %}bg-red-500{% elif actividad.estado == 'LPC' %}bg-yellow-500{% elif actividad.estado == 'EPR' %}bg-blue-500{% elif actividad.estado == 'COM' %}bg-green-500{% elif actividad.estado == 'TER' %}bg-purple-500{% else %}bg-gray-500{% endif %}"
+                                    <div class="gantt-bar absolute top-3 rounded flex items-center justify-center text-white text-xs font-medium {{ periodo.color_class }}"
                                         style="left: {{ periodo.left_px }}px; width: {{ periodo.width_px }}px;"
                                         data-activity-name="{{ actividad.nombre }}"
                                         data-activity-type="{{ actividad.tipo }}"
-                                        data-activity-status="{{ actividad.estado }}"
+                                        data-activity-status="{{ periodo.estado }}"
                                         data-start-date="{{ periodo.fecha_inicio }}"
                                         data-end-date="{{ periodo.fecha_fin }}"
                                         data-linea-trabajo="{{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}"
@@ -111,8 +110,8 @@
         </div>
         
         <!-- Gantt con columnas mensuales (oculto por defecto) -->
-        <div id="gantt-mensual" class="gantt-wrapper border rounded-lg hidden">
-            <div class="gantt-container" style="min-width: calc(200px + {{ gantt_data.total_weeks|add:'0' }}px * 25);">
+        <div id="gantt-mensual" class="gantt-wrapper border rounded-lg" style="display: none;">
+            <div class="gantt-container" style="min-width: calc(192px + {{ gantt_data.total_weeks }} * 25px);">
                 <!-- Header con fechas mensuales -->
                 <div class="gantt-header flex bg-gray-100 border-b-2 border-gray-300 sticky top-0 z-100">
                     <div class="activity-header w-48 font-bold text-gray-700 border-r border-gray-300 bg-gray-100 sticky left-0 z-101 text-xs">
@@ -123,9 +122,9 @@
                         <div id="monthly-columns" class="flex">
                             {% regroup gantt_data.columnas_semanales by month_name as monthly_groups %}
                             {% for month_group in monthly_groups %}
-                                <div class="month-container border-r border-gray-300">
+                                <div class="month-container">
                                     <!-- Header del mes con nombre completo (columnas de 25px) -->
-                                    <div class="month-header text-center bg-blue-50 border-b border-gray-300 py-2 px-1 font-bold text-xs text-gray-700" style="width: calc({{ month_group.list|length }} * 25px); min-width: calc({{ month_group.list|length }} * 25px); box-sizing: border-box;">
+                                    <div class="month-header text-center bg-blue-50 border-b border-r border-gray-300 py-2 px-1 font-bold text-xs text-gray-700" style="width: calc({{ month_group.list|length }} * 25px); min-width: calc({{ month_group.list|length }} * 25px); box-sizing: border-box;">
                                         {% if month_group.grouper == 'Ene' %}Enero
                                         {% elif month_group.grouper == 'Feb' %}Febrero
                                         {% elif month_group.grouper == 'Mar' %}Marzo
@@ -187,12 +186,11 @@
                             <div class="timeline-container-monthly relative bg-gray-50" 
                                 style="min-height: 40px; height: auto; width: calc({{ gantt_data.total_weeks }} * 25px); min-width: calc({{ gantt_data.total_weeks }} * 25px);">
                                 {% for periodo in actividad.periodos_calculados %}
-                                    <div class="gantt-bar gantt-bar-monthly absolute rounded flex items-center justify-center text-white font-medium
-                                                {% if actividad.estado == 'PEN' %}bg-red-500{% elif actividad.estado == 'LPC' %}bg-yellow-500{% elif actividad.estado == 'EPR' %}bg-blue-500{% elif actividad.estado == 'COM' %}bg-green-500{% elif actividad.estado == 'TER' %}bg-purple-500{% else %}bg-gray-500{% endif %}"
+                                    <div class="gantt-bar gantt-bar-monthly absolute rounded flex items-center justify-center text-white font-medium {{ periodo.color_class }}"
                                         style="left: {{ periodo.left_px_monthly }}px; width: {{ periodo.width_px_monthly }}px; font-size: 9px; top: 5px;"
                                         data-activity-name="{{ actividad.nombre }}"
                                         data-activity-type="{{ actividad.tipo }}"
-                                        data-activity-status="{{ actividad.estado }}"
+                                        data-activity-status="{{ periodo.estado }}"
                                         data-start-date="{{ periodo.fecha_inicio }}"
                                         data-end-date="{{ periodo.fecha_fin }}"
                                         data-linea-trabajo="{{ actividad.linea_trabajo|default:'Sin línea de trabajo' }}"
@@ -288,15 +286,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Funciones para cambio de vista
     function mostrarVistaSemanal() {
-        ganttSemanal.classList.remove('hidden');
-        ganttMensual.classList.add('hidden');
+        ganttSemanal.style.display = 'block';
+        ganttMensual.style.display = 'none';
         btnSemanal.classList.add('vista-activa');
         btnMensual.classList.remove('vista-activa');
     }
     
     function mostrarVistaMensual() {
-        ganttSemanal.classList.add('hidden');
-        ganttMensual.classList.remove('hidden');
+        ganttSemanal.style.display = 'none';
+        ganttMensual.style.display = 'block';
         btnSemanal.classList.remove('vista-activa');
         btnMensual.classList.add('vista-activa');
     }
@@ -746,36 +744,6 @@ document.addEventListener('DOMContentLoaded', function() {
     min-width: 25px;
     max-width: 25px;
 }
-
-/* Ocultar elementos */
-.hidden {
-    display: none !important;
-}
-
-/* Ajustar scroll para vista mensual */
-.month-container .week-subcolumn {
-    background-image: repeating-linear-gradient(
-        to right,
-        transparent 0px,
-        transparent 99px,
-        rgba(0,0,0,0.05) 99px,
-        rgba(0,0,0,0.05) 100px
-    );
-}
-
-/* Asegurar alineación correcta en vista mensual */
-#gantt-mensual .timeline-container {
-    position: relative;
-    left: 0 !important;
-    margin-left: 0 !important;
-}
-
-#gantt-mensual .gantt-bar {
-    position: absolute;
-}
 </style>
-
-
-
 
 {% endblock %}
