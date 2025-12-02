@@ -4,6 +4,8 @@ __pycache__/
 gespro-env/
 
 databases/*.sqlite3
-frontend/*.css
+
+# Carpeta compilada de Tailwind CSS
+theme/static/css/
 
 .env
