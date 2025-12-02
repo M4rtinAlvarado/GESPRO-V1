@@ -136,7 +136,7 @@ def _calcular_posiciones_actividades(actividades, start_date, week_width):
             week_fin = dias_hasta_fin // 7
             semanas_ocupadas = week_fin - week_inicio + 1
             
-            # Vista semanal: siempre ocupa semana completa donde inicia
+            # Vista semanal: ancho proporcional a las semanas que ocupa
             left_px = week_inicio * week_width
             width_px = semanas_ocupadas * week_width
             
