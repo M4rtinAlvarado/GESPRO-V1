@@ -2,14 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from proyectos.models import *
-from datetime import datetime, timedelta
-from django.contrib import messages
-from django.db import models
 from .gantt import calcular_gantt_data
 import json
-from django.urls import reverse 
-from urllib.parse import urlencode, urlunparse
 from vistas.alerta_cambios import registrar_y_notificar_cambios
+from .dashboard import dashboard_view
 
 
 
@@ -592,32 +588,10 @@ def obtener_historial(request, actividad_id):
     return JsonResponse({"error": "Método no permitido"}, status=405)
 
 
-import json
-import urllib.parse
-
-# ID del dashboard y chart que quieres filtrar
-DASHBOARD_ID = "6xq4LRdgrba"
-CHART_ID = "13"  # ID del chart/filtro legacy en Superset
-
 def reportes(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+   context = dashboard_view(request, proyecto_id)
+   return render(request, 'vistas/reportes.html', context)
+    
 
-    # 1️⃣ Creamos el filtro legacy dinámico
-    preselect_filters = {
-        CHART_ID: {
-            "project_id": [str(proyecto.id)]
-        }
-    }
-    print(preselect_filters)
-
-    filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
-
-    iframe_src = f"http://localhost:4003/superset"
-    print(iframe_src)
-
-    return render(request, 'vistas/reportes.html', {
-        'proyecto': proyecto,
-        'iframe_src': iframe_src
-    })
 
 

@@ -2,9 +2,10 @@
 {% block title %}Reportes - {{ proyecto.nombre }}{% endblock %}
 
 {% block content %}
-<iframe
-  src="{{ iframe_src }}"
-  class="w-full h-[90vh]"
-  frameborder="0"
-></iframe>
+  <h1>Mi Dashboard con Gráfico de Plotly</h1>
+    
+  <div class="grafico-contenedor max-w-100">
+      {# ¡AQUÍ ESTÁ LA CLAVE! El filtro safe es crucial para renderizar el HTML puro #}
+      {{ grafico_html | safe }} 
+  </div>
 {% endblock %}
