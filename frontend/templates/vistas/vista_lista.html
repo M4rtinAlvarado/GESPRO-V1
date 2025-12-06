@@ -90,7 +90,7 @@
                                 Periodo {{ forloop.counter }}
                             </span>
 
-                            <div class="flex flex-row flex-wrap items-center text-sm gap-80 sm:ml-4 sm:mr-auto">
+                            <div class="grid grid-cols-3 gap-100 items-center text-sm sm:ml-4 sm:mr-auto">
                                 <span><strong>Inicio:</strong> {{ p.fecha_inicio|date:"d/m/Y" }}</span>
                                 <span><strong>Fin:</strong> {{ p.fecha_fin|date:"d/m/Y" }}</span>
                                 <select name="estado_periodo"
@@ -932,9 +932,9 @@ document.getElementById("saveChanges").addEventListener("click", () => {
             correo: e.correo || ""
         })),
         periodos: tempActivity.periodos.map(p => ({
-            id: p.id ? String(p.id).trim() : None,
-            fecha_inicio: p.fecha_inicio,
-            fecha_fin: p.fecha_fin
+            id: p.id != null && p.id !== "" ? parseInt(p.id, 10) : "",
+            f_inicio: p.fecha_inicio,
+            f_fin: p.fecha_fin
         }))
     };
 

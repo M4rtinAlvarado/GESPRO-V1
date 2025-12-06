@@ -52,16 +52,20 @@ def obtener_datos(request, proyecto_id):
 
         # obtenemos los periodos de la actividad, con su respectivo estado
         consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True)
+        total_periodos = consulta_3.count()
         periodos = [
             {
                 'id': periodo.id,
                 'fecha_inicio': periodo.fecha_inicio,
                 'fecha_fin': periodo.fecha_fin,
                 'estado_valor': periodo.estado,  # <-- código almacenado en la BD (PEN, EPR, ...)
-                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'  # etiqueta para mostrar
+                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado',  # etiqueta para mostrar
+                'indice': i + 1,
             }
-            for periodo in consulta_3
+            for i, periodo in enumerate(consulta_3)
         ]
+
+
 
 
         todas_actividades.append({
@@ -70,6 +74,7 @@ def obtener_datos(request, proyecto_id):
             'tipo': 'Normal',
             'encargados': encargados,
             'periodos': periodos,
+            'total_periodos': total_periodos,
             #'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
             #'estado_valor': actividad.estado, 
             'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
@@ -97,17 +102,20 @@ def obtener_datos(request, proyecto_id):
         ]
 
         # obtenemos los periodos de la actividad, con su respectivo estado
-        consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True)
+        consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True).order_by('fecha_inicio') 
+        total_periodos = consulta_3.count()
         periodos = [
             {
                 'id': periodo.id,
                 'fecha_inicio': periodo.fecha_inicio,
                 'fecha_fin': periodo.fecha_fin,
                 'estado_valor': periodo.estado,  # <-- código almacenado en la BD (PEN, EPR, ...)
-                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'  # etiqueta para mostrar
+                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado',  # etiqueta para mostrar,
+                'indice': i + 1,
             }
-            for periodo in consulta_3
+            for i, periodo in enumerate(consulta_3)
         ]
+        
             
 
         todas_actividades.append({
@@ -117,6 +125,7 @@ def obtener_datos(request, proyecto_id):
             'tipo': 'Difusión',
             'encargados': encargados,
             'periodos': periodos,
+            'total_periodos': total_periodos,
             #'estado_valor': actividad.estado, 
             'linea_trabajo': lineas_trabajo,
         })
@@ -347,7 +356,8 @@ def generar_diccionario_registro(data, estado_anterior_json):
             continue  # ignorar filas vacías
 
         pid = normalizar_id(p.get("id"))
-        ids_periodos_request.append(pid)
+        if pid is not None:
+            ids_periodos_request.append(pid)
 
         if pid is None:
             cambios["periodos"].append({
@@ -455,21 +465,24 @@ def editar_actividad(request):
         # Actualizar periodos si se envió
         periodos = data.get('periodos',[])
         ids_presentes_en_request = []
-        for periodo_data in periodos:            
-            periodo_id = periodo_data.get('id')
-            if periodo_id != '':
+        for periodo_data in periodos:
+            periodo_id = periodo_data.get('id') or None  # Normaliza
+
+            f_inicio = periodo_data.get('f_inicio') or periodo_data.get('fecha_inicio')
+            f_fin = periodo_data.get('f_fin') or periodo_data.get('fecha_fin')
+
+            if periodo_id:  
+                # Periodo existente → actualizar
                 ids_presentes_en_request.append(periodo_id)
-            f_inicio = periodo_data.get('fecha_inicio')
-            f_fin = periodo_data.get('fecha_fin')
-            if periodo_id:
-                # Actualizar periodo existente
+
                 periodo = get_object_or_404(Periodo, id=periodo_id, actividad=actividad)
-                #comparar fechas del request con las ya existentes
+
                 if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
                     periodo.fecha_inicio = f_inicio
                 if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
                     periodo.fecha_fin = f_fin
                 periodo.save()
+
             else:
                 # Crear nuevo periodo
                 nuevo_periodo = Periodo.objects.create(
@@ -478,8 +491,9 @@ def editar_actividad(request):
                     fecha_fin=f_fin,
                     activo=True
                 )
-
                 ids_presentes_en_request.append(nuevo_periodo.id)
+
+
         Fechas_a_eliminar = Periodo.objects.filter(actividad=actividad, activo=True).exclude(
         id__in=ids_presentes_en_request)
         
@@ -549,7 +563,7 @@ def editar_actividad(request):
 
         try:
             # Obtener estado actual para el correo
-            periodos_actuales = Periodo.objects.filter(actividad=actividad, estado=True).order_by('fecha_inicio')
+            periodos_actuales = Periodo.objects.filter(actividad=actividad, activo=True).order_by('fecha_inicio')
             encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, activo=True)
 
             estado_actual = {

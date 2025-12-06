@@ -6,57 +6,79 @@
 <div class="flex gap-6 h-[calc(100vh-200px)]">
     {% for estado, nombre_estado in estados %}
     <div id="estado-{{ estado }}" class="flex-1 bg-gray-100 rounded-md p-4 flex flex-col border-2 border-blue-950">
-        <!-- Nombre del estado con círculo de color -->
+
+        <!-- Header estado -->
         <h3 class="text-center font-semibold mb-3 flex items-center justify-center space-x-2">
-            {% comment %} Circulo de color según el estado {% endcomment %}
             {% if estado == 'PEN' %}
-            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
             {% elif estado == 'LPC' %}
-            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
             {% elif estado == 'EPR' %}
-            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
             {% elif estado == 'COM' %}
-            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
             {% elif estado == 'TER' %}
-            <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
             {% endif %}
             <span>{{ nombre_estado }}</span>
         </h3>
 
-        <div class="actividad-lista flex-1 flex flex-col overflow-y-auto max-h-[calc(100vh-200px)]">
+        <!-- LISTA DE PERIODOS -->
+        <div class="periodo-lista flex-1 flex flex-col overflow-y-auto max-h-[calc(100vh-200px)]">
+
             {% for actividad in actividades %}
-                {% if actividad.estado_valor == estado %}
-                    <div class="actividad-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500 flex flex-col justify-start"
-                            data-id="{{ actividad.id }}">
+                {% for p in actividad.periodos %}
+                    
+                    {% if p.estado_valor == estado %}
+                    <div class="periodo-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500"
+                         data-periodo-id="{{ p.id }}" data-actividad-id="{{ actividad.id }}">
+
                         <strong class="text-gray-800">{{ actividad.nombre }}</strong>
+
+                        <small class="text-gray-500 block mt-1">
+                            <strong>Inicio:</strong> {{ p.fecha_inicio|date:"d/m/Y" }}
+                            <strong class="ml-3">Fin:</strong> {{ p.fecha_fin|date:"d/m/Y" }}
+                        </small>
+
                         {% if actividad.linea_trabajo %}
-                            <small class="text-gray-500">Línea: 
+                            <small class="text-gray-500 block">
+                                Línea:
                                 {% if actividad.tipo == "Difusión" %}
                                     {{ actividad.linea_trabajo|join:"-" }}
-                                {% else %} 
+                                {% else %}
                                     {{ actividad.linea_trabajo }}
                                 {% endif %}
                             </small>
                         {% endif %}
+
                         {% if actividad.producto_asociado %}
-                        <small class="text-gray-500">Producto: {{ actividad.producto_asociado.nombre }}</small>
+                            <small class="text-gray-500 block">Producto: {{ actividad.producto_asociado.nombre }}</small>
                         {% endif %}
 
-                        <!-- Cambie los encargados a diccionario, edu -->
-                        <small class="text-gray-500">
+                        <small class="text-gray-500 block">
                             Encargados:
                             {% if actividad.encargados %}
                                 {% for encargado in actividad.encargados %}
-                                    {{ encargado.nombre }}
-                                    {% if not forloop.last %}, {% endif %}
+                                    {{ encargado.nombre }}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             {% else %}
                                 Sin encargados
                             {% endif %}
                         </small>
-                        <small class="text-gray-400">{{ actividad.tipo }}</small>
+
+                        <div class="flex justify-between mt-1">
+                            <small class="text-gray-400">{{ actividad.tipo }}</small>
+
+                            {% if actividad.total_periodos > 1 %}
+                                <small class="text-blue-600 font-semibold">
+                                    Periodo {{ p.indice }} de {{ actividad.total_periodos }}
+                                </small>
+                            {% endif %}
+                        </div>
+
                     </div>
-                {% endif %}
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
         </div>
     </div>
@@ -77,9 +99,9 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.actividad-lista').forEach(lista => {
+    document.querySelectorAll('.periodo-lista').forEach(lista => {
         new Sortable(lista, {
-            group: 'actividades',
+            group: 'periodos',
             animation: 150,
             ghostClass: 'ghost-placeholder',
             dragClass: 'opacity-80',
@@ -90,16 +112,16 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             onEnd: function(evt) {
                 evt.item.innerHTML = evt.item.dataset.originalContent;
-                const actividadId = evt.item.dataset.id;
+                const periodoId = evt.item.dataset.periodoId;
                 const nuevoEstado = evt.to.closest('[id^="estado-"]').id.replace('estado-', '');
-                
+
                 fetch("{% url 'actualizar_estado' %}", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/x-www-form-urlencoded",
                         "X-CSRFToken": "{{ csrf_token }}"
                     },
-                    body: `actividad_id=${actividadId}&nuevo_estado=${nuevoEstado}`
+                    body: `periodo_id=${periodoId}&nuevo_estado=${nuevoEstado}`
                 });
             }
         });
