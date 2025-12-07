@@ -18,6 +18,11 @@ def obtener_datos(request, proyecto_id):
 
     all_encargados_qs = Encargado.objects.filter(activo=True)
     all_encargados = list(all_encargados_qs.values('id', 'nombre', 'correo_electronico'))
+
+    all_lineas_trabajo_qs = LineaTrabajo.objects.filter(activo=True, proyecto_id=proyecto_id)
+    all_lineas_trabajo = list(all_lineas_trabajo_qs.values_list('nombre', flat=True)) 
+
+
     
     # SIN FILTRO DE ESTADO (como pediste)
     actividades_normales = Actividad.objects.filter(
@@ -138,11 +143,14 @@ def obtener_datos(request, proyecto_id):
         ('TER', 'Terminada'),
     ]
 
+
+
     context = {
         'proyecto': proyecto,
         'actividades': todas_actividades,
         'estados': estados,
         'all_encargados': all_encargados,
+        'all_lineas_trabajo': all_lineas_trabajo,
     }
 
     return context
@@ -220,7 +228,8 @@ def vista_gantt(request, proyecto_id):
 
     # Calcular columnas semanales y posiciones
     gantt_data = calcular_gantt_data(todas_actividades)
-    
+
+
     context = {
         'proyecto': proyecto,
         'total_actividades': todas_actividades,
@@ -583,6 +592,17 @@ def editar_actividad(request):
 
 
     return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
+
+
+def crear_actividad(request):
+    #printar el request body
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        print("\n--- Datos recibidos en crear_actividad ---")
+        print(json.dumps(data, indent=4, ensure_ascii=False))
+        print("------------------------------------------\n")
+
+        return JsonResponse({'success': True, 'message': 'Funcionalidad en desarrollo'})
 
 
 def obtener_historial(request, actividad_id):

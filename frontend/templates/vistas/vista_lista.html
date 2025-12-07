@@ -19,6 +19,9 @@
 <div class="flex flex-col items-center gap-4 py-6">
     <div class="flex flex-row justify-between w-full px-4">
         <h1 class="text-4xl">Actividades del proyecto</h1>
+        <button id="openCrearModal" 
+                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Crear Actividad
     </div>
 
     {% for act in actividades %}
@@ -122,65 +125,152 @@
 <div id="modalOverlay" class="hidden fixed inset-0 bg-black/30 z-40"></div>
 
 <!-- Modal de edición de actividad -->
-<div id="editModal" class="hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-1/3 max-h-[80vh] overflow-y-auto rounded">
+<div id="editModal" class="js-modal hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-1/3 max-h-[80vh] overflow-y-auto rounded">
     <h2 class="text-xl font-bold">Editar Actividad</h2>
 
     <div class="p-4 flex flex-col gap-4">
-        <!-- Nombre -->
         <div class="flex items-center gap-2 mb-3">
-            <label for="modalNombre" class="font-medium">Nombre:</label>
-            <input type="text" id="modalNombre" class="border p-1 rounded flex-1">
-            <p id="nombreError" class="text-red-600 font-medium mt-1 hidden">El nombre no puede estar vacío</p>
-        </div>
+            <label for="editNombreInput" class="font-medium">Nombre:</label> 
+            <input type="text" id="editNombreInput" class="js-activity-name border p-1 rounded flex-1">
+            <p class="js-name-error text-red-600 font-medium mt-1 hidden"></p> </div>
 
-        <!-- Encargados -->
         <div class="flex justify-between items-center mb-2">
-        <label class="font-medium">Encargados</label>
-        <button id="openAddEncargadoModal" class="ml-2 px-2 py-1 bg-green-500 text-white rounded">Crear</button>
+            <label class="font-medium">Encargados</label>
+            <button class="btnOpenAddEncargado ml-2 px-2 py-1 bg-green-500 text-white rounded">Crear</button>
         </div>
 
-        <div id="modalEncargadosList" class="mb-2 flex flex-col gap-2 max-h-48 overflow-y-auto border p-2 rounded bg-gray-50 h-[20%]"></div>
+        <div class="js-encargados-list mb-2 flex flex-col gap-2 max-h-48 overflow-y-auto border p-2 rounded bg-gray-50">
+        </div>
 
-        <!-- Campo de nombre y correo -->
         <div class="flex flex-col gap-2 mb-2">
             <div class="relative flex gap-2">
-                <svg class="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" 
-                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
-                </svg>
-
-                <input type="text" id="modalEncargadosInput" placeholder="Agregar encargado..." 
-                    class="border p-1 pl-8 flex-1" autocomplete="off">
+                <input type="text" class="js-encargados-input border p-1 pl-8 flex-1" placeholder="Buscar o agregar encargado..." autocomplete="off">
             </div>
-            <span id="nombreError" class="text-red-500 text-sm hidden">Debes ingresar un nombre.</span>
 
-            <input type="email" id="modalEncargadoCorreo" placeholder="Correo electrónico" 
-                class="border p-1 hidden">
-            <span id="correoError" class="text-red-500 text-sm hidden">Debes ingresar un correo electrónico válido.</span>
-
-            <button id="addEncargadoBtn" class="border px-2 py-1 hidden bg-green-500 text-white rounded">Agregar</button>
+            <button class="js-add-encargado-btn border px-2 py-1 bg-green-500 text-white rounded hidden">
+                Crear encargado nuevo
+            </button>
         </div>
 
-        <ul id="searchResults" class="border p-1 mb-2 max-h-40 overflow-y-auto hidden"></ul>
+        <ul class="js-search-results border p-1 mb-2 max-h-40 overflow-y-auto hidden rounded"></ul>
 
-        <!-- Periodos -->
+
         <label class="font-medium">Periodos:</label>
-        <div id="modalPeriodosList" class="mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
+        
+        <p class="js-periodo-solapado-error text-red-600 font-medium mb-2 hidden"></p> 
+        
+        <div class="js-periodos-list mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
+        
         <label class="font-medium">Agregar periodo:</label>
         <div class="flex gap-2 mt-2">
-        <input type="date" id="modalPeriodoInicio" class="border p-1 flex-1">
-        <input type="date" id="modalPeriodoFin" class="border p-1 flex-1">
-        <button id="addPeriodo" type="button" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-blue-700">
-            Agregar
-        </button>
+            <input type="date" class="js-periodo-inicio border p-1 flex-1">
+            <input type="date" class="js-periodo-fin border p-1 flex-1">
+            <button type="button" class="js-add-periodo-btn bg-green-500 text-white px-3 py-1 rounded hover:bg-blue-700">
+                Agregar
+            </button>
         </div>
-        <p id="periodoError" class="text-red-600 text-sm mt-1"></p>
+        <p class="js-periodo-error text-red-600 text-sm mt-1"></p> 
 
-        <!-- Botones -->
         <div class="flex justify-end gap-2">
-            <button id="cancelChanges" class="px-3 py-1 border rounded">Cancelar</button>
-            <button id="saveChanges" class="px-3 py-1 border rounded bg-blue-500 text-white">Guardar</button>
+            <button class="js-close-modal px-3 py-1 border rounded">Cancelar</button>
+            <button id="saveChanges" class="js-save-changes px-3 py-1 border rounded bg-blue-500 text-white">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de crear de actividad -->
+<div id="crearModal" class="js-modal hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-1/3 max-h-[80vh] overflow-y-auto rounded">
+    <h2 class="text-xl font-bold">Crear Actividad</h2>
+
+    <div class="p-4 flex flex-col gap-4">
+        <div class="flex items-center gap-2 mb-3">
+            <label for="createNombreInput" class="font-medium">Nombre:</label>
+            <input type="text" id="createNombreInput" class="js-activity-name border p-1 rounded flex-1">
+            <p class="js-name-error text-red-600 font-medium mt-1 hidden"></p>
+        </div>
+        <div class="mb-3">
+            <label for="modalTipo" class="font-medium">Tipo de Actividad:</label>
+            <select id="modalTipo" class="js-activity-type border p-1 rounded w-full">
+                <option value="Normal">Normal</option>
+                <option value="Difusion">Difusión</option>
+                </select>
+        </div>
+        <div class="flex items-center gap-2 mb-3">
+            <label for="modalProducto" class="font-medium">Producto Asociado:</label>
+            <input type="text" id="modalProducto" class="js-activity-product border p-1 rounded flex-1">
+            <p class="js-product-error text-red-600 font-medium mt-1 hidden"></p>
+        </div>
+
+
+        <div class="flex items-start gap-2 mb-3 w-full"> 
+            <label for="modalLinea" class="font-medium pt-2 whitespace-nowrap">Línea de Trabajo:</label>
+
+            <div class="flex-1">
+                <select id="modalLineaSimple" 
+                        class="js-activity-line-simple border p-1 rounded w-full"> 
+                    <option value="">-- Seleccione una Línea --</option>
+                    {% for linea in all_lineas_trabajo %}
+                        <option value="{{ linea }}">{{ linea }}</option>
+                    {% endfor %}
+                </select>
+
+                <div id="lineas-trabajo-checkboxes" 
+                    class="js-lineas-checkbox-container border p-2 rounded w-full space-y-2 hidden">
+                    
+                    {% for linea in all_lineas_trabajo %}
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" 
+                                name="linea_seleccionada" 
+                                value="{{ linea }}" 
+                                class="js-linea-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded">
+                            <span>{{ linea }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <p class="js-line-error text-red-600 font-medium mt-1 hidden">Debe seleccionar una línea de trabajo</p>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-2">
+            <label class="font-medium">Encargados</label>
+            <button class="btnOpenAddEncargado ml-2 px-2 py-1 bg-green-500 text-white rounded">Crear</button>
+        </div>
+
+        <div class="js-encargados-list mb-2 flex flex-col gap-2 max-h-48 overflow-y-auto border p-2 rounded bg-gray-50">
+        </div>
+
+        <div class="flex flex-col gap-2 mb-2">
+            <div class="relative flex gap-2">
+                <input type="text" class="js-encargados-input border p-1 pl-8 flex-1" placeholder="Buscar o agregar encargado..." autocomplete="off">
+            </div>
+
+            <button class="js-add-encargado-btn border px-2 py-1 bg-green-500 text-white rounded hidden">
+                Crear encargado nuevo
+            </button>
+        </div>
+
+        <ul class="js-search-results border p-1 mb-2 max-h-40 overflow-y-auto hidden rounded"></ul>
+
+
+        <label class="font-medium">Periodos:</label>
+        
+        <p class="js-periodo-solapado-error text-red-600 font-medium mb-2 hidden"></p> 
+
+        <div class="js-periodos-list mb-2 flex flex-col gap-2 max-h-64 overflow-y-auto border p-2 rounded bg-gray-50"></div>
+        <label class="font-medium">Agregar periodo:</label>
+        <div class="flex gap-2 mt-2">
+            <input type="date" class="js-periodo-inicio border p-1 flex-1">
+            <input type="date" class="js-periodo-fin border p-1 flex-1">
+            <button type="button" class="js-add-periodo-btn bg-green-500 text-white px-3 py-1 rounded hover:bg-blue-700">
+                Agregar
+            </button>
+        </div>
+        <p class="js-periodo-error text-red-600 text-sm mt-1"></p> 
+
+        <div class="flex justify-end gap-2">
+            <button id="cancelCreate" class="js-close-modal px-3 py-1 border rounded">Cancelar</button>
+            <button id="btnCrearActividad" class="js-create-activity-btn px-3 py-1 border rounded bg-blue-500 text-white">Crear</button>
         </div>
     </div>
 </div>
@@ -204,7 +294,7 @@
 </div>
 
 <!-- Modal de agregar encargado -->
-<div id="addEncargadoModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-50">
+<div id="addEncargadoModal" class="hidden fixed inset-0 bg-black/75 flex justify-center items-center z-60">
   <div class="bg-white p-6 rounded shadow w-96 relative">
     <h2 class="text-lg font-semibold mb-4">Agregar Encargado</h2>
     <label class="block mb-2">Nombre</label>
@@ -222,6 +312,9 @@
   </div>
 </div>
 
+
+
+
 <!-- Modal de Historial de Cambios -->
 <div id="historialModal" class="hidden fixed top-12 left-1/2 transform -translate-x-1/2 bg-white p-6 border shadow-lg z-50 w-2/3 max-h-[80vh] overflow-y-auto rounded">
     <h2 class="text-xl font-bold mb-4">Historial de Cambios</h2>
@@ -238,9 +331,9 @@
 
 
 <script>
-
 // ===============================
 // Toggle panel de periodos
+// ===============================
 document.querySelectorAll(".toggle-periodos").forEach(btn => {
     btn.addEventListener("click", () => {
         const id = btn.dataset.id;
@@ -251,12 +344,10 @@ document.querySelectorAll(".toggle-periodos").forEach(btn => {
         icon.classList.toggle("rotate-180");
     });
 });
-// ===============================
-
 
 // ===============================
-// Actualizar estado de periodo
-
+// Actualizar estado de periodo (No requiere refactorización de ID, ya que usa dataset)
+// ===============================
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll("select[name='estado_periodo']").forEach(select => {
         let valorInicial = select.value;
@@ -266,8 +357,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const nuevoEstado = select.value;
 
             if (nuevoEstado === valorInicial) return;
-
-            console.log("Enviando cambio estado_periodo:", { periodoId, nuevoEstado });
 
             fetch("{% url 'actualizar_estado' %}", {
                 method: "POST",
@@ -289,14 +378,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 return { ok: res.ok, status: res.status, data };
             })
             .then(({ ok, status, data }) => {
-                console.log("Respuesta actualizar_estado_periodo:", status, data);
                 if (ok && data.success) {
                     valorInicial = nuevoEstado; // confirmar cambio
-                    // opcional: actualizar label visible si lo usas
-                    // let labelSpan = select.closest('.periodo-row')?.querySelector('.estado-label');
-                    // if (labelSpan) labelSpan.textContent = data.new_label || select.options[select.selectedIndex].text;
                 } else {
-                    // revertir y mostrar error en consola
                     console.warn("No se pudo actualizar el periodo:", data.error || data);
                     select.value = valorInicial;
                     alert(data.error || "No se pudo actualizar el estado del periodo.");
@@ -312,35 +396,54 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ===============================
-
-
+// Variables globales y Helpers de Modal 🚀
+// ===============================
 let tempActivity = { encargados: [], periodos: [] };
 const allEncargados = {{ all_encargados|safe }};
+let activeModalElement = null; // El elemento DOM del modal activo (#editModal o #crearModal)
 
+function validarCorreo(correo) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(correo);
+}
+
+/**
+ * Busca un elemento por clase DENTRO del modal activo.
+ * @param {string} className La clase CSS del elemento (ej: '.js-activity-name')
+ * @returns {Element | null}
+ */
+function getModalElement(className) {
+    if (!activeModalElement) {
+        console.error("No hay modal activo para buscar el elemento:", className);
+        return null;
+    }
+    return activeModalElement.querySelector(className);
+}
 
 // ===============================
-// Abrir y cerrar modal
+// Abrir/Cerrar Modales (Lógica central)
 // ===============================
+
+// Función genérica para cerrar cualquier modal
+function cerrarModal() {
+    document.getElementById("editModal").classList.add("hidden");
+    document.getElementById("crearModal").classList.add("hidden");
+    document.getElementById("modalOverlay").classList.add("hidden");
+
+    tempActivity = { encargados: [], periodos: [] };
+    activeModalElement = null;
+    document.body.classList.remove('overflow-hidden');
+}
+
+// Abrir Modal de Edición (Llamado desde .btn-editar)
 function abrirModalEditar(button) {
+    const editModal = document.getElementById("editModal");
+    activeModalElement = editModal; // 🎯 Establecer el modal activo
+
+    // 1. Cargar datos de la actividad (MISMO CÓDIGO)
     tempActivity.id = button.dataset.id;
     tempActivity.nombre = button.dataset.nombre;
-
-    const rawEncargados = button.dataset.encargados ? button.dataset.encargados.split(',').map(e => e.trim()) : [];
-    tempActivity.encargados = [];
-    if (button.dataset.encargados) {
-        const encList = button.dataset.encargados.split(',').map(e => e.trim());
-        encList.forEach(item => {
-            const [nombre, correo] = item.split('|'); // separa por |
-            const match = allEncargados.find(e => e.nombre === nombre);
-            tempActivity.encargados.push({
-                id: match?.id || null,
-                nombre: nombre,
-                correo: correo || match?.correo_electronico || ''
-            });
-        });
-    }
-
-
+    
     function estadoToCode(estado) {
         switch (estado) {
             case "Pendiente": return "PEN";
@@ -351,8 +454,25 @@ function abrirModalEditar(button) {
             default: return "PEN";
         }
     }
+
+    // Encargados
+    tempActivity.encargados = [];
+    if (button.dataset.encargados) {
+        const encList = button.dataset.encargados.split(',').map(e => e.trim());
+        encList.forEach(item => {
+            const [nombre, correo] = item.split('|'); 
+            const match = allEncargados.find(e => e.nombre === nombre);
+            tempActivity.encargados.push({
+                id: match?.id || null,
+                nombre: nombre,
+                correo: correo || match?.correo_electronico || ''
+            });
+        });
+    }
+
+    // Periodos
     const raw = button.dataset.periodos || "";
-    const rawPeriodos = raw
+    tempActivity.periodos = raw
         .split(",")
         .filter(Boolean)
         .map(p => {
@@ -362,180 +482,254 @@ function abrirModalEditar(button) {
                 fecha_inicio: inicio || "",
                 fecha_fin: fin || "",
                 estado: estado || "Pendiente",
-                estado_valor: estadoToCode(estado), // si quieres usar PEN/LPC/EPR/...
+                estado_valor: estadoToCode(estado),
             };
         });
-    tempActivity.periodos = rawPeriodos;
-    console.log("dataset periodos:", button.dataset.periodos);
     
+    // 2. Poblar UI (USANDO CLASES)
+    const nombreInput = getModalElement(".js-activity-name");
+    if (nombreInput) nombreInput.value = tempActivity.nombre;
+
+    actualizarEncargadosUI();
+    actualizarPeriodosUI(); // Llama a la versión refactorizada
+
+    // 3. Mostrar
+    editModal.classList.remove("hidden");
+    document.getElementById("modalOverlay").classList.remove("hidden");
+    document.body.classList.add('overflow-hidden');
     
+    // 4. Resetear búsqueda y activar listeners del buscador
+    const searchInput = getModalElement(".js-encargados-input");
+    if (searchInput) searchInput.value = '';
+    
+    setupEncargadoSearchListeners();
+}
 
-//    const rawPeriodos = button.dataset.periodos ? button.dataset.periodos.split(',').map(p => p.trim()) : [];
-//    tempActivity.periodos = rawPeriodos.map(p => {
-//        const [id, f_inicio, f_fin] = p.split('|');
-//        return { id, f_inicio, f_fin };
-//    });
+// Abrir Modal de Creación (Llamado desde #openCrearModal)
+function abrirModalCrear() {
+    const crearModal = document.getElementById("crearModal");
+    activeModalElement = crearModal; // 🎯 Establecer el modal activo
+    
+    // Resetear tempActivity y campos
+    tempActivity = { encargados: [], periodos: [] };
+    
+    const nombreInput = getModalElement(".js-activity-name");
+    if (nombreInput) nombreInput.value = "";
+    
+    // Aquí puedes inicializar los demás campos específicos de 'Crear'
+    // getModalElement(".js-activity-type").value = "Difusión"; // Si es necesario
+    // getModalElement(".js-activity-product").value = "";
+    // getModalElement(".js-activity-line").value = "";
 
-    console.log("Dataset encargados:", button.dataset.encargados);
-    console.log("Temp activity encargados:", tempActivity.encargados);
+    // Limpiar listas y errores (USANDO CLASES)
+    // CÓDIGO CORREGIDO:
+    getModalElement(".js-name-error")?.classList.add("hidden");
+    getModalElement(".js-activity-product-error")?.classList.add("hidden");
+    getModalElement(".js-activity-line-error")?.classList.add("hidden");
 
-    document.getElementById("modalNombre").value = tempActivity.nombre;
+    const periodoErrorElement = getModalElement(".js-periodo-error");
+
+    if (periodoErrorElement) {
+        // Es seguro usar la asignación porque ya verificamos que el elemento existe
+        periodoErrorElement.textContent = ""; 
+        // Usamos 'add("hidden")' para asegurarnos de que el error esté oculto.
+        // Usar 'remove("hidden")' solo lo mostraría.
+        periodoErrorElement.classList.add("hidden"); 
+    }
 
     actualizarEncargadosUI();
     actualizarPeriodosUI();
 
-    document.getElementById("editModal").classList.remove("hidden");
+    crearModal.classList.remove("hidden");
     document.getElementById("modalOverlay").classList.remove("hidden");
     document.body.classList.add('overflow-hidden');
-
-    const searchInput = document.getElementById("modalEncargadosInput");
-    if (searchInput) {
-        searchInput.value = '';
-    }
+    
+    setupEncargadoSearchListeners();
 }
 
-function cerrarModal() {
-    document.getElementById("editModal").classList.add("hidden");
-    document.getElementById("modalOverlay").classList.add("hidden");
-    tempActivity = { encargados: [], periodos: [] };
-    document.body.classList.remove('overflow-hidden');
-}
+// Escucha del botón de Abrir Crear
+document.getElementById("openCrearModal").addEventListener("click", abrirModalCrear);
 
-document.getElementById("cancelChanges").addEventListener("click", cerrarModal);
+// Escucha de botones de Cerrar/Cancelar (USANDO CLASES)
+document.querySelectorAll(".js-close-modal").forEach(btn => {
+    btn.addEventListener("click", cerrarModal);
+});
 document.getElementById("modalOverlay").addEventListener("click", cerrarModal);
 
-// ===============================
-// Utils
-// ===============================
-function validarCorreo(correo) {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(correo);
-}
+// Escucha de botones de Edición (USANDO abrirModalEditar)
+document.querySelectorAll(".btn-editar").forEach(btn => {
+    btn.addEventListener("click", () => abrirModalEditar(btn));
+});
 
 // ===============================
-// Encargados
+// Encargados (Lógica reutilizable)
 // ===============================
+
+// Función para actualizar la lista visible (USANDO CLASES)
 function actualizarEncargadosUI() {
-  const container = document.getElementById("modalEncargadosList");
-  container.innerHTML = '';
-
-  if (tempActivity.encargados.length === 0) {
-    const msg = document.createElement('p');
-    msg.textContent = "Sin encargados";
-    msg.classList.add('text-gray-500', 'italic');
-    container.appendChild(msg);
-    return;
-  }
-
-  tempActivity.encargados.forEach((e, i) => {
-    const div = document.createElement('div');
-    div.classList.add(
-      'flex', 'items-center', 'justify-between',
-      'p-2', 'rounded', 'bg-gray-50', 'hover:bg-blue-100',
-      'border-b', 'border-gray-300', 'last:border-b-0'
-    );
-
-    const infoDiv = document.createElement('div');
-    infoDiv.classList.add('flex', 'flex-col', 'flex-1', 'mr-2');
-
-    const nombreSpan = document.createElement('span');
-    nombreSpan.textContent = e.nombre;
-    nombreSpan.classList.add('font-medium');
-
-    const correoSpan = document.createElement('span');
-    correoSpan.textContent = e.correo || 'sin correo';
-    correoSpan.classList.add('text-sm', 'text-gray-600');
-
-    infoDiv.appendChild(nombreSpan);
-    infoDiv.appendChild(correoSpan);
-
-    // Botones
-    const btnContainer = document.createElement('div');
-    btnContainer.classList.add('flex', 'gap-2', 'items-center');
-
-    // Editar
-    const editBtn = document.createElement('button');
-    editBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
-        </svg>
-    `;
-    editBtn.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    abrirModalEditarEncargado(e, i);
-    });
-
-    // Eliminar
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600 hover:text-red-800" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z" clip-rule="evenodd" />
-      </svg>`;
-    deleteBtn.addEventListener('click', () => {
-      tempActivity.encargados.splice(i, 1);
-      actualizarEncargadosUI();
-    });
-
-    btnContainer.appendChild(editBtn);
-    btnContainer.appendChild(deleteBtn);
-
-    div.appendChild(infoDiv);
-    div.appendChild(btnContainer);
-    container.appendChild(div);
-  });
-}
-
-
-// FILTRAR Y AGREGAR ENCARGADOS
-document.getElementById("modalEncargadosInput").addEventListener("input", e => {
-    const value = e.target.value.trim().toLowerCase();
-    const results = document.getElementById("searchResults");
-
-    results.innerHTML = '';
-
-    if (!value) {
-        results.classList.add("hidden");
+    const container = getModalElement(".js-encargados-list");
+    if (!container) return;
+    container.innerHTML = '';
+    // ... (El resto del código de renderizado es el mismo, solo necesita estar dentro de esta función)
+    
+    if (tempActivity.encargados.length === 0) {
+        const msg = document.createElement('p');
+        msg.textContent = "Sin encargados";
+        msg.classList.add('text-gray-500', 'italic');
+        container.appendChild(msg);
         return;
     }
 
-    const matches = allEncargados
-        .filter(enc => enc.nombre.toLowerCase().includes(value))
-        .filter(enc => !tempActivity.encargados.some(a => a.nombre === enc.nombre));
+    tempActivity.encargados.forEach((e, i) => {
+        const div = document.createElement('div');
+        div.classList.add(
+            'flex', 'items-center', 'justify-between',
+            'p-2', 'rounded', 'bg-white',
+            'border', 'hover:bg-gray-100'
+        );
 
-    if (matches.length > 0) {
-        matches.forEach(enc => {
-            const li = document.createElement('li');
-            li.textContent = `${enc.nombre} (${enc.correo_electronico || 'sin correo'})`;
-            li.classList.add('cursor-pointer', 'hover:bg-gray-100', 'p-1', 'rounded');
+        const infoDiv = document.createElement('div');
+        infoDiv.classList.add('flex', 'flex-col', 'flex-1', 'mr-2');
 
-            li.addEventListener('click', () => {
-                tempActivity.encargados.push({
-                    id: enc.id,
-                    nombre: enc.nombre,
-                    correo: enc.correo_electronico || ''
-                });
-                actualizarEncargadosUI();
-                e.target.value = '';
-                results.classList.add("hidden");
-            });
+        const nombreSpan = document.createElement('span');
+        nombreSpan.textContent = e.nombre;
+        nombreSpan.classList.add('font-medium');
 
-            results.appendChild(li);
+        const correoSpan = document.createElement('span');
+        correoSpan.textContent = e.correo || 'sin correo';
+        correoSpan.classList.add('text-sm', 'text-gray-600');
+
+        infoDiv.appendChild(nombreSpan);
+        infoDiv.appendChild(correoSpan);
+
+        const btnContainer = document.createElement('div');
+        btnContainer.classList.add('flex', 'gap-2', 'items-center');
+
+        // Editar
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" />
+            </svg>`;
+        editBtn.addEventListener('click', ev => {
+            ev.stopPropagation();
+            abrirModalEditarEncargado(e, i);
         });
 
-        results.classList.remove("hidden");
-    } else {
-        // Si no hay coincidencias
-        results.classList.add("hidden");
-    }
-});
+        // Eliminar
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-red-600 hover:text-red-800"
+                viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M10 8.586l4.95-4.95a1 1 0 111.414 1.414L11.414 10l4.95 4.95a1 1 0 01-1.414 1.414L10 11.414l-4.95 4.95a1 1 0 01-1.414-1.414L8.586 10l-4.95-4.95a1 1 0 011.414-1.414L10 8.586z"
+                    clip-rule="evenodd" />
+            </svg>`;
+        deleteBtn.addEventListener('click', () => {
+            tempActivity.encargados.splice(i, 1);
+            actualizarEncargadosUI();
+        });
+
+        btnContainer.appendChild(editBtn);
+        btnContainer.appendChild(deleteBtn);
+
+        div.appendChild(infoDiv);
+        div.appendChild(btnContainer);
+        container.appendChild(div);
+    });
+}
 
 
-// ABRIR MODAL EDITAR ENCARGADO
+// FILTRAR Y AGREGAR ENCARGADOS (USANDO CLASES)
+function setupEncargadoSearchListeners() {
+    const inputEnc = getModalElement(".js-encargados-input");
+    const results = getModalElement(".js-search-results");
+    const btnCrear = getModalElement(".js-add-encargado-btn");
+    
+    if (!inputEnc || !results || !btnCrear) return; 
+
+    // Limpiamos listeners viejos si es que la función se llama varias veces (aunque `oninput` y `onclick` sobreescriben)
+    inputEnc.oninput = null;
+    btnCrear.onclick = null;
+    
+    // Listener de Input
+    const handleInput = e => {
+        const value = e.target.value.trim().toLowerCase();
+        results.innerHTML = '';
+
+        if (!value) {
+            results.classList.add("hidden");
+            btnCrear.classList.add("hidden");
+            return;
+        }
+
+        // Buscar coincidencias y filtrar encargados ya agregados
+        const matches = allEncargados
+            .filter(enc => enc.nombre.toLowerCase().includes(value))
+            .filter(enc => !tempActivity.encargados.some(a => a.id === enc.id));
+
+        if (matches.length > 0) {
+            matches.forEach(enc => {
+                const li = document.createElement('li');
+                li.textContent = `${enc.nombre} (${enc.correo_electronico || 'sin correo'})`;
+                li.classList.add('cursor-pointer', 'hover:bg-gray-100', 'p-1', 'rounded');
+
+                li.addEventListener('click', () => {
+                    tempActivity.encargados.push({
+                        id: enc.id,
+                        nombre: enc.nombre,
+                        correo: enc.correo_electronico || ''
+                    });
+
+                    inputEnc.value = '';
+                    results.classList.add("hidden");
+                    btnCrear.classList.add("hidden");
+                    actualizarEncargadosUI();
+                });
+
+                results.appendChild(li);
+            });
+
+            results.classList.remove("hidden");
+            btnCrear.classList.add("hidden");
+        } else {
+            // No hay coincidencias → permitir crear uno nuevo
+            results.classList.add("hidden");
+            btnCrear.classList.remove("hidden");
+        }
+    };
+    
+    // Listener de Creación
+    const handleCreate = () => {
+        const nombre = inputEnc.value.trim();
+        if (!nombre) return;
+
+        const nuevo = {
+            id: "tmp_" + Date.now(), // ID temporal para nuevos encargados
+            nombre,
+            correo: ""
+        };
+
+        tempActivity.encargados.push(nuevo);
+        actualizarEncargadosUI();
+
+        inputEnc.value = '';
+        btnCrear.classList.add("hidden");
+    };
+
+    inputEnc.oninput = handleInput;
+    btnCrear.onclick = handleCreate;
+}
+
+// ABRIR MODAL EDITAR ENCARGADO (La lógica de edición de encargado es independiente del modal padre)
 function abrirModalEditarEncargado(encargado, index) {
   const modal = document.getElementById("editEncargadoModal");
   const nombreInput = document.getElementById("editNombre");
   const correoInput = document.getElementById("editCorreo");
 
+  // Limpiar errores (Si existen, no están en el DOM del modal de actividad, sino en el modal de encargado)
   document.getElementById("errorNombreEncargado")?.remove();
   document.getElementById("errorCorreoEncargado")?.remove();
 
@@ -544,18 +738,7 @@ function abrirModalEditarEncargado(encargado, index) {
 
   modal.classList.remove("hidden");
   modal.classList.add("flex");
-  Object.assign(modal.style, {
-    position: "fixed",
-    top: "0",
-    left: "0",
-    width: "100vw",
-    height: "100vh",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    backdropFilter: "blur(3px)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: "50"
-  });
+  // Omitir estilos inline para mantener limpio, ya Tailwind lo maneja
 
   const closeModal = () => {
     modal.classList.add("hidden");
@@ -567,14 +750,13 @@ function abrirModalEditarEncargado(encargado, index) {
   document.getElementById("cancelEditBtn").onclick = closeModal;
 
   document.getElementById("saveEditBtn").onclick = () => {
-
+    // ... (lógica de validación de editar encargado - la misma)
     document.getElementById("errorNombreEncargado")?.remove();
     document.getElementById("errorCorreoEncargado")?.remove();
 
     const nuevoNombre = nombreInput.value.trim();
     const nuevoCorreo = correoInput.value.trim();
 
-    // Validar nombre vacío
     if (!nuevoNombre) {
       const error = document.createElement("p");
       error.id = "errorNombreEncargado";
@@ -584,7 +766,6 @@ function abrirModalEditarEncargado(encargado, index) {
       return;
     }
 
-    // Validar nombre duplicado
     const nombreExiste = tempActivity.encargados.some(
       (e, i) => i !== index && e.nombre.toLowerCase() === nuevoNombre.toLowerCase()
     );
@@ -597,7 +778,6 @@ function abrirModalEditarEncargado(encargado, index) {
       return;
     }
 
-    // Validar formato de correo
     if (nuevoCorreo && !validarCorreo(nuevoCorreo)) {
       const error = document.createElement("p");
       error.id = "errorCorreoEncargado";
@@ -625,19 +805,85 @@ function abrirModalEditarEncargado(encargado, index) {
   });
 }
 
+
+// Modal Agregar Encargado (Lógica independiente, ya que usa IDs únicos y no depende del modal de actividad)
+// El flujo es correcto para este modal, solo la apertura fue refactorizada a .btnOpenAddEncargado
+document.querySelectorAll(".btnOpenAddEncargado").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const modal = document.getElementById("addEncargadoModal");
+        modal.classList.remove("hidden");
+        // ... (limpieza de campos)
+        modal.querySelector("#addEncargadoNombre").value = '';
+        modal.querySelector("#addEncargadoCorreo").value = '';
+        modal.querySelector("#addNombreError").classList.add("hidden");
+        modal.querySelector("#addCorreoError").classList.add("hidden");
+    });
+});
+
+document.getElementById("cancelAddEncargado").addEventListener("click", () => {
+    document.getElementById("addEncargadoModal").classList.add("hidden");
+});
+
+document.getElementById("saveAddEncargado").addEventListener("click", () => {
+    const modal = document.getElementById("addEncargadoModal");
+    // ... (lógica de guardado de encargado - la misma)
+    const nombre = modal.querySelector("#addEncargadoNombre").value.trim();
+    const correo = modal.querySelector("#addEncargadoCorreo").value.trim();
+
+    let hasError = false;
+    const nombreError = modal.querySelector("#addNombreError");
+    const correoError = modal.querySelector("#addCorreoError");
+
+    nombreError.classList.add("hidden");
+    correoError.classList.add("hidden");
+
+    if (!nombre) {
+        nombreError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (!correo || !validarCorreo(correo)) {
+        correoError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (tempActivity.encargados.some(e => e.nombre.toLowerCase() === nombre.toLowerCase())) {
+        nombreError.textContent = "Ya existe un encargado con ese nombre";
+        nombreError.classList.remove("hidden");
+        hasError = true;
+    }
+
+    if (hasError) return;
+
+    tempActivity.encargados.push({
+        id: "",
+        nombre,
+        correo
+    });
+
+    actualizarEncargadosUI();
+    modal.classList.add("hidden");
+});
+
+
 // ===============================
-// Periodos
+// Periodos (Lógica reutilizable - USANDO CLASES) 🗓️
 // ===============================
+
+// Función para actualizar la lista visible (USANDO CLASES)
 function actualizarPeriodosUI() {
-    const container = document.getElementById("modalPeriodosList");
+    const container = getModalElement(".js-periodos-list");
+    if (!container) return;
     container.innerHTML = '';
 
-    let errorLabel = document.getElementById("periodoSolapadoError");
+    let errorLabel = getModalElement(".js-periodo-solapado-error");
+    
+    // Crear el elemento de error si no existe (ya debería existir en el HTML refactorizado, pero lo creamos si es necesario)
     if (!errorLabel) {
         errorLabel = document.createElement('p');
-        errorLabel.id = "periodoSolapadoError";
-        errorLabel.classList.add('text-red-600', 'font-medium', 'mb-2', 'hidden');
-        container.parentElement.insertBefore(errorLabel, container);
+        errorLabel.classList.add('text-red-600', 'font-medium', 'mb-2', 'hidden', 'js-periodo-solapado-error');
+        // Usar insertBefore en lugar de document.getElementById si es un elemento dinámico
+        container.parentElement.insertBefore(errorLabel, container); 
     }
     errorLabel.textContent = '';
     errorLabel.classList.add("hidden");
@@ -668,6 +914,9 @@ function actualizarPeriodosUI() {
         inputInicio.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputInicio.addEventListener('input', (e) => {
             tempActivity.periodos[i].fecha_inicio = e.target.value;
+            // Después de la actualización, reordenar y revalidar
+            tempActivity.periodos.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+            actualizarPeriodosUI(); // Re-renderiza para reflejar el orden
             validarSolapamientos();
         });
 
@@ -677,6 +926,9 @@ function actualizarPeriodosUI() {
         inputFin.classList.add('border', 'p-1', 'flex-1', 'min-w-0');
         inputFin.addEventListener('input', (e) => {
             tempActivity.periodos[i].fecha_fin = e.target.value;
+            // Después de la actualización, reordenar y revalidar
+            tempActivity.periodos.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+            actualizarPeriodosUI(); // Re-renderiza para reflejar el orden
             validarSolapamientos();
         });
 
@@ -704,11 +956,15 @@ function actualizarPeriodosUI() {
 }
 
 // ===============================
-// Validar solapamientos
+// Validar solapamientos (USANDO CLASES)
 // ===============================
 function validarSolapamientos() {
-    const errorLabel = document.getElementById("periodoSolapadoError");
-    const periodosDivs = document.querySelectorAll("#modalPeriodosList > div");
+    const errorLabel = getModalElement(".js-periodo-solapado-error");
+    const periodosList = getModalElement(".js-periodos-list");
+    
+    if (!periodosList || !errorLabel) return;
+    
+    const periodosDivs = periodosList.querySelectorAll(":scope > div"); // Selecciona solo hijos directos
 
     // Limpiar errores y colores previos
     errorLabel.textContent = '';
@@ -749,219 +1005,324 @@ function validarSolapamientos() {
                 periodosDivs[i].classList.add('bg-red-100', 'border-red-400');
             }
         });
+        return true; // Hay solapamiento
     }
+    return false; // No hay solapamiento
 }
 
 // ===============================
-// Agregar periodo 
+// Agregar periodo (USANDO CLASES)
 // ===============================
-document.getElementById("addPeriodo").addEventListener("click", () => {
-    const inicio = document.getElementById("modalPeriodoInicio").value;
-    const fin = document.getElementById("modalPeriodoFin").value;
-    const errorMsg = document.getElementById("periodoError");
-    errorMsg.textContent = '';
+document.querySelectorAll(".js-add-periodo-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        if (!activeModalElement) return;
 
-    document.querySelectorAll("#modalPeriodosList > div").forEach(div => {
-        div.classList.remove("bg-red-100", "border-red-400");
-    });
-
-    if (!inicio && !fin) return;  // <-- nada que validar si ambos vacíos
-
-    if (!inicio || !fin) {
-        errorMsg.textContent = "Ambas fechas son obligatorias.";
-        return;
-    }
-
-    if (inicio > fin) {
-        errorMsg.textContent = "La fecha de inicio no puede ser mayor que la de fin.";
-        return;
-    }
-
-    const nuevoInicio = new Date(inicio);
-    const nuevoFin = new Date(fin);
-
-    const periodosSolapados = [];
-    tempActivity.periodos.forEach((p, i) => {
-        const inicioExistente = new Date(p.fecha_inicio);
-        const finExistente = new Date(p.fecha_fin);
-
-        const seSolapan =
-            (nuevoInicio <= finExistente) && (nuevoFin >= inicioExistente);
-
-        if (seSolapan) {
-            periodosSolapados.push(i);
-        }
-    });
-
-    if (periodosSolapados.length > 0) {
-        errorMsg.textContent = `El periodo se solapa con ${periodosSolapados.length > 1 ? "varios periodos existentes" : "un periodo existente"}.`;
+        const inicioInput = getModalElement(".js-periodo-inicio");
+        const finInput = getModalElement(".js-periodo-fin");
+        const errorMsg = getModalElement(".js-periodo-error");
         
-        const periodosDivs = document.querySelectorAll("#modalPeriodosList > div");
-        periodosSolapados.forEach(i => {
-            const div = periodosDivs[i];
-            if (div) {
-                div.classList.add("bg-red-100", "border-red-400");
+        const periodoList = getModalElement(".js-periodos-list");
+        const periodosDivs = periodoList ? periodoList.querySelectorAll(":scope > div") : [];
+        
+        errorMsg.textContent = '';
+        errorMsg.classList.add("hidden");
+
+
+        // Limpiar colores de solapamiento en la lista
+        periodosDivs.forEach(div => {
+            div.classList.remove("bg-red-100", "border-red-400");
+        });
+
+        const inicio = inicioInput.value;
+        const fin = finInput.value;
+
+        if (!inicio && !fin) return; 
+
+        if (!inicio || !fin) {
+            errorMsg.textContent = "Ambas fechas son obligatorias.";
+            errorMsg.classList.remove("hidden");
+            return;
+        }
+
+        if (inicio > fin) {
+            errorMsg.textContent = "La fecha de inicio no puede ser mayor que la de fin.";
+            errorMsg.classList.remove("hidden");
+            return;
+        }
+
+        const nuevoInicio = new Date(inicio);
+        const nuevoFin = new Date(fin);
+
+        const periodosSolapados = [];
+        tempActivity.periodos.forEach((p, i) => {
+            const inicioExistente = new Date(p.fecha_inicio);
+            const finExistente = new Date(p.fecha_fin);
+
+            const seSolapan =
+                (nuevoInicio <= finExistente) && (nuevoFin >= inicioExistente);
+
+            if (seSolapan) {
+                periodosSolapados.push(i);
             }
         });
 
-        return;
-    }
+        if (periodosSolapados.length > 0) {
+            errorMsg.textContent = `El periodo se solapa con ${periodosSolapados.length > 1 ? "varios periodos existentes" : "un periodo existente"}.`;
+            errorMsg.classList.remove("hidden");
+            
+            periodosSolapados.forEach(i => {
+                const div = periodosDivs[i];
+                if (div) {
+                    div.classList.add("bg-red-100", "border-red-400");
+                }
+            });
 
-    tempActivity.periodos.push({
-        id: "",
-        fecha_inicio: inicio,
-        fecha_fin: fin,
-        estado_valor: "PEN",
-        estado: "Pendiente"
+            return;
+        }
+
+        tempActivity.periodos.push({
+            id: "",
+            fecha_inicio: inicio,
+            fecha_fin: fin,
+            estado_valor: "PEN",
+            estado: "Pendiente"
+        });
+        
+        // Ordenar por fecha de inicio antes de actualizar la UI
+        tempActivity.periodos.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+
+        actualizarPeriodosUI();
+
+        inicioInput.value = '';
+        finInput.value = '';
     });
-    actualizarPeriodosUI();
-
-
-    document.getElementById("modalPeriodoInicio").value = '';
-    document.getElementById("modalPeriodoFin").value = '';
 });
-
 
 // ===============================
-// Botón editar
+// Lógica de Guardado (Editar y Crear) 💾
 // ===============================
-document.querySelectorAll(".btn-editar").forEach(btn => {
-    btn.addEventListener("click", () => abrirModalEditar(btn));
-});
 
-// Abrir modal agregar encargado
-document.getElementById("openAddEncargadoModal").addEventListener("click", () => {
-    document.getElementById("addEncargadoModal").classList.remove("hidden");
-    document.getElementById("addEncargadoNombre").value = '';
-    document.getElementById("addEncargadoCorreo").value = '';
-    document.getElementById("addNombreError").classList.add("hidden");
-    document.getElementById("addCorreoError").classList.add("hidden");
-});
+// Añadir al bloque de event listeners en tu script:
 
-// Cancelar
-document.getElementById("cancelAddEncargado").addEventListener("click", () => {
-    document.getElementById("addEncargadoModal").classList.add("hidden");
-});
+const tipoSelect = document.querySelector('.js-activity-type');
+const lineaSimpleSelect = document.querySelector('.js-activity-line-simple');
+const lineasCheckboxContainer = document.getElementById('lineas-trabajo-checkboxes');
 
-// Guardar nuevo encargado
-document.getElementById("saveAddEncargado").addEventListener("click", () => {
-    const nombre = document.getElementById("addEncargadoNombre").value.trim();
-    const correo = document.getElementById("addEncargadoCorreo").value.trim();
-    let hasError = false;
-
-    const nombreError = document.getElementById("addNombreError");
-    const correoError = document.getElementById("addCorreoError");
-
-    nombreError.classList.add("hidden");
-    correoError.classList.add("hidden");
-
-    if (!nombre) {
-        nombreError.classList.remove("hidden");
-        hasError = true;
+if (tipoSelect && lineaSimpleSelect && lineasCheckboxContainer) {
+    
+    function actualizarControlesLineas() {
+        const tipoSeleccionado = tipoSelect.value;
+        
+        if (tipoSeleccionado === 'Difusion') {
+            // MODO DIFUSIÓN: Mostrar checkboxes y ocultar select simple
+            lineaSimpleSelect.classList.add('hidden');
+            lineasCheckboxContainer.classList.remove('hidden');
+        } else {
+            // MODO NORMAL: Ocultar checkboxes y mostrar select simple
+            lineaSimpleSelect.classList.remove('hidden');
+            lineasCheckboxContainer.classList.add('hidden');
+        }
+        
+        // Opcional: Limpiar selecciones al cambiar de modo
+        lineaSimpleSelect.value = ''; // Limpiar select simple
+        lineasCheckboxContainer.querySelectorAll('.js-linea-checkbox').forEach(cb => {
+            cb.checked = false; // Desmarcar todos los checkboxes
+        });
     }
 
-    if (!correo || !validarCorreo(correo)) {
-        correoError.classList.remove("hidden");
-        hasError = true;
-    }
+    // Inicializar y enganchar el evento
+    actualizarControlesLineas();
+    tipoSelect.addEventListener('change', actualizarControlesLineas);
+}
 
-    if (tempActivity.encargados.some(e => e.nombre.toLowerCase() === nombre.toLowerCase())) {
-        nombreError.textContent = "Ya existe un encargado con ese nombre";
-        nombreError.classList.remove("hidden");
-        hasError = true;
-    }
+// Función de guardado genérica
+function manejarGuardado(urlEndpoint, esCreacion) {
+    const modal = esCreacion ? document.getElementById("crearModal") : document.getElementById("editModal");
 
-    if (hasError) return;
-
-    tempActivity.encargados.push({
-        id: "", // <-- corregido
-        nombre: nombre, // <-- corregido
-        correo: correo  // <-- corregido
-    });
-
-    actualizarEncargadosUI();
-    document.getElementById("addEncargadoModal").classList.add("hidden");
-});
-
-// ===============================
-// Guardar cambios
-// ===============================
-document.getElementById("saveChanges").addEventListener("click", () => {
-    const nombreInput = document.getElementById("modalNombre");
-    const nombreError = document.getElementById("nombreError");
+    // --- 1. Obtener y Validar Nombre ---
+    const nombreInput = modal.querySelector(".js-activity-name");
     const nombre = nombreInput.value.trim();
+    const nombreError = modal.querySelector(".js-name-error");
 
     if (!nombre) {
-        nombreError.textContent = "El nombre no puede estar vacío";
-        nombreError.classList.remove("hidden");  // <--- importante
+        nombreError.textContent = "El nombre no puede estar vacío.";
+        nombreError.classList.remove("hidden");
         nombreInput.focus();
         return;
     } else {
-        nombreError.textContent = "";
-        nombreError.classList.add("hidden");      // ocultar si es válido
+        nombreError.classList.add("hidden");
     }
 
-    // Validación de periodos solapados
-    const periodos = tempActivity.periodos;
-    for (let i = 0; i < periodos.length; i++) {
-        const a = periodos[i];
-        for (let j = i + 1; j < periodos.length; j++) {
-            const b = periodos[j];
-            if (!(a.fecha_fin < b.fecha_inicio || a.fecha_inicio > b.fecha_fin)) {
-                // Mostrar error inline en lugar de alert
-                let periodoError = document.getElementById("periodoError");
-                if (!periodoError) {
-                    periodoError = document.createElement("p");
-                    periodoError.id = "periodoError";
-                    periodoError.classList.add("text-red-600", "font-medium", "mt-1");
-                    document.getElementById("modalPeriodosList").parentNode.insertBefore(periodoError, document.getElementById("modalPeriodosList").nextSibling);
-                }
-                periodoError.textContent = "Los periodos no pueden solaparse";
-                return;
-            }
+    // --- 2. Validaciones Específicas de Creación (Si aplica) ---
+    let producto, linea, tipo; // 'linea' será un array de valores seleccionados
+    let productoError, lineaError;
+
+    if (esCreacion) {
+        const productoInput = modal.querySelector(".js-activity-product");
+        const tipoSelect = modal.querySelector(".js-activity-type");
+        const lineaSimpleSelect = modal.querySelector(".js-activity-line-simple");
+        const lineasCheckboxContainer = modal.querySelector("#lineas-trabajo-checkboxes");
+
+        producto = productoInput.value.trim();
+        tipo = tipoSelect.value;
+        
+        productoError = modal.querySelector(".js-product-error");
+        lineaError = modal.querySelector(".js-line-error");
+        let validacionExitosa = true;
+        
+        // --- RECOLECCIÓN CONDICIONAL DE LÍNEA DE TRABAJO ---
+        if (tipo === 'Difusion') {
+            // Recolectar valores de checkboxes marcados
+            linea = Array.from(lineasCheckboxContainer.querySelectorAll('.js-linea-checkbox:checked'))
+                        .map(checkbox => checkbox.value);
+        } else {
+            // Recolectar el valor del select simple
+            const valorSimple = lineaSimpleSelect.value;
+            // Lo convertimos a un array para que el payload sea consistente
+            linea = valorSimple ? [valorSimple] : [];
+        }
+
+        // --- Validación de Producto ---
+        if (!producto) {
+            productoError.textContent = "El producto asociado no puede estar vacío.";
+            productoError.classList.remove("hidden");
+            validacionExitosa = false;
+        } else {
+            productoError.classList.add("hidden");
+        }
+
+        // --- VALIDACIÓN DE LÍNEA DE TRABAJO ---
+        
+        // 1. Validar que al menos se haya seleccionado una línea (para ambos tipos)
+        if (linea.length === 0) {
+            lineaError.textContent = "Debe seleccionar al menos una línea de trabajo.";
+            lineaError.classList.remove("hidden");
+            validacionExitosa = false;
+        } 
+        // 2. Aplicar restricción si el tipo es 'Normal' (solo 1 línea)
+        else if (tipo !== 'Difusion' && linea.length > 1) {
+            lineaError.textContent = "Las actividades de tipo 'Normal' solo pueden tener una línea de trabajo.";
+            lineaError.classList.remove("hidden");
+            validacionExitosa = false;
+        }
+        // 3. Si todo es válido
+        else {
+            lineaError.classList.add("hidden");
+        }
+        
+        
+        if (!validacionExitosa) {
+            return; // Detener si faltan campos de creación
         }
     }
 
-    // Si pasa todas las validaciones, enviar datos
+    // --- 3. Obtener y Validar Periodos (Mínimo uno) ---
+    
+    // Leemos directamente del array de datos temporales (tempActivity)
+    const periodos = tempActivity.periodos.map(p => ({
+        id: p.id || null, 
+        fecha_inicio: p.fecha_inicio,
+        fecha_fin: p.fecha_fin,
+        estado_valor: p.estado_valor || 'PEN' 
+    }));
+
+
+    // Validar: Debe haber al menos un período
+    let periodoSolapadoError = modal.querySelector(".js-periodo-solapado-error");
+    if (periodos.length === 0) {
+        periodoSolapadoError.textContent = "Debe agregar al menos un período para la actividad.";
+        periodoSolapadoError.classList.remove("hidden");
+        
+        const generalError = modal.querySelector(".js-periodo-error");
+        if (generalError) generalError.classList.add("hidden"); 
+        
+        return; // Detener el proceso
+    } else {
+        periodoSolapadoError.classList.add("hidden");
+    }
+
+    // --- 4. Obtener Encargados ---
+    const encargadosListUI = modal.querySelector(".js-encargados-list");
+    const encargados = [];
+    encargadosListUI.querySelectorAll(".js-encargado-item").forEach(item => {
+        encargados.push({
+            nombre: item.dataset.nombre,
+            correo: item.dataset.correo
+        });
+    });
+    
+    // --- 5. Construir Payload ---
     const payload = {
-        id: tempActivity.id,
+        actividad_id: esCreacion ? null : modal.dataset.actividadId,
         nombre: nombre,
-        encargados: tempActivity.encargados.map(e => ({
-            id: e.id || "",
-            nombre: e.nombre,
-            correo: e.correo || ""
-        })),
-        periodos: tempActivity.periodos.map(p => ({
-            id: p.id != null && p.id !== "" ? parseInt(p.id, 10) : "",
-            f_inicio: p.fecha_inicio,
-            f_fin: p.fecha_fin
-        }))
+        encargados: encargados,
+        periodos: periodos, 
     };
 
-    fetch("{% url 'editar_actividad' %}", {
-        method: "POST",
+    if (esCreacion) {
+        payload.tipo = tipo;
+        payload.producto = producto;
+        // Enviamos el array de líneas (incluso si solo tiene 1)
+        payload.lineas_trabajo = linea; 
+        payload.proyecto_id = {{ proyecto.id }}; // Asume que esta variable está disponible
+    }
+
+    // --- 6. Enviar Solicitud ---
+    fetch(urlEndpoint, {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') // Usa la función getCookie definida arriba
         },
         body: JSON.stringify(payload)
     })
-    .then(res => {
-        if (!res.ok) throw new Error("Error al guardar la actividad");
-        return res.json();
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => { throw new Error(errorData.error || 'Error desconocido del servidor'); });
+        }
+        return response.json();
     })
     .then(data => {
-        if (data.success) location.reload();
-        else location.reload();
+        if (data.success) {
+            alert(data.message);
+            window.location.reload(); 
+        } else {
+            alert("Error al guardar: " + data.error);
+        }
     })
-    .catch(err => {
-        console.error(err);
-        alert("Hubo un error al guardar la actividad");
+    .catch(error => {
+        alert("Ocurrió un error: " + error.message);
     });
+}
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+// 6. Listener de Guardar Cambios (Edición)
+document.getElementById("saveChanges").addEventListener("click", () => {
+    manejarGuardado("{% url 'editar_actividad' %}", false);
 });
 
+// 7. Listener de Crear Actividad
+document.getElementById("btnCrearActividad").addEventListener("click", () => {
+    // Nota: Necesitarás definir la URL 'crear_actividad' en tus urls.py
+    manejarGuardado("{% url 'crear_actividad' %}", true); 
+});
+
+
 // ===============================
-// Modal de Historial
+// Modal de Historial (No necesita refactorización de IDs internos)
 // ===============================
 document.querySelectorAll(".btn-historial").forEach(btn => {
     btn.addEventListener("click", () => abrirModalHistorial(btn.dataset.id));
@@ -984,7 +1345,7 @@ function abrirModalHistorial(actividadId) {
     document.body.classList.add('overflow-hidden');
     
     // Obtener historial del servidor
-    fetch(`/vistas/historial/${actividadId}/`, {
+    fetch(`/vistas/historial/${actividadId}/`, { // Asumiendo que esta es la URL
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -1002,7 +1363,7 @@ function abrirModalHistorial(actividadId) {
             return;
         }
 
-        // Construir HTML para todos los registros
+        // ... (Tu lógica de renderizado HTML del historial es correcta y se mantiene)
         let html = '<div class="space-y-4">';
         
         data.forEach((registro, index) => {
@@ -1025,7 +1386,6 @@ function abrirModalHistorial(actividadId) {
                         </thead>
                         <tbody class="bg-white">
             `;
-
             // Cambios en la actividad (nombre)
             if (cambios.actividad && Object.keys(cambios.actividad).length > 0) {
                 for (const [campo, detalle] of Object.entries(cambios.actividad)) {
@@ -1047,7 +1407,6 @@ function abrirModalHistorial(actividadId) {
                     }
                 }
             }
-
             // Cambios en encargados
             if (cambios.encargados && cambios.encargados.length > 0) {
                 cambios.encargados.forEach(enc => {
@@ -1058,40 +1417,28 @@ function abrirModalHistorial(actividadId) {
                     let despuesTitle = '-';
                     let campo = 'Encargado';
                     
-                    if (enc.tipo === 'agregado') {
-                        // Estructura nueva: enc.nombre y enc.correo son strings directos
+                    if (enc.tipo === 'agregado' || enc.tipo === 'creado') {
                         const nombre = enc.nombre?.despues || enc.nombre || '';
                         const correo = enc.correo?.despues || enc.correo || '';
                         despues = `${nombre}`;
                         despuesTitle = `${nombre} (${correo || 'Sin correo'})`;
                         accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Agregado</span>';
-                    }else if (enc.tipo === 'creado') {
-                        // Estructura antigua: enc.nombre y enc.correo son strings directos
-                        const nombre = enc.nombre.despues || '';
-                        const correo = enc.correo.despues || '';
-                        despues = `${nombre}`;
-                        despuesTitle = `${nombre} (${correo || 'Sin correo'})`;
-                        accionBadge = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-nowrap">Creado</span>';
                     } else if (enc.tipo === 'eliminado') {
-                        // Estructura nueva: enc.nombre y enc.correo son strings directos
                         const nombre = enc.nombre?.antes || enc.nombre || '';
                         const correo = enc.correo?.antes || enc.correo || '';
                         antes = `${nombre}`;
                         antesTitle = `${nombre} (${correo || 'Sin correo'})`;
                         accionBadge = '<span class="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs whitespace-nowrap">Eliminado</span>';
                     } else if (enc.tipo === 'modificado') {
-                        // Nueva estructura: enc.nombre y enc.correo son objetos {antes, despues}
                         const nombreAntes = enc.nombre?.antes || '';
                         const nombreDespues = enc.nombre?.despues || '';
                         const correoAntes = enc.correo?.antes || '';
                         const correoDespues = enc.correo?.despues || '';
                         
-                        // Determinar qué cambió
                         const nombreCambio = nombreAntes !== nombreDespues;
                         const correoCambio = correoAntes !== correoDespues;
                         
                         if (nombreCambio && correoCambio) {
-                            // Ambos cambiaron - mostrar nombre y correo
                             campo = 'Encargado';
                             const correoAntesDisplay = correoAntes || 'Sin correo';
                             const correoDespuesDisplay = correoDespues || 'Sin correo';
@@ -1100,14 +1447,12 @@ function abrirModalHistorial(actividadId) {
                             despues = `${nombreDespues}<br><span class="text-xs text-gray-500">${correoDespuesDisplay}</span>`;
                             despuesTitle = `${nombreDespues} (${correoDespuesDisplay})`;
                         } else if (nombreCambio) {
-                            // Solo nombre cambió
                             campo = 'Encargado (Nombre)';
                             antes = `${nombreAntes}`;
                             antesTitle = `${nombreAntes} (${correoAntes || 'Sin correo'})`;
                             despues = `${nombreDespues}`;
                             despuesTitle = `${nombreDespues} (${correoDespues || 'Sin correo'})`;
                         } else if (correoCambio) {
-                            // Solo correo cambió
                             campo = 'Encargado (Correo)';
                             const correoAntesDisplay = correoAntes || 'Sin correo';
                             const correoDespuesDisplay = correoDespues || 'Sin correo';
@@ -1134,7 +1479,6 @@ function abrirModalHistorial(actividadId) {
                     `;
                 });
             }
-
             // Cambios en periodos
             if (cambios.periodos && cambios.periodos.length > 0) {
                 cambios.periodos.forEach(per => {
@@ -1179,6 +1523,7 @@ function abrirModalHistorial(actividadId) {
                 });
             }
 
+
             html += `
                         </tbody>
                     </table>
@@ -1210,7 +1555,6 @@ function formatearFecha(fecha) {
         if (!y || !m || !d) return fecha; // Si no se puede parsear, devolver original
         return `${d}/${m}/${y}`;
     } catch (e) {
-        console.error('Error al formatear fecha:', fecha, e);
         return fecha;
     }
 }
@@ -1219,7 +1563,7 @@ function formatearFechaCompleta(fecha) {
     if (!fecha) return 'No definida';
     try {
         const partes = fecha.split(' ');
-        if (partes.length < 2) return fecha; // Si no tiene hora, devolver original
+        if (partes.length < 2) return fecha; 
         
         const [fechaParte, horaParte] = partes;
         const [y, m, d] = fechaParte.split('-');
@@ -1227,27 +1571,26 @@ function formatearFechaCompleta(fecha) {
         
         return `${d}/${m}/${y} a las ${horaParte}`;
     } catch (e) {
-        console.error('Error al formatear fecha completa:', fecha, e);
         return fecha;
     }
 }
 
-// Cerrar modal de historial
 document.getElementById("closeHistorialModal").addEventListener("click", () => {
     document.getElementById("historialModal").classList.add("hidden");
     document.getElementById("modalOverlay").classList.add("hidden");
     document.body.classList.remove('overflow-hidden');
 });
 
-// Cerrar al hacer click en el overlay
-document.getElementById("modalOverlay").addEventListener("click", () => {
-    if (!document.getElementById("editModal").classList.contains("hidden")) {
-        return; // No cerrar si el modal de editar está abierto
-    }
-    document.getElementById("historialModal").classList.add("hidden");
-    document.getElementById("modalOverlay").classList.add("hidden");
-    document.body.classList.remove('overflow-hidden');
-});
+// Cerrar al hacer click en el overlay (solo si no hay un modal de actividad abierto)
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+    const editModal = document.getElementById("editModal");
+    const crearModal = document.getElementById("crearModal");
 
+    // Prevenir cerrar si se hace clic en el overlay y el modal de editar/crear está abierto
+    if (!editModal.classList.contains("hidden") || !crearModal.classList.contains("hidden")) {
+        // Ejecutar lógica de cerrarModal, que limpia y cierra
+        cerrarModal(); 
+    }
+});
 </script>
 {% endblock %}

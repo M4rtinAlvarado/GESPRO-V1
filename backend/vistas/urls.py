@@ -10,6 +10,7 @@ urlpatterns = [
     path("actualizar_estado/", views.actualizar_estado, name="actualizar_estado"),
     path('editar_actividad/', views.editar_actividad, name='editar_actividad'),
     path('historial/<int:actividad_id>/', views.obtener_historial, name='obtener_historial'),
+    path('crear_actividad/', views.crear_actividad, name='crear_actividad'),
 
 
     path("reportes/<int:proyecto_id>", views.reportes, name="reportes"),
