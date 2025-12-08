@@ -4,7 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 from proyectos.models import *
 from datetime import datetime, timedelta
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Q        
 from .gantt import calcular_gantt_data
 import json
 from django.urls import reverse 
@@ -675,4 +676,115 @@ def reportes(request, proyecto_id):
         'iframe_src': iframe_src
     })
 
+def crear_actividad(request):
+    try:
+        data = json.loads(request.body)
+        
+        # Datos del request
+        proyecto_id = data.get('proyecto_id')
+        nombre = data.get('nombre')
+        tipo = data.get('tipo')
+        producto_nombre = data.get('producto')
+        lineas_nombres = data.get('lineas_trabajo', [])
+        encargados_data = data.get('encargados', [])
+        periodos_data = data.get('periodos', [])
 
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+        with transaction.atomic():
+            
+            # --- 1. Crear la Actividad Base ---
+            actividad_nueva = None
+
+            if tipo == 'Normal':
+                if not lineas_nombres:
+                    return JsonResponse({'success': False, 'error': 'Falta línea de trabajo'})
+                
+                nombre_linea = lineas_nombres[0]
+                linea_obj = LineaTrabajo.objects.filter(proyecto=proyecto, nombre=nombre_linea).first()
+                
+                if not linea_obj:
+                    return JsonResponse({'success': False, 'error': f'Línea "{nombre_linea}" no encontrada'})
+
+                actividad_nueva = Actividad.objects.create(nombre=nombre, linea_trabajo=linea_obj)
+
+            elif tipo == 'Difusion':
+                actividad_nueva = ActividadDifusion.objects.create(nombre=nombre, proyecto=proyecto)
+                
+                for nombre_linea in lineas_nombres:
+                    linea_obj = LineaTrabajo.objects.filter(proyecto=proyecto, nombre=nombre_linea).first()
+                    if linea_obj:
+                        ActividadDifusion_Linea.objects.create(
+                            actividad=actividad_nueva, 
+                            linea_trabajo=linea_obj, 
+                            estado=True  # Este modelo SÍ usa 'estado' según tu código anterior
+                        )
+                
+                if producto_nombre:
+                    ProductoAsociado.objects.create(nombre=producto_nombre, actividad_base=actividad_nueva)
+            else:
+                return JsonResponse({'success': False, 'error': 'Tipo de actividad inválido'})
+
+            # --- 2. Procesar Encargados (CORREGIDO) ---
+            for enc in encargados_data:
+                nombre_enc = enc.get('nombre')
+                correo_enc = enc.get('correo', '').strip()
+
+                encargado_obj = None
+                
+                # Criterio de búsqueda seguro
+                criterio = Q()
+                if correo_enc:
+                    criterio |= Q(correo_electronico=correo_enc)
+                if nombre_enc:
+                    criterio |= Q(nombre=nombre_enc)
+                
+                if criterio:
+                    # Soluciona error "returned 14": Toma el primero y ignora duplicados
+                    encargado_obj = Encargado.objects.filter(criterio).first()
+
+                # Si no existe, crear
+                if not encargado_obj:
+                    encargado_obj = Encargado.objects.create(
+                        nombre=nombre_enc,
+                        correo_electronico=correo_enc
+                    )
+                else:
+                    if correo_enc and not encargado_obj.correo_electronico:
+                        encargado_obj.correo_electronico = correo_enc
+                        encargado_obj.save()
+
+                # Crear la relación
+                Actividad_Encargado.objects.create(
+                    actividad=actividad_nueva,
+                    encargado=encargado_obj,
+                    activo=True  # <--- CORRECCIÓN IMPORTANTE: Tu modelo usa 'activo', no 'estado'
+                )
+
+            # --- 3. Procesar Periodos ---
+            for per in periodos_data:
+                f_inicio = per.get('fecha_inicio')
+                f_fin = per.get('fecha_fin')
+                estado_val = per.get('estado_valor', 'PEN')
+
+                if f_inicio and f_fin:
+                    Periodo.objects.create(
+                        actividad=actividad_nueva,
+                        fecha_inicio=f_inicio,
+                        fecha_fin=f_fin,
+                        estado=estado_val,
+                        activo=True
+                    )
+
+            # 4. Actualizar Proyecto
+            proyecto.ultima_modificacion = datetime.now()
+            proyecto.save()
+
+        return JsonResponse({'success': True, 'message': 'Actividad creada correctamente'})
+
+    except Exception as e:
+        print(f"Error Backend: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)

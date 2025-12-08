@@ -1242,14 +1242,10 @@ function manejarGuardado(urlEndpoint, esCreacion) {
     }
 
     // --- 4. Obtener Encargados ---
-    const encargadosListUI = modal.querySelector(".js-encargados-list");
-    const encargados = [];
-    encargadosListUI.querySelectorAll(".js-encargado-item").forEach(item => {
-        encargados.push({
-            nombre: item.dataset.nombre,
-            correo: item.dataset.correo
-        });
-    });
+    const encargados = tempActivity.encargados.map(e => ({
+        nombre: e.nombre,
+        correo: e.correo
+    }));
     
     // --- 5. Construir Payload ---
     const payload = {
