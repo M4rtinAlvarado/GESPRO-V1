@@ -51,6 +51,12 @@ INSTALLED_APPS = [
     'proyectos',
     'alertas.apps.AlertasConfig',
     'vistas',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.microsoft',
+
 ]
 
 MIDDLEWARE = [
@@ -61,7 +67,37 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
+SITE_ID = 1
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    },
+    'microsoft': {
+        "APPS": [
+            {
+                "client_id": "<insert-id>",
+                "secret": "<insert-secret>",
+                "settings": {
+                    "tenant": "organizations",
+                    # Optional: override URLs (use base URLs without path)
+                    "login_url": "https://login.microsoftonline.com",
+                    "graph_url": "https://graph.microsoft.com",
+                }
+            }
+        ]
+    }
+}
 
 ROOT_URLCONF = 'gespro.urls'
 
@@ -75,6 +111,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.request',
             ],
         },
     },

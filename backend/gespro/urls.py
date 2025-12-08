@@ -28,7 +28,8 @@ urlpatterns = [
     path('alertas/',include('alertas.urls')),
     path('', RedirectView.as_view(url=reverse_lazy('proyectos'))),
     path('vistas/', include('vistas.urls')),
-    path('',views.home, name = 'home')
+    path('',views.home, name = 'home'),
+    path('accounts/', include('allauth.urls')),
     
 ]
 

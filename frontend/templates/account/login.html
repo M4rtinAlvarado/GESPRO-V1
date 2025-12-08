@@ -1,0 +1,21 @@
+{% load socialaccount %}
+
+<h2>Iniciar sesión</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Ingresar</button>
+</form>
+
+<hr>
+
+<!-- Botón de Google -->
+<a href="{% provider_login_url 'google' %}" class="py-2 px-4 bg-red-600 text-white rounded">
+    Iniciar sesión con Google
+</a>
+<a href="{% provider_login_url 'microsoft' %}" 
+   class="py-2 px-4 bg-blue-600 text-white rounded">
+    Iniciar sesión con Microsoft
+</a>
+
