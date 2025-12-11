@@ -229,3 +229,10 @@ MIDDLEWARE.insert(
     'gespro.middleware.LoginRequiredMiddleware'
 )
 
+# Lista blanca de correos permitidos
+ALLOWED_GOOGLE_EMAILS = [
+    "isaiasgoku15@gmail.com",
+    "otrocorreo@empresa.com",
+]
+ACCOUNT_ADAPTER = "proyectos.verificadorUsuarios.MyAccountAdapter"
+

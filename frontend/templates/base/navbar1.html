@@ -7,31 +7,38 @@
 
 <nav class="flex justify-between items-center py-5 px-5 bg-blue-950 relative">
 
-  <!-- Botón de volver -->
-  {% if request.resolver_match.url_name == 'verificar_proyecto' %}
-  <div class="flex items-center">
-      <a href="{% url 'proyectos' %}" class="text-4xl font-bold text-white hover:text-gray-300">←</a>
-  </div>
-  {% else %}
-  <div></div>
-  {% endif %}
+    {% if request.resolver_match.url_name == 'verificar_proyecto' %}
+    <div class="flex items-center">
+        <a href="{% url 'proyectos' %}" class="text-4xl font-bold text-white hover:text-gray-300">←</a>
+    </div>
+    {% else %}
+    <div></div>
+    {% endif %}
 
-  <!-- Título -->
-  <h1 class="text-4xl text-white text-center flex-1">Proyectos</h1>
+    <!-- Título centrado -->
+    <h1 class="text-4xl text-white text-center flex-1">Proyectos</h1>
 
-  <!-- Nombre de usuario / Dropdown -->
-  {% if request.user.is_authenticated %}
-  <div class="relative">
-      <button id="user-menu-button" class="flex items-center space-x-2 bg-blue-800 hover:bg-blue-700 px-3 py-2 rounded-lg focus:outline-none text-white font-semibold">
-          {{ request.user.get_full_name|default:request.user.username }}
-      </button>
+    <!-- Usuario -->
+    {% if request.user.is_authenticated %}
+    <div class="relative flex items-center">
 
-      <!-- Dropdown -->
-      <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
-          <a href="{% url 'account_logout' %}" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Cerrar sesión</a>
-      </div>
-  </div>
-  {% endif %}
+        <!-- Separador vertical -->
+        <div class="h-full w-px bg-white opacity-30 mx-4"></div>
+
+        <!-- Nombre del usuario (clic para abrir menú) -->
+        <div id="user-menu-button" class="cursor-pointer text-white font-semibold px-2 py-1 hover:text-gray-300">
+            {{ request.user.get_full_name|default:request.user.username }}
+        </div>
+
+        <!-- Dropdown -->
+        <div id="user-dropdown"
+             class="hidden absolute right-0 mt-35 w-48 bg-gray-100 rounded-md shadow-lg py-2 z-50">
+            <a href="{% url 'account_logout' %}"
+               class="block px-4 py-2 text-gray-800 hover:bg-gray-300">Cerrar sesión</a>
+        </div>
+
+    </div>
+    {% endif %}
 
 </nav>
 
@@ -39,18 +46,14 @@
 {% endblock %}
 
 <script>
-    // Toggle dropdown
-    const button = document.getElementById('user-menu-button');
-    const dropdown = document.getElementById('user-dropdown');
+    const btn = document.getElementById('user-menu-button');
+    const drop = document.getElementById('user-dropdown');
 
-    button?.addEventListener('click', () => {
-        dropdown.classList.toggle('hidden');
-    });
+    btn?.addEventListener('click', () => drop.classList.toggle('hidden'));
 
-    // Cerrar dropdown al hacer clic fuera
     window.addEventListener('click', function(e){
-        if (!button.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
+        if (!btn.contains(e.target) && !drop.contains(e.target)) {
+            drop.classList.add('hidden');
         }
     });
 </script>

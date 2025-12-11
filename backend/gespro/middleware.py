@@ -8,6 +8,7 @@ PUBLIC_PATHS = [
     '/accounts/microsoft/login/',
     '/accounts/',  # allauth urls
     '/admin/login/',
+    '/admin/',
 ]
 
 class LoginRequiredMiddleware:
