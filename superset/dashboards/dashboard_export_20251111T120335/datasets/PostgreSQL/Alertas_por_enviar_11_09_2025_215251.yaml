@@ -1,0 +1,82 @@
+table_name: Alertas por enviar 11/09/2025 21:52:51
+main_dttm_col: fecha_envio
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: gespro
+schema: public
+sql: "SELECT ab.nombre as actividad, al.fecha_envio, CASE WHEN al.enviado = true THEN\
+  \ 'S\xED' ELSE 'No' END as enviado, al.fecha_envio - CURRENT_DATE as dias_restantes\
+  \ FROM proyectos_alerta al JOIN proyectos_actividadbase ab ON al.actividad_id =\
+  \ ab.id WHERE ab.estado != 'COM' AND al.fecha_envio >= CURRENT_DATE ORDER BY al.fecha_envio\
+  \ ASC LIMIT 20;"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 9c129377-273b-47e2-a969-84324d863aaf
+metrics:
+- metric_name: count
+  verbose_name: COUNT(*)
+  metric_type: count
+  expression: COUNT(*)
+  description: null
+  d3format: null
+  currency: null
+  extra: null
+  warning_text: null
+columns:
+- column_name: fecha_envio
+  verbose_name: null
+  is_dttm: true
+  is_active: true
+  type: DATETIMETZ
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: dias_restantes
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTERVAL
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: actividad
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: enviado
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+version: 1.0.0
+database_uuid: 159e008d-2d73-4b19-8371-1f9d4f45df0b

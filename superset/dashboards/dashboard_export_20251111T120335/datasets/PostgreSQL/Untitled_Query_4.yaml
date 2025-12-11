@@ -1,0 +1,71 @@
+table_name: Untitled Query 4
+main_dttm_col: null
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: gespro
+schema: null
+sql: "SELECT \r\n    e.nombre as encargado,\r\n    COUNT(ae.actividad_id) as total_actividades,\r\
+  \n    COUNT(CASE WHEN ab.estado IN ('EPR', 'LPC', 'PEN') THEN 1 END) as activas\r\
+  \nFROM proyectos_encargado e\r\nJOIN proyectos_actividad_encargado ae \r\n    ON\
+  \ e.id = ae.encargado_id\r\nJOIN proyectos_actividadbase ab \r\n    ON ae.actividad_id\
+  \ = ab.id\r\nWHERE e.estado = true \r\n    AND ae.estado = true\r\nGROUP BY e.nombre\r\
+  \nORDER BY total_actividades DESC\r\nLIMIT 5;"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 21e783c3-0f58-4106-b2e2-d1641fe29e3f
+metrics:
+- metric_name: count
+  verbose_name: COUNT(*)
+  metric_type: count
+  expression: COUNT(*)
+  description: null
+  d3format: null
+  currency: null
+  extra: null
+  warning_text: null
+columns:
+- column_name: total_actividades
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: LONGINTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: activas
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: LONGINTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: encargado
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+version: 1.0.0
+database_uuid: 159e008d-2d73-4b19-8371-1f9d4f45df0b

@@ -1,0 +1,44 @@
+table_name: Porcentaje Completado 2
+main_dttm_col: null
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: gespro
+schema: null
+sql: "SELECT \r\n    ROUND(\r\n        1.0 * COUNT(CASE WHEN estado = 'COM' OR estado\
+  \ = 'TER' THEN 1 END) / NULLIF(COUNT(*), 0),\r\n        3\r\n    ) as porcentaje_completado\r\
+  \nFROM proyectos_actividadbase;"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: ab2912ec-9ae9-4777-868c-9e2193746c9e
+metrics:
+- metric_name: count
+  verbose_name: COUNT(*)
+  metric_type: count
+  expression: COUNT(*)
+  description: null
+  d3format: null
+  currency: null
+  extra: null
+  warning_text: null
+columns:
+- column_name: porcentaje_completado
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: DECIMAL
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: null
+version: 1.0.0
+database_uuid: 159e008d-2d73-4b19-8371-1f9d4f45df0b

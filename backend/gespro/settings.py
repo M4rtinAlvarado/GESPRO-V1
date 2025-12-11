@@ -82,20 +82,6 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'OAUTH_PKCE_ENABLED': True,
-    },
-    'microsoft': {
-        "APPS": [
-            {
-                "client_id": "<insert-id>",
-                "secret": "<insert-secret>",
-                "settings": {
-                    "tenant": "organizations",
-                    # Optional: override URLs (use base URLs without path)
-                    "login_url": "https://login.microsoftonline.com",
-                    "graph_url": "https://graph.microsoft.com",
-                }
-            }
-        ]
     }
 }
 
@@ -222,4 +208,24 @@ else:
     EMAIL_HOST_USER = os.getenv("EMAIL")
     EMAIL_HOST_PASSWORD = os.getenv("PASSWORD_APP")
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+#allauth settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+
+# Usar email como identificador
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+
+# Crear cuenta automáticamente sin pantalla intermedia
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Tomar nombre y email desde Google
+SOCIALACCOUNT_QUERY_EMAIL = True
+LOGIN_REDIRECT_URL = '/proyectos'
+
+MIDDLEWARE.insert(
+    MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+    'gespro.middleware.LoginRequiredMiddleware'
+)
 

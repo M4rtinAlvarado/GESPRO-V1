@@ -1,0 +1,117 @@
+slice_name: Carga del mes
+description: null
+certified_by: null
+certification_details: null
+viz_type: echarts_timeseries_bar
+params:
+  datasource: 15__table
+  viz_type: echarts_timeseries_bar
+  slice_id: 21
+  x_axis: actividad_fecha_limite
+  time_grain_sqla: P1D
+  x_axis_sort_asc: true
+  x_axis_sort_series: name
+  x_axis_sort_series_ascending: true
+  metrics:
+  - aggregate: COUNT
+    column:
+      advanced_data_type: null
+      certification_details: null
+      certified_by: null
+      column_name: actividad_id
+      description: null
+      expression: null
+      filterable: true
+      groupby: true
+      id: 30
+      is_certified: false
+      is_dttm: false
+      python_date_format: null
+      type: INTEGER
+      type_generic: 0
+      verbose_name: null
+      warning_markdown: null
+    datasourceWarning: false
+    expressionType: SIMPLE
+    hasCustomLabel: true
+    label: 'Entrega de actividades: '
+    optionName: metric_mre6b0rtwre_ryv1j2w3uh
+    sqlExpression: null
+  groupby: []
+  adhoc_filters:
+  - clause: WHERE
+    comparator: null
+    datasourceWarning: false
+    expressionType: SQL
+    filterOptionName: filter_a5l5rzi215n_shcks958nhc
+    isExtra: false
+    isNew: false
+    operator: null
+    sqlExpression: actividad_estado NOT IN ('COM', 'TER')
+    subject: null
+  - clause: WHERE
+    comparator: null
+    datasourceWarning: false
+    expressionType: SQL
+    filterOptionName: filter_0iwn37v5xc4n_1167854nhfak
+    isExtra: false
+    isNew: false
+    operator: null
+    sqlExpression: actividad_fecha_limite > CURRENT_DATE
+    subject: null
+  - clause: WHERE
+    comparator: null
+    datasourceWarning: false
+    expressionType: SQL
+    filterOptionName: filter_8m570wnb6lk_0h2ve0b4vc3d
+    isExtra: false
+    isNew: false
+    operator: TEMPORAL_RANGE
+    sqlExpression: actividad_fecha_limite BETWEEN CURRENT_DATE AND (CURRENT_DATE +
+      INTERVAL '30 days')
+    subject: actividad_fecha_limite
+  order_desc: true
+  row_limit: 10000
+  truncate_metric: true
+  show_empty_columns: true
+  comparison_type: values
+  annotation_layers: []
+  forecastPeriods: 10
+  forecastInterval: 0.8
+  orientation: vertical
+  x_axis_title_margin: 15
+  y_axis_title_margin: 30
+  y_axis_title_position: Left
+  sort_series_type: sum
+  color_scheme: supersetColors
+  time_shift_color: true
+  only_total: true
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  x_axis_time_format: smart_date
+  y_axis_format: SMART_NUMBER
+  y_axis_bounds:
+  - null
+  - null
+  truncateXAxis: true
+  rich_tooltip: true
+  showTooltipTotal: true
+  tooltipTimeFormat: smart_date
+  extra_form_data: {}
+  dashboards:
+  - 1
+query_context: '{"datasource":{"id":15,"type":"table"},"force":false,"queries":[{"filters":[],"extras":{"time_grain_sqla":"P1D","having":"","where":"(actividad_estado
+  NOT IN (''COM'', ''TER'')) AND (actividad_fecha_limite > CURRENT_DATE) AND (actividad_fecha_limite
+  BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL ''30 days''))"},"applied_time_extras":{},"columns":[{"timeGrain":"P1D","columnType":"BASE_AXIS","sqlExpression":"actividad_fecha_limite","label":"actividad_fecha_limite","expressionType":"SQL"}],"metrics":[{"aggregate":"COUNT","column":{"advanced_data_type":null,"certification_details":null,"certified_by":null,"column_name":"actividad_id","description":null,"expression":null,"filterable":true,"groupby":true,"id":30,"is_certified":false,"is_dttm":false,"python_date_format":null,"type":"INTEGER","type_generic":0,"verbose_name":null,"warning_markdown":null},"datasourceWarning":false,"expressionType":"SIMPLE","hasCustomLabel":true,"label":"Entrega
+  de actividades: ","optionName":"metric_mre6b0rtwre_ryv1j2w3uh","sqlExpression":null}],"orderby":[[{"aggregate":"COUNT","column":{"advanced_data_type":null,"certification_details":null,"certified_by":null,"column_name":"actividad_id","description":null,"expression":null,"filterable":true,"groupby":true,"id":30,"is_certified":false,"is_dttm":false,"python_date_format":null,"type":"INTEGER","type_generic":0,"verbose_name":null,"warning_markdown":null},"datasourceWarning":false,"expressionType":"SIMPLE","hasCustomLabel":true,"label":"Entrega
+  de actividades: ","optionName":"metric_mre6b0rtwre_ryv1j2w3uh","sqlExpression":null},false]],"annotation_layers":[],"row_limit":10000,"series_columns":[],"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{},"time_offsets":[],"post_processing":[{"operation":"pivot","options":{"index":["actividad_fecha_limite"],"columns":[],"aggregates":{"Entrega
+  de actividades: ":{"operator":"mean"}},"drop_missing_columns":false}},{"operation":"flatten"}]}],"form_data":{"datasource":"15__table","viz_type":"echarts_timeseries_bar","slice_id":21,"x_axis":"actividad_fecha_limite","time_grain_sqla":"P1D","x_axis_sort_asc":true,"x_axis_sort_series":"name","x_axis_sort_series_ascending":true,"metrics":[{"aggregate":"COUNT","column":{"advanced_data_type":null,"certification_details":null,"certified_by":null,"column_name":"actividad_id","description":null,"expression":null,"filterable":true,"groupby":true,"id":30,"is_certified":false,"is_dttm":false,"python_date_format":null,"type":"INTEGER","type_generic":0,"verbose_name":null,"warning_markdown":null},"datasourceWarning":false,"expressionType":"SIMPLE","hasCustomLabel":true,"label":"Entrega
+  de actividades: ","optionName":"metric_mre6b0rtwre_ryv1j2w3uh","sqlExpression":null}],"groupby":[],"adhoc_filters":[{"clause":"WHERE","comparator":null,"datasourceWarning":false,"expressionType":"SQL","filterOptionName":"filter_a5l5rzi215n_shcks958nhc","isExtra":false,"isNew":false,"operator":null,"sqlExpression":"actividad_estado
+  NOT IN (''COM'', ''TER'')","subject":null},{"clause":"WHERE","comparator":null,"datasourceWarning":false,"expressionType":"SQL","filterOptionName":"filter_0iwn37v5xc4n_1167854nhfak","isExtra":false,"isNew":false,"operator":null,"sqlExpression":"actividad_fecha_limite
+  > CURRENT_DATE","subject":null},{"clause":"WHERE","comparator":null,"datasourceWarning":false,"expressionType":"SQL","filterOptionName":"filter_8m570wnb6lk_0h2ve0b4vc3d","isExtra":false,"isNew":false,"operator":"TEMPORAL_RANGE","sqlExpression":"actividad_fecha_limite
+  BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL ''30 days'')","subject":"actividad_fecha_limite"}],"order_desc":true,"row_limit":10000,"truncate_metric":true,"show_empty_columns":true,"comparison_type":"values","annotation_layers":[],"forecastPeriods":10,"forecastInterval":0.8,"orientation":"vertical","x_axis_title_margin":15,"y_axis_title_margin":30,"y_axis_title_position":"Left","sort_series_type":"sum","color_scheme":"supersetColors","time_shift_color":true,"only_total":true,"show_legend":true,"legendType":"scroll","legendOrientation":"top","x_axis_time_format":"smart_date","y_axis_format":"SMART_NUMBER","y_axis_bounds":[null,null],"truncateXAxis":true,"rich_tooltip":true,"showTooltipTotal":true,"tooltipTimeFormat":"smart_date","extra_form_data":{},"dashboards":[1],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: aa9b667e-4004-484e-a92a-9e8cc522eea1
+version: 1.0.0
+dataset_uuid: 5a1ea428-cc7b-4b13-b0b6-e315a9d96403

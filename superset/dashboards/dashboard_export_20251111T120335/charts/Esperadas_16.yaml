@@ -1,0 +1,41 @@
+slice_name: Esperadas
+description: null
+certified_by: null
+certification_details: null
+viz_type: big_number_total
+params:
+  datasource: 15__table
+  viz_type: big_number_total
+  slice_id: 16
+  metric:
+    aggregate: null
+    column: null
+    datasourceWarning: false
+    expressionType: SQL
+    hasCustomLabel: true
+    label: Esperadas
+    optionName: metric_8hdd463cnzu_4cx1g95skjv
+    sqlExpression: "SUM(\n    CASE \n        WHEN actividad_fecha_limite <= CURRENT_DATE\
+      \ THEN 1 \n        ELSE 0 \n    END\n)"
+  adhoc_filters:
+  - clause: WHERE
+    comparator: No filter
+    expressionType: SIMPLE
+    operator: TEMPORAL_RANGE
+    subject: proyecto_fecha_limite
+  header_font_size: 0.4
+  subheader_font_size: 0.15
+  y_axis_format: SMART_NUMBER
+  time_format: smart_date
+  extra_form_data: {}
+  dashboards:
+  - 1
+query_context: '{"datasource":{"id":15,"type":"table"},"force":false,"queries":[{"filters":[{"col":"proyecto_fecha_limite","op":"TEMPORAL_RANGE","val":"No
+  filter"}],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":[],"metrics":[{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":true,"label":"Esperadas","optionName":"metric_8hdd463cnzu_4cx1g95skjv","sqlExpression":"SUM(\n    CASE
+  \n        WHEN actividad_fecha_limite <= CURRENT_DATE THEN 1 \n        ELSE 0 \n    END\n)"}],"annotation_layers":[],"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"15__table","viz_type":"big_number_total","slice_id":16,"metric":{"aggregate":null,"column":null,"datasourceWarning":false,"expressionType":"SQL","hasCustomLabel":true,"label":"Esperadas","optionName":"metric_8hdd463cnzu_4cx1g95skjv","sqlExpression":"SUM(\n    CASE
+  \n        WHEN actividad_fecha_limite <= CURRENT_DATE THEN 1 \n        ELSE 0 \n    END\n)"},"adhoc_filters":[{"clause":"WHERE","comparator":"No
+  filter","expressionType":"SIMPLE","operator":"TEMPORAL_RANGE","subject":"proyecto_fecha_limite"}],"header_font_size":0.4,"subheader_font_size":0.15,"y_axis_format":"SMART_NUMBER","time_format":"smart_date","extra_form_data":{},"dashboards":[1],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: 1409a1e8-e01e-4f7f-9f5d-1cd609ad97aa
+version: 1.0.0
+dataset_uuid: 5a1ea428-cc7b-4b13-b0b6-e315a9d96403

@@ -1,0 +1,288 @@
+table_name: Actividades
+main_dttm_col: proyecto_fecha_limite
+description: null
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: gespro
+schema: null
+sql: "SELECT\n    -- Informaci\xF3n base de la actividad\n    base.id AS actividad_id,\n\
+  \    base.nombre AS actividad_nombre,\n    base.estado AS actividad_estado,\n  \
+  \  base.n_act,\n\n    -- Tipo de Actividad (Normal o Difusi\xF3n)\n    CASE \n \
+  \       WHEN act_normal.actividadbase_ptr_id IS NOT NULL THEN 'Normal'\n       \
+  \ WHEN act_difusion.actividadbase_ptr_id IS NOT NULL THEN 'Difusi\xF3n'\n      \
+  \  ELSE 'Desconocido'\n    END AS tipo_actividad,\n\n    -- Informaci\xF3n del Proyecto\
+  \ (obtenida por cualquiera de las dos v\xEDas)\n    p.id AS proyecto_id,\n    p.nombre\
+  \ AS proyecto_nombre,\n    p.fecha_fin AS proyecto_fecha_limite,\n\n    -- Informaci\xF3\
+  n de la L\xEDnea de Trabajo (solo para Actividades Normales)\n    lt.id AS linea_trabajo_id,\n\
+  \    lt.nombre AS linea_trabajo_nombre,\n\n    -- Fechas de la Actividad (obtenemos\
+  \ el rango m\xE1s amplio)\n    fechas.min_fecha_inicio AS actividad_fecha_inicio,\n\
+  \    fechas.max_fecha_fin AS actividad_fecha_limite, -- <-- Aqu\xED est\xE1 tu \"\
+  fecha l\xEDmite\" por actividad\n\n    -- === Columnas de Banderas (Flags) para\
+  \ facilitar m\xE9tricas en Superset ===\n    \n    -- 1. Para contar tipos\n   \
+  \ CASE WHEN act_normal.actividadbase_ptr_id IS NOT NULL THEN 1 ELSE 0 END AS es_normal,\n\
+  \    CASE WHEN act_difusion.actividadbase_ptr_id IS NOT NULL THEN 1 ELSE 0 END AS\
+  \ es_difusion,\n\n    -- 2. Para calcular porcentajes\n    CASE WHEN base.estado\
+  \ IN ('COM', 'TER') THEN 1 ELSE 0 END AS es_completada,\n    \n    -- 3. Para \xCD\
+  ndice de Progreso (Asumimos que \"Progreso\" = En Progreso, Completada o Terminada)\n\
+  \    CASE WHEN base.estado IN ('EPR', 'COM', 'TER') THEN 1 ELSE 0 END AS es_en_progreso_o_mas\n\
+  \nFROM\n    -- La tabla base que tiene TODAS las actividades\n    proyectos_actividadbase\
+  \ AS base\n\n-- Uni\xF3n para identificar Actividades Normales y obtener su l\xED\
+  nea de trabajo\nLEFT JOIN\n    proyectos_actividad AS act_normal ON base.id = act_normal.actividadbase_ptr_id\n\
+  LEFT JOIN\n    proyectos_lineatrabajo AS lt ON act_normal.linea_trabajo_id = lt.id\n\
+  \n-- Uni\xF3n para identificar Actividades de Difusi\xF3n\nLEFT JOIN\n    proyectos_actividaddifusion\
+  \ AS act_difusion ON base.id = act_difusion.actividadbase_ptr_id\n\n-- Uni\xF3n\
+  \ para obtener el Proyecto\n-- Usamos COALESCE para tomar el proyecto_id de la l\xED\
+  nea de trabajo (si es Normal)\n-- o directamente de la actividad de difusi\xF3n\
+  \ (si es Difusi\xF3n)\nLEFT JOIN\n    proyectos_proyecto AS p ON p.id = COALESCE(lt.proyecto_id,\
+  \ act_difusion.proyecto_id)\n\n-- Subconsulta para obtener la fecha de inicio m\xE1\
+  s temprana y la fecha de fin (l\xEDmite) m\xE1s tard\xEDa\n-- para cada actividad,\
+  \ basado en tu modelo 'Fecha'.\nLEFT JOIN (\n    SELECT\n        actividad_id,\n\
+  \        MIN(fecha_inicio) AS min_fecha_inicio,\n        MAX(fecha_fin) AS max_fecha_fin\n\
+  \    FROM\n        proyectos_fecha\n    WHERE\n        estado = TRUE\n    GROUP\
+  \ BY\n        actividad_id\n) AS fechas ON base.id = fechas.actividad_id;"
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+uuid: 5a1ea428-cc7b-4b13-b0b6-e315a9d96403
+metrics:
+- metric_name: count
+  verbose_name: COUNT(*)
+  metric_type: count
+  expression: COUNT(*)
+  description: null
+  d3format: null
+  currency: null
+  extra:
+    warning_markdown: ''
+  warning_text: null
+columns:
+- column_name: actividad_estado_nombre
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: null
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: "CASE \n    WHEN actividad_estado = 'PEN' THEN 'Pendiente'\n    WHEN\
+    \ actividad_estado = 'LPC' THEN 'Listo para comenzar'\n    WHEN actividad_estado\
+    \ = 'EPR' THEN 'En progreso'\n    WHEN actividad_estado = 'COM' THEN 'Completada'\n\
+    \    WHEN actividad_estado = 'TER' THEN 'Terminada'\n    ELSE actividad_estado\n\
+    END"
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: <new column>
+  verbose_name: dias restantes
+  is_dttm: false
+  is_active: true
+  type: null
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: "CASE \n    -- Si ya est\xE1 completada o terminada, no hay tiempo restante.\n\
+    \    WHEN actividad_estado IN ('COM', 'TER') THEN 0\n\n    -- De lo contrario,\
+    \ resta la fecha l\xEDmite menos la fecha actual.\n    ELSE (actividad_fecha_limite\
+    \ - CURRENT_DATE)\nEND"
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: actividad_fecha_inicio
+  verbose_name: null
+  is_dttm: true
+  is_active: true
+  type: DATE
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: actividad_fecha_limite
+  verbose_name: null
+  is_dttm: true
+  is_active: true
+  type: DATE
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: proyecto_fecha_limite
+  verbose_name: null
+  is_dttm: true
+  is_active: true
+  type: DATE
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: es_en_progreso_o_mas
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: linea_trabajo_id
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: actividad_id
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: es_completada
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: n_act
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: es_normal
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: proyecto_id
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: es_difusion
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: INTEGER
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: linea_trabajo_nombre
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: actividad_estado
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: actividad_nombre
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: tipo_actividad
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: proyecto_nombre
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: null
+  description: null
+  python_date_format: null
+  extra: {}
+version: 1.0.0
+database_uuid: 159e008d-2d73-4b19-8371-1f9d4f45df0b
