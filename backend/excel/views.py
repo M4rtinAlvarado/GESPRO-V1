@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from proyectos.models import *
+from django.db.models import Prefetch
 from .forms import UploadExcelForm
 import os
 from django.http import FileResponse, Http404
@@ -130,3 +131,140 @@ def descargar_plantilla(request):
         return FileResponse(open(ruta_archivo, 'rb'), as_attachment=True, filename='plantilla.xlsx')
     else:
         raise Http404("Archivo no encontrado")
+    
+
+def datos_exportar(request):
+    if request.method == 'POST':
+        proyecto_id = request.POST.get('proyecto_id')
+        lista_actividades= []
+        # Prefetch encargados
+        encargados_prefetch = Prefetch(
+            'actividad_encargados',
+            queryset=Actividad_Encargado.objects.select_related('encargado')
+                .only('encargado__nombre'),
+            to_attr='encargados_cache'
+        )
+
+        # Prefetch períodos (solo fechas)
+        periodos_prefetch = Prefetch(
+            'fechas',
+            queryset=Periodo.objects.only('fecha_inicio', 'fecha_fin'),
+            to_attr='periodos_cache'
+        )
+
+        # Prefetch productos asociados (solo nombre)
+        productos_prefetch = Prefetch(
+            'productos_asociados',
+            queryset=ProductoAsociado.objects.only('nombre'),
+            to_attr='productos_cache'
+        )
+
+        actividades = (
+            Actividad.objects            
+            .select_related('linea_trabajo')  
+            .prefetch_related(
+                encargados_prefetch,
+                periodos_prefetch,
+                productos_prefetch
+            )
+            .only(
+                'id',
+                'n_act',
+                'nombre',
+                'linea_trabajo__nombre',
+            )  
+        )
+
+
+        for act in actividades:
+
+            responsables = [ae.encargado.nombre for ae in act.encargados_cache]
+
+            periodos = [(p.fecha_inicio.strftime("%d/%m/%Y"), p.fecha_fin.strftime("%d/%m/%Y")) for p in act.periodos_cache]
+
+            producto = act.productos_cache[0].nombre if act.productos_cache else None
+
+            fila = [
+                act.n_act,
+                act.linea_trabajo.nombre,
+                responsables,
+                producto,
+                periodos
+            ]
+
+            lista_actividades.append(fila)
+        
+        lista_actividades_difusion = []
+
+        encargados_prefetch = Prefetch(
+            'actividad_encargados',
+            queryset=Actividad_Encargado.objects.select_related('encargado')
+                .only('encargado__nombre'),
+            to_attr='encargados_cache'
+        )
+
+        # Prefetch períodos (solo fechas)
+        periodos_prefetch = Prefetch(
+            'fechas',
+            queryset=Periodo.objects.only('fecha_inicio', 'fecha_fin'),
+            to_attr='periodos_cache'
+        )
+
+        # Productos asociados (muchos)
+        productos_prefetch = Prefetch(
+            'productos_asociados',
+            queryset=ProductoAsociado.objects.only('nombre'),
+            to_attr='productos_cache'
+        )
+
+        # Líneas de trabajo (muchas)
+        lineas_prefetch = Prefetch(
+            'actividad_lineas',
+            queryset=ActividadDifusion_Linea.objects.select_related('linea_trabajo')
+                .only('linea_trabajo__nombre'),
+            to_attr='lineas_cache'
+        )
+
+        actividades = (
+            ActividadDifusion.objects
+            .select_related('proyecto')
+            .prefetch_related(
+                encargados_prefetch,
+                periodos_prefetch,
+                productos_prefetch,
+                lineas_prefetch
+            )
+            .only(
+                'id',
+                'n_act',
+                'nombre',
+                'proyecto__nombre'
+            )
+        )
+
+        for act in actividades:
+
+            responsables = [ae.encargado.nombre for ae in act.encargados_cache]
+
+            periodos = [(p.fecha_inicio.strftime("%d/%m/%Y"), p.fecha_fin.strftime("%d/%m/%Y")) for p in act.periodos_cache]
+
+            productos = [p.nombre for p in act.productos_cache]
+
+            lineas = [rel.linea_trabajo.nombre for rel in act.lineas_cache]
+
+            fila = [
+                act.n_act,
+                act.proyecto.nombre,
+                lineas,
+                responsables,
+                productos,
+                periodos
+            ]
+
+            lista_actividades_difusion.append(fila)
+
+    #     print("Actividades Normales:")
+    #     print(lista_actividades)
+    #     print("Actividades de Difusión:")
+    #     print(lista_actividades_difusion)
+    # return redirect('proyectos')
