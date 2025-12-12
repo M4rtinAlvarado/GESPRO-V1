@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from proyectos.models import *
 from django.db.models import Prefetch
 from django.http import JsonResponse
@@ -13,48 +13,63 @@ from django.utils import timezone
 def listado_alertas(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    alertas_filtradas = Prefetch(
-        'alertas', 
-        queryset=Alerta.objects.filter(estado=True)
+    # 1. Prefetch de Alertas (dentro de Periodo)
+    # Filtramos alertas activas
+    alertas_prefetch = Prefetch(
+        'alertas',
+        queryset=Alerta.objects.filter(activo=True).order_by('fecha_envio')
     )
 
+    # 2. Prefetch de Periodos (dentro de Actividad)
+    # Usamos related_name='fechas' según tu modelo Periodo
+    periodos_prefetch = Prefetch(
+        'fechas',
+        queryset=Periodo.objects.filter(activo=True).prefetch_related(alertas_prefetch).order_by('fecha_inicio')
+    )
+
+    # 3. Consultas de Actividades
     actividades_normales = Actividad.objects.filter(
-        linea_trabajo__proyecto=proyecto, 
+        linea_trabajo__proyecto=proyecto,
+        activo=True # Usamos activo en lugar de estado
     ).prefetch_related(
         Prefetch('actividad_encargados__encargado'),
-        alertas_filtradas,
-        'fechas'
+        periodos_prefetch
     ).distinct()
 
     actividades_difusion = ActividadDifusion.objects.filter(
         proyecto=proyecto,
+        activo=True
     ).prefetch_related(
         Prefetch('actividad_encargados__encargado'),
-        alertas_filtradas,
-        'fechas'
+        periodos_prefetch
     ).distinct()
-
 
     actividades = list(actividades_normales) + list(actividades_difusion)
 
+    # 4. Procesamiento de datos para la vista (Resumen en la fila padre)
     for actividad in actividades:
-        fechas_activas = actividad.fechas.filter(estado=True)
+        # Obtenemos los periodos ya pre-cargados
+        periodos = list(actividad.fechas.all())
         
-        # Obtener la primera fecha de inicio (la más temprana)
-        fecha_inicio_obj = fechas_activas.order_by('fecha_inicio').first()
-        actividad.fecha_inicio = fecha_inicio_obj.fecha_inicio if fecha_inicio_obj else None
-        
-        # Obtener la última fecha de fin (la más tardía)
-        fecha_fin_obj = fechas_activas.order_by('-fecha_fin').first()
-        actividad.fecha_limite = fecha_fin_obj.fecha_fin if fecha_fin_obj else None
-        
-        # Contar alertas pendientes (no enviadas)
-        actividad.alertas_pendientes_count = actividad.alertas.filter(enviado=False).count()
+        if periodos:
+            actividad.fecha_inicio_resumen = periodos[0].fecha_inicio
+            actividad.fecha_fin_resumen = periodos[-1].fecha_fin
+            
+            # Contar alertas pendientes en todos los periodos
+            total_pendientes = 0
+            for p in periodos:
+                total_pendientes += len([a for a in p.alertas.all() if not a.enviado])
+            actividad.alertas_pendientes_count = total_pendientes
+        else:
+            actividad.fecha_inicio_resumen = None
+            actividad.fecha_fin_resumen = None
+            actividad.alertas_pendientes_count = 0
 
     return render(request, "alertas/listado_alertas.html", {
         "proyecto": proyecto,
         "actividades": actividades
     })
+
 def modificar_alerta(request):
     #recibe una lista de ids de laertas que modificar, recibe los campos con sus nuevos valores fecha_creacion, fecha_envio
     if request.method == "POST":
@@ -72,7 +87,30 @@ def modificar_alerta(request):
                 alerta.fecha_envio = fecha_envio
             alerta.save()
 
-        return redirect('listado_alertas', proyecto_id=alertas.first().actividad.linea_trabajo.proyecto.id)
+        # Fix redirect logic for new schema
+        first_alerta = alertas.first()
+        if first_alerta:
+            periodo = first_alerta.periodo
+            actividad_base = periodo.actividad
+            
+            proyecto_id = None
+            # Try to find project id
+            try:
+                # Try Actividad (Normal)
+                actividad = Actividad.objects.get(id=actividad_base.id)
+                proyecto_id = actividad.linea_trabajo.proyecto.id
+            except Actividad.DoesNotExist:
+                try:
+                    # Try ActividadDifusion
+                    actividad_dif = ActividadDifusion.objects.get(id=actividad_base.id)
+                    proyecto_id = actividad_dif.proyecto.id
+                except ActividadDifusion.DoesNotExist:
+                    pass
+            
+            if proyecto_id:
+                return redirect('listado_alertas', proyecto_id=proyecto_id)
+        
+        return JsonResponse({"status": "error", "message": "No se pudo determinar el proyecto para redireccionar"}, status=400)
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=400)
 
@@ -80,46 +118,41 @@ def crear_alertas(request):
     if request.method == "POST":
         try:
             datos = json.loads(request.body)
-            print("Datos recibidos:", datos)
             
             if isinstance(datos, dict):
                     datos = [datos]
 
             timezone.activate('America/Santiago')
-
-            # 2. 💡 'localtime()' ahora usará la zona activada ('America/Santiago')
             ahora = timezone.localtime()
             
-            # --- Proceso de Alertas ---
             for item in datos:
-                print("creando alerta para: ", item)
-                actividad_id = item.get("actividad")
+                # CAMBIO: Ahora recibimos 'periodo_id', no 'actividad'
+                periodo_id = item.get("periodo_id") 
                 fecha_envio_str = item.get("fecha")
                 
-
+                if not periodo_id:
+                    continue
 
                 fecha_envio_dt = datetime.strptime(fecha_envio_str, "%Y-%m-%d %H:%M:%S").replace(microsecond=0)
-                    
                 fecha_envio_aware = timezone.make_aware(fecha_envio_dt)
 
                 if fecha_envio_aware > ahora:
-                    actividad = get_object_or_404(ActividadBase, id=actividad_id)
+                    # Buscamos el Periodo
+                    periodo = get_object_or_404(Periodo, id=periodo_id)
                     
                     Alerta.objects.create(
-                        actividad=actividad, 
+                        periodo=periodo, # Relación con Periodo
                         fecha_envio=fecha_envio_aware,
-                        enviado=False, 
+                        enviado=False,
+                        activo=True
                     )
-                    print(f"Alerta creada para Actividad ID {actividad_id}")
                 else:
-                    print(ahora)
-                    print(f"La fecha: {fecha_envio_aware} ya pasó, no se creo la alerta")
+                    print(f"La fecha: {fecha_envio_aware} ya pasó")
                     
             return JsonResponse({"success": True, "mensaje": "Alertas creadas correctamente"})
         
         except Exception as e:
-            # Captura y reporta errores como Actividad no encontrada, formato de fecha, etc.
-            print(f"ERROR DURANTE LA CREACIÓN DE ALERTA: {type(e).__name__}: {str(e)}")
+            print(f"ERROR: {str(e)}")
             return JsonResponse({"success": False, "mensaje": f"Error: {str(e)}"}, status=400)
 
 def mover_alertas(request):
@@ -183,7 +216,7 @@ def eliminar_alertas(request):
             for alerta_id in ids_a_eliminar:
                 # Lógica original: buscar y marcar como inactivo
                 alerta = get_object_or_404(Alerta, id=alerta_id)
-                alerta.estado = False
+                alerta.activo = False # CAMBIO: estado -> activo
                 alerta.save()
                 
             return JsonResponse({"success": True, "mensaje": "Alertas eliminadas correctamente"})
