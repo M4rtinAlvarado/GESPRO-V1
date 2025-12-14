@@ -37,116 +37,179 @@
     </div>
 
     {% if actividades %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 shadow-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <!-- Checkbox seleccionar todo -->
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4" aria-label="Seleccionar todas las actividades">
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actividad</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsables</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha inicio</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha límite</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alertas</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for actividad in actividades %}
-                        <tr class="activity-row hover:bg-gray-50 transition-colors" 
-                            data-actividad-id="{{ actividad.id }}"
-                            data-alertas-count="{{ actividad.alertas.all|length }}"
-                            data-alertas-pendientes="{{ actividad.alertas_pendientes_count }}">
-                            <!-- Checkbox individual -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4" aria-label="Seleccionar actividad {{ actividad.nombre }}">
-                            </td>
-
-                            <!-- Nombre -->
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900 w-64 break-words"> {{ actividad.nombre }}</td>
-
-                            <!-- Responsables -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {% if actividad.actividad_encargados.all %}
-                                    {% for ae in actividad.actividad_encargados.all %}
-                                        {{ ae.encargado.nombre }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                {% else %}
-                                    <span class="text-gray-400">Sin responsables</span>
-                                {% endif %}
-                            </td>
-
-                            <!-- Fecha inicio -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {% if actividad.fecha_inicio %}
-                                    {{ actividad.fecha_inicio|date:"d/m/Y" }}
-                                {% else %}
-                                    <span class="text-gray-400">No definida</span>
-                                {% endif %}
-                            </td>
-
-                            <!-- Fecha límite -->
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {% if actividad.fecha_limite %}
-                                    {{ actividad.fecha_limite|date:"d/m/Y" }}
-                                {% else %}
-                                    <span class="text-gray-400">No definida</span>
-                                {% endif %}
-                            </td>
-
-                            <!-- Alertas -->
-                            <td class="px-6 py-4 text-sm text-gray-900">
-                                <div class="flex items-center gap-2">
-                                    {% if actividad.alertas.all %}
-                                        <div class="max-w-md overflow-x-auto py-2">
-                                            <div class="flex gap-2 px-2">
-                                                {% for alerta in actividad.alertas.all %}
-                                                    <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-16 rounded-lg shadow-md overflow-hidden border transition-transform duration-200
-                                                                {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500 cursor-pointer hover:scale-110{% endif %}"
-                                                        data-alerta-id="{{ alerta.id }}"
-                                                        data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
-                                                        data-alerta-enviado="{{ alerta.enviado|lower }}"
-                                                        {% if not alerta.enviado %}title="Click para editar"{% endif %}>
-                                                        <!-- Mes y año arriba -->
-                                                        <div class="w-full text-center text-white text-[10px] font-bold uppercase py-1
-                                                                    {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
-                                                            {% with mes=alerta.fecha_envio|date:"n" %}
-                                                                {% if mes == "1" %}ENE{% elif mes == "2" %}FEB{% elif mes == "3" %}MAR{% elif mes == "4" %}ABR{% elif mes == "5" %}MAY{% elif mes == "6" %}JUN{% elif mes == "7" %}JUL{% elif mes == "8" %}AGO{% elif mes == "9" %}SEP{% elif mes == "10" %}OCT{% elif mes == "11" %}NOV{% else %}DIC{% endif %}
-                                                            {% endwith %} {{ alerta.fecha_envio|date:"Y" }}
-                                                        </div>
-                                                        <!-- Día grande -->
-                                                        <div class="text-white text-2xl font-bold leading-none py-2">
-                                                            {{ alerta.fecha_envio|date:"d" }}
-                                                        </div>
-                                                        <!-- Hora con AM/PM -->
-                                                        <div class="w-full text-center text-white text-[10px] font-semibold py-1
-                                                                    {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
-                                                            {{ alerta.fecha_envio|date:"g:i A" }}
-                                                        </div>
+        <!-- Lista de Actividades con Acordeón -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Cabecera tipo tabla -->
+            <div class="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div class="col-span-1 flex items-center gap-2">
+                    <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4 cursor-pointer" 
+                           aria-label="Seleccionar todas las actividades"
+                           title="Seleccionar todas">
+                    <span class="w-4"></span>
+                </div>
+                <div class="col-span-4">Actividad</div>
+                <div class="col-span-2">Responsables</div>
+                <div class="col-span-2">Rango fechas</div>
+                <div class="col-span-3 text-right">Estado</div>
+            </div>
+            
+            {% for actividad in actividades %}
+            <div class="actividad-accordion border-b border-gray-100 last:border-b-0"
+                 data-actividad-id="{{ actividad.id }}"
+                 data-alertas-pendientes="{{ actividad.alertas_pendientes_count }}">
+                
+                <!-- Cabecera de Actividad (clickeable para expandir) -->
+                <div class="actividad-header grid grid-cols-12 gap-2 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors items-center"
+                     onclick="toggleAccordion(this)">
+                    <div class="col-span-1 flex items-center gap-2">
+                        <!-- Checkbox -->
+                        <input type="checkbox" class="row-checkbox form-checkbox h-4 w-4" 
+                               aria-label="Seleccionar actividad {{ actividad.nombre }}"
+                               onclick="event.stopPropagation()">
+                        
+                        <!-- Icono expandir/colapsar -->
+                        <svg class="accordion-icon w-4 h-4 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                    
+                    <!-- Nombre de la Actividad -->
+                    <div class="col-span-4 flex items-center gap-2">
+                        <span class="font-medium text-gray-800 text-sm">{{ actividad.nombre }}</span>
+                        <span class="text-xs text-gray-400">({{ actividad.fechas.all|length }})</span>
+                    </div>
+                    
+                    <!-- Responsables -->
+                    <div class="col-span-2 text-sm text-gray-600 truncate">
+                        {% if actividad.actividad_encargados.all %}
+                            {% for ae in actividad.actividad_encargados.all %}
+                                {{ ae.encargado.nombre }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Rango de fechas -->
+                    <div class="col-span-2 text-xs text-gray-500">
+                        {% if actividad.fecha_inicio_resumen %}
+                            {{ actividad.fecha_inicio_resumen|date:"d/m/Y" }}
+                        {% else %}
+                            --
+                        {% endif %}
+                        →
+                        {% if actividad.fecha_fin_resumen %}
+                            {{ actividad.fecha_fin_resumen|date:"d/m/Y" }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Badge alertas pendientes -->
+                    <div class="col-span-3 flex justify-end">
+                        {% if actividad.alertas_pendientes_count > 0 %}
+                        <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                            {{ actividad.alertas_pendientes_count }} pendiente{{ actividad.alertas_pendientes_count|pluralize:"s" }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400 text-xs">Sin pendientes</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Contenido del Acordeón (Periodos) -->
+                <div class="actividad-content hidden bg-gray-50">
+                    {% if actividad.fechas.all %}
+                        {% for periodo in actividad.fechas.all %}
+                        <div class="periodo-row grid grid-cols-12 gap-2 px-4 py-2 border-t border-gray-100 hover:bg-gray-100 items-center"
+                            data-periodo-id="{{ periodo.id }}"
+                            data-fecha-inicio="{{ periodo.fecha_inicio|date:'Y-m-d' }}"
+                            data-fecha-fin="{{ periodo.fecha_fin|date:'Y-m-d' }}">
+                            
+                            <!-- Espaciador e icono -->
+                            <div class="col-span-1 flex items-center gap-2 pl-6">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            
+                            <!-- Fechas del periodo -->
+                            <div class="col-span-4 text-sm text-gray-600">
+                                {{ periodo.fecha_inicio|date:"d/m/Y" }} → {{ periodo.fecha_fin|date:"d/m/Y" }}
+                            </div>
+                            
+                            <!-- Estado del periodo -->
+                            <div class="col-span-2">
+                                <span class="text-xs px-2 py-0.5 rounded-full
+                                    {% if periodo.estado == 'COM' or periodo.estado == 'TER' %}bg-green-100 text-green-700
+                                    {% elif periodo.estado == 'EPR' %}bg-blue-100 text-blue-700
+                                    {% elif periodo.estado == 'LPC' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-gray-200 text-gray-600{% endif %}">
+                                    {{ periodo.get_estado_display }}
+                                </span>
+                            </div>
+                            
+                            <!-- Espacio vacío -->
+                            <div class="col-span-2"></div>
+                            
+                            <!-- Alertas del Periodo -->
+                            <div class="col-span-3 flex items-center justify-end gap-2">
+                                {% if periodo.alertas.all %}
+                                    <div class="max-w-xs overflow-x-auto py-1">
+                                        <div class="flex gap-1 px-1">
+                                            {% for alerta in periodo.alertas.all %}
+                                                <div class="alerta-card flex-shrink-0 flex flex-col items-center justify-center w-14 rounded-md shadow-sm overflow-hidden border transition-transform duration-200
+                                                            {% if alerta.enviado %}bg-emerald-500 border-emerald-600{% else %}bg-amber-400 border-amber-500 cursor-pointer hover:scale-105{% endif %}"
+                                                    data-alerta-id="{{ alerta.id }}"
+                                                    data-alerta-fecha="{{ alerta.fecha_envio|date:'Y-m-d H:i:s' }}"
+                                                    data-alerta-enviado="{{ alerta.enviado|lower }}"
+                                                    data-periodo-id="{{ periodo.id }}"
+                                                    {% if not alerta.enviado %}title="Click para editar"{% endif %}>
+                                                    <!-- Mes y año arriba -->
+                                                    <div class="w-full text-center text-white text-[9px] font-bold uppercase py-0.5
+                                                                {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
+                                                        {% with mes=alerta.fecha_envio|date:"n" %}
+                                                            {% if mes == "1" %}ENE{% elif mes == "2" %}FEB{% elif mes == "3" %}MAR{% elif mes == "4" %}ABR{% elif mes == "5" %}MAY{% elif mes == "6" %}JUN{% elif mes == "7" %}JUL{% elif mes == "8" %}AGO{% elif mes == "9" %}SEP{% elif mes == "10" %}OCT{% elif mes == "11" %}NOV{% else %}DIC{% endif %}
+                                                        {% endwith %}
                                                     </div>
-                                                {% endfor %}
-                                            </div>
+                                                    <!-- Día grande -->
+                                                    <div class="text-white text-xl font-bold leading-none py-1">
+                                                        {{ alerta.fecha_envio|date:"d" }}
+                                                    </div>
+                                                    <!-- Hora -->
+                                                    <div class="w-full text-center text-white text-[9px] font-semibold py-0.5
+                                                                {% if alerta.enviado %}bg-emerald-600{% else %}bg-amber-500{% endif %}">
+                                                        {{ alerta.fecha_envio|date:"H:i" }}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
                                         </div>
-                                    {% else %}
-                                        <span class="text-gray-400">Sin alertas</span>
-                                    {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-gray-400 text-xs">Sin alertas</span>
+                                {% endif %}
 
-                                    <!-- Boton agregar alerta -->
-                                    <button type="button"
-                                            class="btn-agregar-alerta flex-shrink-0 bg-blue-950 hover:bg-blue-600 text-white font-bold px-2 py-1 rounded-full text-sm"
-                                            data-actividad-id="{{ actividad.id }}"
-                                            data-actividad-nombre="{{ actividad.nombre }}"
-                                            data-fecha-inicio="{% if actividad.fecha_inicio %}{{ actividad.fecha_inicio|date:'Y-m-d' }}{% endif %}"
-                                            data-fecha-fin="{% if actividad.fecha_limite %}{{ actividad.fecha_limite|date:'Y-m-d' }}{% endif %}">
-                                        +
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                <!-- Botón agregar alerta al periodo -->
+                                <button type="button"
+                                        class="btn-agregar-alerta flex-shrink-0 bg-blue-950 hover:bg-blue-600 text-white font-bold w-6 h-6 rounded-full text-sm"
+                                        data-actividad-id="{{ actividad.id }}"
+                                        data-actividad-nombre="{{ actividad.nombre }}"
+                                        data-periodo-id="{{ periodo.id }}"
+                                        data-fecha-inicio="{{ periodo.fecha_inicio|date:'Y-m-d' }}"
+                                        data-fecha-fin="{{ periodo.fecha_fin|date:'Y-m-d' }}">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="px-4 py-2 text-sm text-gray-500 border-t border-gray-100">
+                            Esta actividad no tiene periodos definidos.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
     {% else %}
         <div class="bg-blue-100 text-blue-800 px-4 py-3 rounded">
@@ -551,6 +614,16 @@
 
 <!-- Script para seleccionar/deseleccionar todo -->
 <script>
+    // Función para el acordeón
+    function toggleAccordion(header) {
+        const accordion = header.closest('.actividad-accordion');
+        const content = accordion.querySelector('.actividad-content');
+        const icon = header.querySelector('.accordion-icon');
+        
+        content.classList.toggle('hidden');
+        icon.classList.toggle('rotate-90');
+    }
+
     // Función para mostrar toasts
     function showToast(message, type = 'success') {
         console.log('showToast llamado:', message, type); // DEBUG
@@ -623,11 +696,11 @@
         // Calcular cantidad de actividades seleccionadas
         const selectedCount = checkedCheckboxes.length;
         
-        // Calcular total de alertas PENDIENTES (no enviadas) de las actividades seleccionadas
+        // Calcular total de alertas PENDIENTES de las actividades seleccionadas
         let totalAlertasPendientes = 0;
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            const alertasPendientes = parseInt(row.dataset.alertasPendientes || '0');
+            const accordion = cb.closest('.actividad-accordion');
+            const alertasPendientes = parseInt(accordion?.dataset.alertasPendientes || '0');
             totalAlertasPendientes += alertasPendientes;
         });
         
@@ -651,40 +724,48 @@
         btnEliminar.disabled = totalAlertasPendientes === 0;
     };
 
+    // Event listener para seleccionar/deseleccionar todo
     if (selectAll) {
         selectAll.addEventListener('change', function() {
             checkboxes.forEach(cb => {
                 cb.checked = selectAll.checked;
-            });
-            updateActionButtons();
-            // Actualizar colores de fila
-            checkboxes.forEach(cb => {
-                const row = cb.closest('tr');
+                // Actualizar color de la cabecera
+                const header = cb.closest('.actividad-header');
                 if (selectAll.checked) {
-                    row.classList.add('bg-blue-50');
-                    row.classList.remove('hover:bg-gray-50');
+                    header.classList.add('bg-blue-50');
+                    header.classList.remove('hover:bg-gray-50');
                 } else {
-                    row.classList.remove('bg-blue-50');
-                    row.classList.add('hover:bg-gray-50');
+                    header.classList.remove('bg-blue-50');
+                    header.classList.add('hover:bg-gray-50');
                 }
             });
+            updateActionButtons();
         });
     }
 
     checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateActionButtons);
+        cb.addEventListener('change', function() {
+            updateActionButtons();
+            // Actualizar estado del checkbox "seleccionar todo"
+            const allChecked = Array.from(checkboxes).every(c => c.checked);
+            const someChecked = Array.from(checkboxes).some(c => c.checked);
+            if (selectAll) {
+                selectAll.checked = allChecked;
+                selectAll.indeterminate = someChecked && !allChecked;
+            }
+        });
     });
 
-    // Cambio de color de fila al seleccionar
+    // Cambio de color de la cabecera al seleccionar
     checkboxes.forEach(cb => {
         cb.addEventListener('change', function() {
-            const row = this.closest('tr');
+            const header = this.closest('.actividad-header');
             if (this.checked) {
-                row.classList.add('bg-blue-50');
-                row.classList.remove('hover:bg-gray-50');
+                header.classList.add('bg-blue-50');
+                header.classList.remove('bg-gray-50', 'hover:bg-gray-100');
             } else {
-                row.classList.remove('bg-blue-50');
-                row.classList.add('hover:bg-gray-50');
+                header.classList.remove('bg-blue-50');
+                header.classList.add('bg-gray-50', 'hover:bg-gray-100');
             }
         });
     });
@@ -748,24 +829,23 @@
         return `${hora}:${minutos} ${dia}/${mes}/${ano}`;
     }
 
-    // Función para obtener fecha base de una actividad
-    function obtenerFechaBase(row, tipoFecha) {
+    // Función para obtener fecha base de una actividad (usa el primer periodo)
+    function obtenerFechaBase(accordion, tipoFecha) {
         if (tipoFecha === 'fecha_especifica') {
             const fechaInput = fechaEspecificaInput.value;
             return fechaInput ? new Date(fechaInput) : null;
         }
         
-        // Columnas: 1=checkbox, 2=actividad, 3=responsables, 4=fecha_inicio, 5=fecha_limite, 6=alertas
-        // Para fecha_inicio: columna 4
-        // Para fecha_fin: columna 5
-        const columnIndex = tipoFecha === 'fecha_inicio' ? 4 : 5;
-        const fechaCell = row.querySelector(`td:nth-child(${columnIndex})`);
-        const fechaTexto = fechaCell?.textContent.trim();
+        // Buscar el primer periodo de la actividad
+        const primerPeriodo = accordion.querySelector('.periodo-row');
+        if (!primerPeriodo) return null;
         
-        if (fechaTexto && fechaTexto !== 'No definida') {
-            const [dia, mes, ano] = fechaTexto.split('/');
-            // Establecer hora a las 9:00 AM para fechas de inicio y fin
-            return new Date(`${ano}-${mes}-${dia}T09:00:00`);
+        const fechaStr = tipoFecha === 'fecha_inicio' 
+            ? primerPeriodo.dataset.fechaInicio 
+            : primerPeriodo.dataset.fechaFin;
+        
+        if (fechaStr) {
+            return new Date(fechaStr + 'T09:00:00');
         }
         
         return null;
@@ -781,9 +861,9 @@
         actividadesListBody.innerHTML = '';
         
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
-            let fechaBase = obtenerFechaBase(row, tipoFecha);
+            const accordion = cb.closest('.actividad-accordion');
+            const nombreActividad = accordion.querySelector('.actividad-header span.font-medium').textContent.trim();
+            let fechaBase = obtenerFechaBase(accordion, tipoFecha);
             let fechaAlerta;
             
             if (tipoFecha === 'fecha_especifica') {
@@ -797,8 +877,8 @@
             }
             
             // Obtener fechas límite de la actividad para validación
-            const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
-            const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            const fechaInicioBase = obtenerFechaBase(accordion, 'fecha_inicio');
+            const fechaFinBase = obtenerFechaBase(accordion, 'fecha_fin');
             const ahora = new Date();
             
             // Validar que la alerta esté dentro del rango y no sea una fecha pasada
@@ -896,61 +976,72 @@
         let alertasInvalidas = 0;
         
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            const actividadId = row.dataset.actividadId;
-            const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
-            let fechaBase = obtenerFechaBase(row, tipoFecha);
-            let fechaAlerta;
+            const accordion = cb.closest('.actividad-accordion');
+            const actividadId = accordion.dataset.actividadId;
+            const nombreActividad = accordion.querySelector('.actividad-header span.font-medium').textContent.trim();
             
-            console.log('Actividad ID:', actividadId); // DEBUG
-            console.log('Fecha base:', fechaBase); // DEBUG
+            // Para cada periodo de la actividad
+            const periodos = accordion.querySelectorAll('.periodo-row');
             
-            if (tipoFecha === 'fecha_especifica') {
-                fechaAlerta = fechaBase;
-            } else if (tipoFecha === 'fecha_inicio') {
-                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
-            } else {
-                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true);
-            }
-            
-            if (fechaAlerta) {
-                // Validar que la alerta no sea una fecha pasada
-                const ahora = new Date();
-                const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
-                const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            periodos.forEach(periodo => {
+                const periodoId = periodo.dataset.periodoId;
+                const fechaInicioPeriodo = periodo.dataset.fechaInicio ? new Date(periodo.dataset.fechaInicio + 'T09:00:00') : null;
+                const fechaFinPeriodo = periodo.dataset.fechaFin ? new Date(periodo.dataset.fechaFin + 'T23:59:59') : null;
                 
-                // Verificar si la fecha ya pasó
-                if (fechaAlerta < ahora) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: la fecha calculada ya pasó`);
-                    alertasInvalidas++;
-                    return; // Skip esta alerta
+                let fechaBase;
+                let fechaAlerta;
+                
+                if (tipoFecha === 'fecha_especifica') {
+                    fechaBase = fechaEspecificaInput.value ? new Date(fechaEspecificaInput.value) : null;
+                    fechaAlerta = fechaBase;
+                } else if (tipoFecha === 'fecha_inicio') {
+                    fechaBase = fechaInicioPeriodo;
+                    fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
+                } else { // fecha_fin
+                    fechaBase = fechaFinPeriodo;
+                    fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true);
                 }
                 
-                // Verificar si está fuera de rango de la actividad
-                if (fechaInicioBase && fechaAlerta < fechaInicioBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio de la actividad`);
-                    alertasInvalidas++;
-                    return; // Skip esta alerta
-                } else if (fechaFinBase && fechaAlerta > fechaFinBase) {
-                    console.warn(`Alerta inválida para ${nombreActividad}: la alerta es posterior al término de la actividad`);
-                    alertasInvalidas++;
-                    return; // Skip esta alerta
+                console.log('Periodo ID:', periodoId, 'Fecha base:', fechaBase); // DEBUG
+                
+                if (fechaAlerta) {
+                    // Validar que la alerta no sea una fecha pasada
+                    const ahora = new Date();
+                    
+                    // Verificar si la fecha ya pasó
+                    if (fechaAlerta < ahora) {
+                        console.warn(`Alerta inválida para ${nombreActividad}: la fecha calculada ya pasó`);
+                        alertasInvalidas++;
+                        return; // Skip esta alerta
+                    }
+                    
+                    // Verificar si está fuera de rango del periodo
+                    if (fechaInicioPeriodo && fechaAlerta < fechaInicioPeriodo) {
+                        console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio del periodo`);
+                        alertasInvalidas++;
+                        return; // Skip esta alerta
+                    } else if (fechaFinPeriodo && fechaAlerta > fechaFinPeriodo) {
+                        console.warn(`Alerta inválida para ${nombreActividad}: la alerta es posterior al término del periodo`);
+                        alertasInvalidas++;
+                        return; // Skip esta alerta
+                    }
+                    
+                    // Si pasó las validaciones, formatear y agregar
+                    const year = fechaAlerta.getFullYear();
+                    const month = String(fechaAlerta.getMonth() + 1).padStart(2, '0');
+                    const day = String(fechaAlerta.getDate()).padStart(2, '0');
+                    const hours = String(fechaAlerta.getHours()).padStart(2, '0');
+                    const minutes = String(fechaAlerta.getMinutes()).padStart(2, '0');
+                    const seconds = String(fechaAlerta.getSeconds()).padStart(2, '0');
+                    const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                    
+                    alertas.push({
+                        actividad: actividadId,
+                        periodo_id: periodoId,
+                        fecha: fechaFormateada
+                    });
                 }
-                
-                // Si pasó las validaciones, formatear y agregar
-                const year = fechaAlerta.getFullYear();
-                const month = String(fechaAlerta.getMonth() + 1).padStart(2, '0');
-                const day = String(fechaAlerta.getDate()).padStart(2, '0');
-                const hours = String(fechaAlerta.getHours()).padStart(2, '0');
-                const minutes = String(fechaAlerta.getMinutes()).padStart(2, '0');
-                const seconds = String(fechaAlerta.getSeconds()).padStart(2, '0');
-                const fechaFormateada = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                
-                alertas.push({
-                    actividad: actividadId,
-                    fecha: fechaFormateada
-                });
-            }
+            });
         });
         
         console.log('Alertas a enviar:', alertas); // DEBUG
@@ -1028,17 +1119,23 @@
     let alertasADesplazar = [];
 
     // Función para obtener alertas pendientes de una actividad (desde el DOM)
-    function obtenerAlertasPendientes(row) {
+    function obtenerAlertasPendientes(accordion) {
         const alertas = [];
-        const actividadId = row.dataset.actividadId;
-        const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+        const actividadId = accordion.dataset.actividadId;
+        const nombreActividad = accordion.querySelector('.actividad-header span.font-medium').textContent.trim();
         
         // Buscar todas las tarjetas de alerta que NO estén enviadas (usando data attributes)
-        const alertasCards = row.querySelectorAll('.alerta-card[data-alerta-enviado="false"]');
+        const alertasCards = accordion.querySelectorAll('.alerta-card[data-alerta-enviado="false"]');
         
         alertasCards.forEach(card => {
             const alertaId = card.dataset.alertaId;
+            const periodoId = card.dataset.periodoId;
             const fechaStr = card.dataset.alertaFecha; // Formato: "2025-11-05 14:30:00"
+            
+            // Obtener fechas del periodo
+            const periodoRow = card.closest('.periodo-row');
+            const fechaInicioPeriodo = periodoRow?.dataset.fechaInicio;
+            const fechaFinPeriodo = periodoRow?.dataset.fechaFin;
             
             // Parsear fecha directamente (formato ISO simplificado)
             const [fechaParte, horaParte] = fechaStr.split(' ');
@@ -1050,9 +1147,12 @@
             
             alertas.push({
                 alertaId: alertaId,
+                periodoId: periodoId,
                 actividadId: actividadId,
                 nombreActividad: nombreActividad,
-                fechaOriginal: fechaOriginal
+                fechaOriginal: fechaOriginal,
+                fechaInicioPeriodo: fechaInicioPeriodo ? new Date(fechaInicioPeriodo + 'T00:00:00') : null,
+                fechaFinPeriodo: fechaFinPeriodo ? new Date(fechaFinPeriodo + 'T23:59:59') : null
             });
         });
         
@@ -1070,24 +1170,20 @@
         alertasADesplazar = [];
         
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            const alertasPendientes = obtenerAlertasPendientes(row);
-            
-            // Obtener fechas límite de la actividad
-            const fechaInicioBase = obtenerFechaBase(row, 'fecha_inicio');
-            const fechaFinBase = obtenerFechaBase(row, 'fecha_fin');
+            const accordion = cb.closest('.actividad-accordion');
+            const alertasPendientes = obtenerAlertasPendientes(accordion);
             
             alertasPendientes.forEach(alerta => {
                 const fechaNueva = calcularFechaAlerta(alerta.fechaOriginal, offsetVal, unidad, direccion === 'antes');
                 
-                // Validar que la nueva fecha esté dentro del rango
+                // Validar que la nueva fecha esté dentro del rango del periodo
                 let esValida = true;
                 let mensajeError = '';
                 
-                if (fechaNueva && fechaInicioBase && fechaNueva < fechaInicioBase) {
+                if (fechaNueva && alerta.fechaInicioPeriodo && fechaNueva < alerta.fechaInicioPeriodo) {
                     esValida = false;
                     mensajeError = 'Previo a Fecha Inicio';
-                } else if (fechaNueva && fechaFinBase && fechaNueva > fechaFinBase) {
+                } else if (fechaNueva && alerta.fechaFinPeriodo && fechaNueva > alerta.fechaFinPeriodo) {
                     esValida = false;
                     mensajeError = 'Excede Fecha Límite';
                 }
@@ -1105,6 +1201,7 @@
                 
                 actividadExistente.alertas.push({
                     alertaId: alerta.alertaId,
+                    periodoId: alerta.periodoId,
                     fechaOriginal: alerta.fechaOriginal,
                     fechaNueva: fechaNueva,
                     esValida: esValida,
@@ -1184,8 +1281,10 @@
         const checkedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
         let totalAlertas = 0;
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            totalAlertas += parseInt(row.dataset.alertasCount || '0');
+            const accordion = cb.closest('.actividad-accordion');
+            // Contar todas las alertas en los periodos de la actividad
+            const todasLasAlertas = accordion.querySelectorAll('.alerta-card');
+            totalAlertas += todasLasAlertas.length;
         });
         const alertasNoModificadas = totalAlertas - totalAlertasModificadas;
         
@@ -1304,14 +1403,14 @@
         alertasAEliminar = [];
         
         checkedCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            const alertasPendientes = obtenerAlertasPendientes(row);
+            const accordion = cb.closest('.actividad-accordion');
+            const alertasPendientes = obtenerAlertasPendientes(accordion);
             
             if (alertasPendientes.length > 0) {
                 // Agregar a la lista global
                 alertasAEliminar.push({
-                    actividadId: row.dataset.actividadId,
-                    nombreActividad: row.querySelector('td:nth-child(2)').textContent.trim(),
+                    actividadId: accordion.dataset.actividadId,
+                    nombreActividad: accordion.querySelector('.actividad-header span.font-medium').textContent.trim(),
                     alertas: alertasPendientes
                 });
             }
@@ -1470,15 +1569,17 @@
     });
     
     function abrirModalCrearIndividual(btnAgregar) {
-        // Obtener datos de la actividad
+        // Obtener datos de la actividad y periodo
         const actividadId = btnAgregar.dataset.actividadId;
         const nombreActividad = btnAgregar.dataset.actividadNombre;
+        const periodoId = btnAgregar.dataset.periodoId;
         const fechaInicio = btnAgregar.dataset.fechaInicio;
         const fechaFin = btnAgregar.dataset.fechaFin;
         
         // Guardar actividad actual con hora a las 9:00 AM para fechas de inicio y fin
         actividadActualCrear = {
             actividadId: actividadId,
+            periodoId: periodoId,
             nombreActividad: nombreActividad,
             fechaInicio: fechaInicio ? new Date(fechaInicio + 'T09:00:00') : null,
             fechaFin: fechaFin ? new Date(fechaFin + 'T09:00:00') : null
@@ -1661,6 +1762,7 @@
         // Construir payload
         const alertas = [{
             actividad: actividadActualCrear.actividadId,
+            periodo_id: actividadActualCrear.periodoId,
             fecha: fechaFormateada
         }];
         
@@ -1729,15 +1831,17 @@
         // Obtener datos de la alerta
         const alertaId = alertaCard.dataset.alertaId;
         const alertaFecha = alertaCard.dataset.alertaFecha;
+        const periodoId = alertaCard.dataset.periodoId;
         
-        // Obtener datos de la actividad
-        const row = alertaCard.closest('tr');
-        const actividadId = row.dataset.actividadId;
-        const nombreActividad = row.querySelector('td:nth-child(2)').textContent.trim();
+        // Obtener datos del periodo y actividad
+        const periodoRow = alertaCard.closest('.periodo-row');
+        const accordion = alertaCard.closest('.actividad-accordion');
+        const actividadId = accordion.dataset.actividadId;
+        const nombreActividad = accordion.querySelector('.actividad-header span.font-medium').textContent.trim();
         
-        // Obtener fechas de inicio y fin de la actividad
-        const fechaInicioText = row.querySelector('td:nth-child(4)').textContent.trim();
-        const fechaFinText = row.querySelector('td:nth-child(5)').textContent.trim();
+        // Obtener fechas de inicio y fin del periodo
+        const fechaInicioStr = periodoRow.dataset.fechaInicio;
+        const fechaFinStr = periodoRow.dataset.fechaFin;
         
         // Parsear fecha original
         const [fechaParte, horaParte] = alertaFecha.split(' ');
@@ -1745,23 +1849,22 @@
         const [horas, minutos, segundos] = horaParte.split(':').map(Number);
         const fechaOriginal = new Date(ano, mes - 1, dia, horas, minutos, segundos || 0);
         
-        // Parsear fechas de la actividad
+        // Parsear fechas del periodo
         let fechaInicio = null;
         let fechaFin = null;
         
-        if (fechaInicioText && fechaInicioText !== 'No definida') {
-            const [diaI, mesI, anoI] = fechaInicioText.split('/').map(Number);
-            fechaInicio = new Date(anoI, mesI - 1, diaI);
+        if (fechaInicioStr) {
+            fechaInicio = new Date(fechaInicioStr + 'T00:00:00');
         }
         
-        if (fechaFinText && fechaFinText !== 'No definida') {
-            const [diaF, mesF, anoF] = fechaFinText.split('/').map(Number);
-            fechaFin = new Date(anoF, mesF - 1, diaF, 23, 59, 59); // Fin del día
+        if (fechaFinStr) {
+            fechaFin = new Date(fechaFinStr + 'T23:59:59'); // Fin del día
         }
         
         // Guardar alerta actual
         alertaIndividualActual = {
             alertaId: alertaId,
+            periodoId: periodoId,
             actividadId: actividadId,
             nombreActividad: nombreActividad,
             fechaOriginal: fechaOriginal,
