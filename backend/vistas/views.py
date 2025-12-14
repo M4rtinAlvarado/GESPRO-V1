@@ -8,9 +8,8 @@ from django.db import models, transaction
 from django.db.models import Q        
 from .gantt import calcular_gantt_data
 import json
-from django.urls import reverse 
-from urllib.parse import urlencode, urlunparse
 from vistas.alerta_cambios import registrar_y_notificar_cambios
+from .dashboard import dashboard_view
 
 
 
@@ -687,15 +686,29 @@ def obtener_historial(request, actividad_id):
     return JsonResponse({"error": "Método no permitido"}, status=405)
 
 
-import json
-import urllib.parse
-
-# ID del dashboard y chart que quieres filtrar
-DASHBOARD_ID = "6xq4LRdgrba"
-CHART_ID = "13"  # ID del chart/filtro legacy en Superset
-
 def reportes(request, proyecto_id):
-    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+   context = dashboard_view(request, proyecto_id)
+   return render(request, 'vistas/reportes.html', context)
+    
+
+
+def crear_actividad(request):
+    try:
+        data = json.loads(request.body)
+        
+        # Datos del request
+        proyecto_id = data.get('proyecto_id')
+        nombre = data.get('nombre')
+        tipo = data.get('tipo')
+        producto_nombre = data.get('producto')
+        lineas_nombres = data.get('lineas_trabajo', [])
+        encargados_data = data.get('encargados', [])
+        periodos_data = data.get('periodos', [])
+
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+
+        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
     # 1️⃣ Creamos el filtro legacy dinámico
     preselect_filters = {
