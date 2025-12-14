@@ -14,34 +14,51 @@ from django.db.models import F, Q, Min, Max, Count, Case, When
 from proyectos.models import Actividad, ActividadDifusion_Linea, Periodo, EstadoActividad, Proyecto, Alerta 
 from dateutil.relativedelta import relativedelta 
 
-def datos_dashboard(id_proyecto):
+def datos_dashboard(id_proyecto, filtro_linea=None, filtro_tipo_actividad='todas'):
     """
     Realiza consultas optimizadas a la BD y usa Pandas para generar los tres DataFrames:
-    df_torta, df_barras, df_area_plot.
+    df_torta, df_barras, df_area_plot, aplicando filtros de Línea y Tipo.
     """
 
-    # --- 1. EXTRACCIÓN DE DATOS DE LA BD ---
+    # Definir listas vacías para el caso en que no se aplique un tipo
+    actividades_normales = []
+    actividades_difusion = []
 
-    # A. Consulta para Gráfico de Barras y Torta (Actividad, Estado, Línea)
+    # --- 1. APLICACIÓN DE FILTROS EN CONSULTAS ---
     
-    # a. Actividades Normales: 
-    actividades_normales = Actividad.objects.filter(
+    # Base QuerySet para Actividades Normales
+    qs_normales = Actividad.objects.filter(
         linea_trabajo__proyecto_id=id_proyecto
-    ).annotate(
-        linea_nombre=F('linea_trabajo__nombre'),
-        actividad_estado=F('actividadbase_ptr__fechas__estado'), 
-        target_act_id=F('id'), 
-    ).values('linea_nombre', 'actividad_estado', 'target_act_id').distinct()
+    )
     
-    # b. Actividades de Difusión (genera múltiples filas por actividad/línea):
-    actividades_difusion = ActividadDifusion_Linea.objects.filter(
+    # Base QuerySet para Actividades de Difusión (vía ActividadDifusion_Linea)
+    qs_difusion_linea = ActividadDifusion_Linea.objects.filter(
         linea_trabajo__proyecto_id=id_proyecto,
         actividad__proyecto_id=id_proyecto
-    ).annotate(
-        linea_nombre=F('linea_trabajo__nombre'),
-        actividad_estado=F('actividad__fechas__estado'), 
-        target_act_id=F('actividad__id'), 
-    ).values('linea_nombre', 'actividad_estado', 'target_act_id').distinct()
+    )
+
+    # 1.1. Filtro por Línea de Trabajo
+    if filtro_linea:
+        qs_normales = qs_normales.filter(linea_trabajo__nombre=filtro_linea)
+        qs_difusion_linea = qs_difusion_linea.filter(linea_trabajo__nombre=filtro_linea)
+
+    # 1.2. Filtro por Tipo de Actividad
+    
+    if filtro_tipo_actividad in ['todas', 'normal']:
+        # Se incluyen Actividades Normales
+        actividades_normales = qs_normales.annotate(
+            linea_nombre=F('linea_trabajo__nombre'),
+            actividad_estado=F('actividadbase_ptr__fechas__estado'), 
+            target_act_id=F('id'), 
+        ).values('linea_nombre', 'actividad_estado', 'target_act_id').distinct()
+        
+    if filtro_tipo_actividad in ['todas', 'difusion']:
+        # Se incluyen Actividades de Difusión
+        actividades_difusion = qs_difusion_linea.annotate(
+            linea_nombre=F('linea_trabajo__nombre'),
+            actividad_estado=F('actividad__fechas__estado'), 
+            target_act_id=F('actividad__id'), 
+        ).values('linea_nombre', 'actividad_estado', 'target_act_id').distinct()
 
     # c. Combinación para el Dataset Maestro de Barras/Torta
     data_combinada = list(actividades_normales) + list(actividades_difusion)
@@ -334,14 +351,28 @@ def truncar_nombre_linea(nombre, max_chars=35):
 
 def graf_bar_lin_est(df_barras, estado_labels):
     """
-    Genera el HTML del gráfico de barras horizontal apiladas,
-    incluyendo actividades normales y actividades de difusión 
-    contabilizadas en todas sus líneas de trabajo asociadas.
+    Genera el HTML del gráfico de barras horizontal apiladas...
     """
     
+    if df_barras.empty:
+        return {'grafico_barras_lineas': '<h2>No hay datos de actividades para este filtro.</h2>'}
+
+    # *** SOLUCIÓN APLICADA AQUÍ ***
+    # Renombramos la columna 'linea_nombre' (creada por groupby) a 'Linea_Trabajo'
+    # Esto asegura que la función use el nombre esperado, sin importar si df_barras ya tiene o no el alias.
+    if 'linea_nombre' in df_barras.columns and 'Linea_Trabajo' not in df_barras.columns:
+        df_barras.rename(columns={'linea_nombre': 'Linea_Trabajo'}, inplace=True)
+    elif 'Linea_Trabajo' not in df_barras.columns:
+         # Si no hay 'linea_nombre' y tampoco 'Linea_Trabajo', algo está mal, 
+         # pero asumimos que el error era la capitalización. 
+         # Si tu código original tenía el renombramiento en datos_dashboard, este IF es redundante 
+         # pero sirve como capa de seguridad.
+         pass # No debería pasar si df_barras viene de datos_dashboard
     
-    df_barras.rename(columns={'linea_nombre': 'Linea_Trabajo'}, inplace=True)
+    # El resto del código ahora funcionará:
+    
     # 1. Almacenar el nombre original en una columna nueva
+    # NOTA: La línea siguiente fallaba porque se esperaba 'Linea_Trabajo'
     df_barras['Nombre_Completo'] = df_barras['Linea_Trabajo']
     
     # 2. Aplicar el truncamiento a la columna que se usará en el eje Y
@@ -353,7 +384,7 @@ def graf_bar_lin_est(df_barras, estado_labels):
     fig = px.bar(
         df_barras, 
         x='count', 
-        y='Linea_Trabajo',
+        y='Linea_Trabajo', 
         color='estado_nombre', # Divide las barras por el estado
         orientation='h',      # Hace las barras horizontales
         title='Distribución de Cargas de Trabajo por Línea y Estado',
@@ -440,12 +471,39 @@ def graf_area_temporal(df_plot):
 
 def dashboard_view(request, id_proyecto):
     context = {}
-    datos = datos_dashboard(id_proyecto)
-    context.update(obtener_metricas_resumen(id_proyecto))
+    
+    # --- 1. CAPTURA DE FILTROS ---
+    filtro_linea = request.GET.get('linea_trabajo')
+    filtro_tipo_actividad = request.GET.get('tipo_actividad', 'todas') # Default a 'todas'
+    
+    # --- 2. OBTENER DATOS CON FILTROS ---
+    datos = datos_dashboard(
+        id_proyecto, 
+        filtro_linea=filtro_linea,
+        filtro_tipo_actividad=filtro_tipo_actividad # Pasar el nuevo filtro
+    )
+    
+    # --- 3. ACTUALIZAR CONTEXTO ---
+    context.update(obtener_metricas_resumen(id_proyecto)) 
     context.update(graf_est_act_tr(datos['df_torta']))
     context.update(graf_bar_lin_est(datos['df_barras'], datos['estado_labels']))
     context.update(graf_area_temporal(datos['df_area_plot']))
 
-
+    # 4. Obtener opciones y filtros actuales para el HTML
     context['proyecto'] = get_object_or_404(Proyecto, id=id_proyecto)
+    
+    # Opciones de Línea de Trabajo para el Dropdown
+    context['opciones_lineas'] = LineaTrabajo.objects.filter(proyecto_id=id_proyecto).values_list('nombre', flat=True).distinct()
+    
+    # Filtros seleccionados actualmente
+    context['filtro_linea_actual'] = filtro_linea if filtro_linea else ''
+    context['filtro_tipo_actividad_actual'] = filtro_tipo_actividad
+    
+    # Opciones de Tipo de Actividad para los botones
+    context['opciones_tipos_actividad'] = [
+        ('todas', 'Todas'), 
+        ('normal', 'Normales'), 
+        ('difusion', 'Difusión')
+    ]
+
     return context
