@@ -32,8 +32,8 @@ services:
       timeout: 5s
       retries: 5
     #Red del servidor
-    networks:
-      - red_taller_software
+    # networks:
+    #   - red_taller_software
 
   gespro-db:
     image: postgres:15-alpine
@@ -53,10 +53,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
     # Red y configuración del servidor
-    networks:
-      red_taller_software:
-        aliases:
-    #       - gespro-db # Alias para ser accesible por otros servicios
+    # networks:
+      # red_taller_software:
+      #   aliases:
+      #      - gespro-db # Alias para ser accesible por otros servicios
     ports:
       - "${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}" # Puerto expuesto en el servidor
     command: postgres -c "port=${POSTGRES_PORT:-5432}" # Comando para cambiar el puerto de Postgres dentro del contenedor
@@ -78,8 +78,8 @@ services:
     volumes:
       - superset_home:/app/superset/
     # Red del servidor
-    networks:
-      - red_taller_software
+    # networks:
+    #   - red_taller_software
     # El comando usa el puerto 8088 interno si no se especifica, se ha ajustado a 4003 para coincidir con la config del servidor
     command: 
       - /bin/bash 
@@ -109,6 +109,6 @@ volumes:
   superset_home:
   postgres_data:
 
-networks:
-  red_taller_software:
-    external: true
+# networks:
+#   red_taller_software:
+#     external: true

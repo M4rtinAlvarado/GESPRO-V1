@@ -1,11 +1,25 @@
 {% extends 'base/navbar2.html' %}
 {% block title %}Reportes - {{ proyecto.nombre }}{% endblock %}
 
+
 {% block content %}
-  <h1>Mi Dashboard con Gráfico de Plotly</h1>
+    <h1>Dashboard del Proyecto: {{ proyecto.nombre }}</h1>
     
-  <div class="grafico-contenedor max-w-100">
-      {# ¡AQUÍ ESTÁ LA CLAVE! El filtro safe es crucial para renderizar el HTML puro #}
-      {{ grafico_html | safe }} 
-  </div>
-{% endblock %}
+    <div class="row">
+        
+        {# Gráfico 1: Torta de Estados (Set3) #}
+        <div class="col-md-6">
+            <div class="card p-3 shadow">
+                {{ grafico_torta_estado | safe }} 
+            </div>
+        </div>
+
+        {# Gráfico 2: Torta Original (RdBu) #}
+        <div class="col-md-6">
+            <div class="card p-3 shadow">
+                {{ grafico_barras_lineas | safe }} 
+            </div>
+        </div>
+
+    </div>
+{% endblock content %}

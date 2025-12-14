@@ -97,13 +97,26 @@ def obtener_datos(request, proyecto_id):
             for rel in consulta_2
         ]
 
+    # obtenemos los periodos de la actividad, con su respectivo estado
+        consulta_3 = Periodo.objects.filter(actividad=actividad).filter(activo=True)
+        periodos=[
+            {
+                'id': periodo.id,
+                'fecha_inicio': periodo.fecha_inicio,
+                'fecha_fin': periodo.fecha_fin,
+                'estado': periodo.get_estado_display() if hasattr(periodo, 'get_estado_display') else 'Sin estado'
+            }
+            for periodo in consulta_3
+        ]
+            
+
         todas_actividades.append({
             'id': actividad.id,
             'nombre': actividad.nombre or f"Actividad Difusión {actividad.id}",
             'fechas': fechas_lista,
             'tipo': 'Difusión',
             'encargados': encargados,
-            'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
+            'periodos': periodos,
             'estado_valor': actividad.estado, 
             'linea_trabajo': lineas_trabajo,
         })

@@ -186,16 +186,10 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
             nombre=ultima_linea
         )
 
-        # Producto asociado
-        producto_obj = None
-        if pd.notna(producto_nombre):
-            producto_obj = ProductoAsociado.objects.filter(nombre__iexact=producto_nombre, proyecto=proyecto).first()
-            if not producto_obj:
-                producto_obj = ProductoAsociado.objects.create(nombre=producto_nombre, extension='', proyecto=proyecto)
-
         # Actividad
         if pd.isna(actividad_nombre):
             continue
+       
 
         bloques = detectar_bloques(row, date_cols)
         if not bloques:
@@ -203,28 +197,37 @@ def crear_proyecto_con_actividades_normales(nombre_proyecto, df_normales):
 
         actividad_obj = Actividad.objects.create(
             linea_trabajo=linea_obj,
-            producto_asociado=producto_obj,
             nombre=actividad_nombre,
             n_act=n_act if pd.notna(n_act) else None
         )
 
-        # Fechas de la actividad
+        # Producto asociado
+        producto_obj = None
+        if pd.notna(producto_nombre):
+            producto_obj = ProductoAsociado.objects.create(
+                nombre=producto_nombre,
+                actividad_base=actividad_obj
+            )  
+
+        # Periodos de la actividad
         for inicio_col, fin_col in bloques:
             fecha_inicio = fechas_reales.get(inicio_col)
             fecha_fin = fechas_reales.get(fin_col)
             if fecha_inicio and fecha_fin:
-                Fecha.objects.create(actividad=actividad_obj, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+                periodo = Periodo.objects.create(actividad=actividad_obj, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
 
                 # Alertas
                 for dias_antes in [5]:
                     fecha_envio = datetime.combine(fecha_fin - timedelta(days=dias_antes), time(hour=9, minute=0))
 
-                    enviado = fecha_envio <= datetime.now()
+
+                    if fecha_envio <= datetime.now():
+                        continue
 
                     Alerta.objects.create(
-                        actividad=actividad_obj,
+                        periodo_id=periodo.id,
                         fecha_envio=fecha_envio,
-                        enviado=enviado
+                        enviado=False
                     )
 
                 if primera_fecha is None or fecha_inicio < primera_fecha:
@@ -301,12 +304,9 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
         productos_str = row.get(COL_PRODUCTO, '')
         productos = [p.strip() for p in str(productos_str).split(';') if p.strip()]
         for p_nombre in productos:
-            producto_obj = ProductoAsociado.objects.filter(nombre__iexact=p_nombre, proyecto=proyecto).first()
-            if not producto_obj:
-                producto_obj = ProductoAsociado.objects.create(nombre=p_nombre, extension='', proyecto=proyecto)
-            ActividadDifusion_Producto.objects.get_or_create(
-                actividad=actividad_obj,
-                producto_asociado=producto_obj
+            producto_obj = ProductoAsociado.objects.create(
+                nombre=p_nombre,
+                actividad_base=actividad_obj
             )
 
         # Líneas de trabajo asociadas
@@ -321,13 +321,13 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                 actividad=actividad_obj,
                 linea_trabajo=linea_obj
             )
-        # Fechas de la actividad
+        # Periodos de la actividad
         bloques = detectar_bloques(df_fechas_difusion.loc[idx], date_cols)
         for inicio_col, fin_col in bloques:
             fecha_inicio = fechas_reales.get(inicio_col)
             fecha_fin = fechas_reales.get(fin_col)
             if fecha_inicio and fecha_fin:
-                Fecha.objects.create(
+                periodo = Periodo.objects.create(
                     actividad=actividad_obj,
                     fecha_inicio=fecha_inicio,
                     fecha_fin=fecha_fin
@@ -337,12 +337,13 @@ def crear_actividades_difusion(proyecto, df_difusion, date_cols, fechas_reales):
                 for dias_antes in [5]:
                     fecha_envio = datetime.combine(fecha_fin - timedelta(days=dias_antes), time(hour=9, minute=0))
 
-                    enviado = fecha_envio <= datetime.now()
+                    if fecha_envio <= datetime.now():
+                        continue
 
                     Alerta.objects.create(
-                        actividad=actividad_obj,
+                        periodo_id=periodo.id,
                         fecha_envio=fecha_envio,
-                        enviado=enviado
+                        enviado=False
                     )
 
 
