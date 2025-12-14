@@ -27,13 +27,16 @@
                 ⋮
             </summary>
             <!-- Menú alineado a la izquierda -->
-            <div class="absolute right-full translate-x-6 rounded-lg border border-gray-700  shadow-lg bg-red-600 z-10 hover:bg-red-700">
+            <div class="absolute right-full translate-x-6 rounded-lg border border-gray-700 shadow-lg bg-white z-10 overflow-hidden">
+                <a href="{% url 'exportar_gantt' proyecto.id %}" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-medium">
+                    📥 Exportar Gantt
+                </a>
                 <form action="{% url 'eliminar_proyecto' %}" method="POST"
                     onsubmit="return confirm('¿Seguro que deseas eliminar este proyecto?')">
                     {% csrf_token %}
                     <input type="hidden" name="proyecto_id" value="{{ proyecto.id }}">
-                    <button type="submit" class="block rounded-lg w-full font-bold text-left px-4 py-2 text-sm text-white">
-                        Eliminar
+                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold">
+                        🗑️ Eliminar
                     </button>
                 </form>
             </div>
