@@ -361,41 +361,56 @@ def generar_diccionario_registro(data, estado_anterior_json):
 
     periodos_request = data.get("periodos", [])
 
+    # 1. Creamos un mapa de periodos anteriores (claves: INT ID, valor: dict de periodo)
     periodos_anteriores = {
         normalizar_id(p.get("id")): p
         for p in estado_anterior_json.get("periodos", [])
         if p.get("id") is not None
     }
-    ids_periodos_request = []
+
+    # 2. Creamos un Set de IDs que se enviaron en el request (para exclusión final rápida)
+    # Usaremos esto como única fuente de verdad para los presentes.
+    ids_presentes_request_set = set()
 
     for p in periodos_request:
-        if not p.get("f_inicio") and not p.get("f_fin"):
-            continue  # ignorar filas vacías
-
+        # Obtener IDs del Request (Entero o None)
         pid = normalizar_id(p.get("id"))
-        if pid is not None:
-            ids_periodos_request.append(pid)
+        
+       
+        f_inicio_request = p.get("fecha_inicio") or p.get("f_inicio")
+        f_fin_request = p.get("fecha_fin") or p.get("f_fin")
 
+       
         if pid is None:
+            # Periodo nuevo
             cambios["periodos"].append({
                 "id": None,
-                "fecha_inicio": {"antes": None, "despues": p.get("f_inicio")},
-                "fecha_fin": {"antes": None, "despues": p.get("f_fin")},
+                "fecha_inicio": {"antes": None, "despues": f_inicio_request},
+                "fecha_fin": {"antes": None, "despues": f_fin_request},
                 "tipo": "agregado"
             })
         else:
+            # Periodo existente
+            ids_presentes_request_set.add(pid) # AÑADIDO: Registramos el ID en el Set
             anterior = periodos_anteriores.get(pid)
-            if anterior and (anterior.get("f_inicio") != p.get("f_inicio") or anterior.get("f_fin") != p.get("f_fin")):
-                cambios["periodos"].append({
-                    "id": pid,
-                    "fecha_inicio": {"antes": anterior.get("f_inicio"), "despues": p.get("f_inicio")},
-                    "fecha_fin": {"antes": anterior.get("f_fin"), "despues": p.get("f_fin")},
-                    "tipo": "modificado"
-                })
+            
+            if anterior: 
+                # 3. Comprobación de Modificación
+                # Las fechas anteriores están en "f_inicio" / "f_fin" en el estado anterior.
+                if (anterior.get("f_inicio") != f_inicio_request or 
+                    anterior.get("f_fin") != f_fin_request):
+                    
+                    cambios["periodos"].append({
+                        "id": pid,
+                        "fecha_inicio": {"antes": anterior.get("f_inicio"), "despues": f_inicio_request},
+                        "fecha_fin": {"antes": anterior.get("f_fin"), "despues": f_fin_request},
+                        "tipo": "modificado"
+                    })
 
-    # --- Eliminados ---
+    # --- Eliminados de Periodos
+    # Iteramos sobre el mapa anterior y verificamos si el ID NO está en el SET de IDs presentes.
     for pid, p in periodos_anteriores.items():
-        if pid not in ids_periodos_request:
+        if pid not in ids_presentes_request_set: 
             cambios["periodos"].append({
                 "id": pid,
                 "fecha_inicio": {"antes": p.get("f_inicio"), "despues": None},
@@ -409,21 +424,6 @@ def generar_diccionario_registro(data, estado_anterior_json):
 def editar_actividad(request):
     #requets = {actividad: id, nombre: nuevo_nombre, periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
     if request.method == 'POST':
-        
-        # data = json.loads(request.body)
-        # print("\n--- Datos recibidos en editar_actividad ---")
-        # print(json.dumps(data, indent=4, ensure_ascii=False))
-        # print("------------------------------------------\n")
-
-        # actividad_id = data.get("id")
-        # nombre = data.get("nombre")
-        # encargados = data.get("encargados", [])
-        # periodos = data.get("periodos", [])
-
-        # print("------------------------------------------\n")
-        # #printar el encargado 0
-        # print(encargados[0]["nombre"])
-
 
         #cargar json
         data = json.loads(request.body)
@@ -433,19 +433,24 @@ def editar_actividad(request):
 
 
         #obtener id de la actividad y el nombre
-        actividad = data.get('id')
+        actividad_id = data.get('actividad_id') or data.get('id')
+        if not actividad_id:
+            return JsonResponse({"success": False, "error": "Falta el ID de la actividad a editar."}, status=400)
+        print(actividad_id)
         nuevo_nombre = data.get('nombre')
 
         # 1. Obtener Periodos ANTES de la modificación
-        periodos_anteriores = Periodo.objects.filter(actividad=actividad, activo=True).order_by('fecha_inicio')
+        periodos_anteriores = Periodo.objects.filter(actividad=actividad_id, activo=True).order_by('fecha_inicio')
         periodos_json_anteriores = [{
             "id": p.id,
             "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
             "f_fin": p.fecha_fin.strftime('%Y-%m-%d')
         } for p in periodos_anteriores]
+
+
         
         # 2. Obtener Encargados ANTES de la modificación (usando la relación inversa)
-        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad, activo=True)
+        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True)
         encargados_json_anteriores = []
         for relacion in relaciones_encargados:
              encargados_json_anteriores.append({
@@ -455,7 +460,7 @@ def editar_actividad(request):
             })
 
 
-        actividad_antes = get_object_or_404(ActividadBase, id=actividad)
+        actividad_antes = get_object_or_404(ActividadBase, id=actividad_id)
         # 3. Crear el JSON de Estado Inicial
         estado_anterior_json = {
             "id": actividad_antes.id,
@@ -472,7 +477,7 @@ def editar_actividad(request):
 
 
         #obtener la actividad
-        actividad = get_object_or_404(ActividadBase, id=actividad)
+        actividad = get_object_or_404(ActividadBase, id=actividad_id)
 
         # Actualizar nombre si se envió
         if nuevo_nombre:
@@ -482,18 +487,32 @@ def editar_actividad(request):
         # Actualizar periodos si se envió
         periodos = data.get('periodos',[])
         ids_presentes_en_request = []
-        for periodo_data in periodos:
-            periodo_id = periodo_data.get('id') or None  # Normaliza
 
+        for periodo_data in periodos:
+
+            periodo_id = periodo_data.get('id') or None 
+
+            # Normalizar la fecha
             f_inicio = periodo_data.get('f_inicio') or periodo_data.get('fecha_inicio')
             f_fin = periodo_data.get('f_fin') or periodo_data.get('fecha_fin')
 
             if periodo_id:  
-                # Periodo existente → actualizar
-                ids_presentes_en_request.append(periodo_id)
 
-                periodo = get_object_or_404(Periodo, id=periodo_id, actividad=actividad)
+                if isinstance(periodo_id, int):
+                    ids_presentes_en_request.append(periodo_id)
+                else:
 
+                    return JsonResponse({"success": False, "error": f"ID de período {periodo_id} no es un número válido."}, status=400)
+
+
+                # Obtener el periodo para actualizar
+                try:
+                    # Usamos .get() en lugar de get_object_or_404 para manejo interno de errores.
+                    periodo = Periodo.objects.get(id=periodo_id, actividad_id=actividad_id)
+                except Periodo.DoesNotExist:
+                    return JsonResponse({"success": False, "error": f"Período con ID {periodo_id} no existe para esta actividad."}, status=400)
+
+                # Actualizar fechas
                 if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
                     periodo.fecha_inicio = f_inicio
                 if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
@@ -501,17 +520,19 @@ def editar_actividad(request):
                 periodo.save()
 
             else:
-                # Crear nuevo periodo
+                # Crear nuevo periodo (periodo_id es None)
                 nuevo_periodo = Periodo.objects.create(
-                    actividad=actividad,
+                    actividad_id=actividad_id,
                     fecha_inicio=f_inicio,
                     fecha_fin=f_fin,
+                    estado_valor=periodo_data.get('estado_valor', 'PEN'),
                     activo=True
                 )
+                # Se añade el ID (que es entero) generado por la DB
                 ids_presentes_en_request.append(nuevo_periodo.id)
 
 
-        Fechas_a_eliminar = Periodo.objects.filter(actividad=actividad, activo=True).exclude(
+        Fechas_a_eliminar = Periodo.objects.filter(actividad=actividad_id, activo=True).exclude(
         id__in=ids_presentes_en_request)
         
         # para cada fecha actrualizar estado a False
@@ -541,16 +562,16 @@ def editar_actividad(request):
                 encargado.correo_electronico = correo
                 encargado.save()
 
-                if not Actividad_Encargado.objects.filter(actividad=actividad, encargado=encargado).exists():
+                if not Actividad_Encargado.objects.filter(actividad=actividad_id, encargado=encargado).exists():
                     # Crear la relación si no existe
                     Actividad_Encargado.objects.create(
-                        actividad=actividad,
+                        actividad=actividad_id,
                         encargado=encargado,
                         activo=True
                     ) 
                 else:
                     # Asegurarse de que la relación esté activa
-                    relacion = Actividad_Encargado.objects.get(actividad=actividad, encargado=encargado)
+                    relacion = Actividad_Encargado.objects.get(actividad=actividad_id, encargado=encargado)
                     if not relacion.activo:
                         relacion.activo = True
                         relacion.save()
@@ -563,13 +584,13 @@ def editar_actividad(request):
                     activo=True
                 )
                 Actividad_Encargado.objects.create(
-                    actividad=actividad,
+                    actividad=actividad_id,
                     encargado=nuevo_encargado,
                     activo=True
                 )
 
                 ids_encargados_en_request.append(nuevo_encargado.id)
-        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad_id=actividad, activo=True).exclude(
+        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True).exclude(
         encargado__id__in=ids_encargados_en_request )
         conteo_eliminado = 0
         for relacion in encargados_a_eliminar:
@@ -580,8 +601,8 @@ def editar_actividad(request):
 
         try:
             # Obtener estado actual para el correo
-            periodos_actuales = Periodo.objects.filter(actividad=actividad, activo=True).order_by('fecha_inicio')
-            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad, activo=True)
+            periodos_actuales = Periodo.objects.filter(actividad=actividad_id, activo=True).order_by('fecha_inicio')
+            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True)
 
             estado_actual = {
                 "nombre": actividad.nombre,
@@ -602,15 +623,6 @@ def editar_actividad(request):
     return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
 
 
-def crear_actividad(request):
-    #printar el request body
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        print("\n--- Datos recibidos en crear_actividad ---")
-        print(json.dumps(data, indent=4, ensure_ascii=False))
-        print("------------------------------------------\n")
-
-        return JsonResponse({'success': True, 'message': 'Funcionalidad en desarrollo'})
 
 
 def obtener_historial(request, actividad_id):

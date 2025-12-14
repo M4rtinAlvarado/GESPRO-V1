@@ -13,5 +13,5 @@ urlpatterns = [
     path('crear_actividad/', views.crear_actividad, name='crear_actividad'),
 
 
-    path("reportes/<int:proyecto_id>", views.reportes, name="reportes"),
+    path("reportes/<int:proyecto_id>/", views.reportes, name="reportes"),
 ]

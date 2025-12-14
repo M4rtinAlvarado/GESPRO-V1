@@ -144,7 +144,7 @@
 
         <div class="flex flex-col gap-2 mb-2">
             <div class="relative flex gap-2">
-                <input type="text" class="js-encargados-input border p-1 pl-8 flex-1" placeholder="Buscar o agregar encargado..." autocomplete="off">
+                <input type="text" class="js-encargados-input border p-1 pl-8 flex-1" placeholder="Buscar encargado..." autocomplete="off">
             </div>
 
             <button class="js-add-encargado-btn border px-2 py-1 bg-green-500 text-white rounded hidden">
@@ -320,7 +320,6 @@
     <h2 class="text-xl font-bold mb-4">Historial de Cambios</h2>
     
     <div id="historialContent" class="p-4">
-        <!-- El contenido se cargará dinámicamente aquí -->
     </div>
     
     <!-- Botón cerrar -->
@@ -346,7 +345,7 @@ document.querySelectorAll(".toggle-periodos").forEach(btn => {
 });
 
 // ===============================
-// Actualizar estado de periodo (No requiere refactorización de ID, ya que usa dataset)
+// Actualizar estado de periodo
 // ===============================
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll("select[name='estado_periodo']").forEach(select => {
@@ -396,7 +395,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // ===============================
-// Variables globales y Helpers de Modal 🚀
+// Variables globales y Helpers de Modal
 // ===============================
 let tempActivity = { encargados: [], periodos: [] };
 const allEncargados = {{ all_encargados|safe }};
@@ -409,7 +408,7 @@ function validarCorreo(correo) {
 
 /**
  * Busca un elemento por clase DENTRO del modal activo.
- * @param {string} className La clase CSS del elemento (ej: '.js-activity-name')
+ * @param {string} className La clase CSS del elemento
  * @returns {Element | null}
  */
 function getModalElement(className) {
@@ -421,7 +420,7 @@ function getModalElement(className) {
 }
 
 // ===============================
-// Abrir/Cerrar Modales (Lógica central)
+// Abrir/Cerrar Modales
 // ===============================
 
 // Función genérica para cerrar cualquier modal
@@ -438,11 +437,13 @@ function cerrarModal() {
 // Abrir Modal de Edición (Llamado desde .btn-editar)
 function abrirModalEditar(button) {
     const editModal = document.getElementById("editModal");
-    activeModalElement = editModal; // 🎯 Establecer el modal activo
+    activeModalElement = editModal;
 
-    // 1. Cargar datos de la actividad (MISMO CÓDIGO)
+    // 1. Cargar datos de la actividad 
     tempActivity.id = button.dataset.id;
     tempActivity.nombre = button.dataset.nombre;
+
+    editModal.dataset.actividadId = button.dataset.id;
     
     function estadoToCode(estado) {
         switch (estado) {
@@ -486,14 +487,13 @@ function abrirModalEditar(button) {
             };
         });
     
-    // 2. Poblar UI (USANDO CLASES)
     const nombreInput = getModalElement(".js-activity-name");
     if (nombreInput) nombreInput.value = tempActivity.nombre;
 
     actualizarEncargadosUI();
     actualizarPeriodosUI(); // Llama a la versión refactorizada
 
-    // 3. Mostrar
+    // Mostrar
     editModal.classList.remove("hidden");
     document.getElementById("modalOverlay").classList.remove("hidden");
     document.body.classList.add('overflow-hidden');
@@ -508,7 +508,7 @@ function abrirModalEditar(button) {
 // Abrir Modal de Creación (Llamado desde #openCrearModal)
 function abrirModalCrear() {
     const crearModal = document.getElementById("crearModal");
-    activeModalElement = crearModal; // 🎯 Establecer el modal activo
+    activeModalElement = crearModal
     
     // Resetear tempActivity y campos
     tempActivity = { encargados: [], periodos: [] };
@@ -516,13 +516,9 @@ function abrirModalCrear() {
     const nombreInput = getModalElement(".js-activity-name");
     if (nombreInput) nombreInput.value = "";
     
-    // Aquí puedes inicializar los demás campos específicos de 'Crear'
-    // getModalElement(".js-activity-type").value = "Difusión"; // Si es necesario
-    // getModalElement(".js-activity-product").value = "";
-    // getModalElement(".js-activity-line").value = "";
 
-    // Limpiar listas y errores (USANDO CLASES)
-    // CÓDIGO CORREGIDO:
+
+    // Limpiar listas y errores
     getModalElement(".js-name-error")?.classList.add("hidden");
     getModalElement(".js-activity-product-error")?.classList.add("hidden");
     getModalElement(".js-activity-line-error")?.classList.add("hidden");
@@ -530,10 +526,7 @@ function abrirModalCrear() {
     const periodoErrorElement = getModalElement(".js-periodo-error");
 
     if (periodoErrorElement) {
-        // Es seguro usar la asignación porque ya verificamos que el elemento existe
         periodoErrorElement.textContent = ""; 
-        // Usamos 'add("hidden")' para asegurarnos de que el error esté oculto.
-        // Usar 'remove("hidden")' solo lo mostraría.
         periodoErrorElement.classList.add("hidden"); 
     }
 
@@ -550,7 +543,7 @@ function abrirModalCrear() {
 // Escucha del botón de Abrir Crear
 document.getElementById("openCrearModal").addEventListener("click", abrirModalCrear);
 
-// Escucha de botones de Cerrar/Cancelar (USANDO CLASES)
+// Escucha de botones de Cerrar/Cancelar
 document.querySelectorAll(".js-close-modal").forEach(btn => {
     btn.addEventListener("click", cerrarModal);
 });
@@ -562,15 +555,14 @@ document.querySelectorAll(".btn-editar").forEach(btn => {
 });
 
 // ===============================
-// Encargados (Lógica reutilizable)
+// Encargados
 // ===============================
 
-// Función para actualizar la lista visible (USANDO CLASES)
+// Función para actualizar la lista visible
 function actualizarEncargadosUI() {
     const container = getModalElement(".js-encargados-list");
     if (!container) return;
     container.innerHTML = '';
-    // ... (El resto del código de renderizado es el mismo, solo necesita estar dentro de esta función)
     
     if (tempActivity.encargados.length === 0) {
         const msg = document.createElement('p');
@@ -642,17 +634,16 @@ function actualizarEncargadosUI() {
 }
 
 
-// FILTRAR Y AGREGAR ENCARGADOS (USANDO CLASES)
+// FILTRAR Y AGREGAR ENCARGADOS
 function setupEncargadoSearchListeners() {
     const inputEnc = getModalElement(".js-encargados-input");
     const results = getModalElement(".js-search-results");
-    const btnCrear = getModalElement(".js-add-encargado-btn");
-    
-    if (!inputEnc || !results || !btnCrear) return; 
 
-    // Limpiamos listeners viejos si es que la función se llama varias veces (aunque `oninput` y `onclick` sobreescriben)
+    
+    if (!inputEnc || !results) return; 
+
     inputEnc.oninput = null;
-    btnCrear.onclick = null;
+
     
     // Listener de Input
     const handleInput = e => {
@@ -661,7 +652,7 @@ function setupEncargadoSearchListeners() {
 
         if (!value) {
             results.classList.add("hidden");
-            btnCrear.classList.add("hidden");
+
             return;
         }
 
@@ -685,7 +676,7 @@ function setupEncargadoSearchListeners() {
 
                     inputEnc.value = '';
                     results.classList.add("hidden");
-                    btnCrear.classList.add("hidden");
+
                     actualizarEncargadosUI();
                 });
 
@@ -693,43 +684,22 @@ function setupEncargadoSearchListeners() {
             });
 
             results.classList.remove("hidden");
-            btnCrear.classList.add("hidden");
-        } else {
-            // No hay coincidencias → permitir crear uno nuevo
-            results.classList.add("hidden");
-            btnCrear.classList.remove("hidden");
+
         }
     };
     
-    // Listener de Creación
-    const handleCreate = () => {
-        const nombre = inputEnc.value.trim();
-        if (!nombre) return;
-
-        const nuevo = {
-            id: "tmp_" + Date.now(), // ID temporal para nuevos encargados
-            nombre,
-            correo: ""
-        };
-
-        tempActivity.encargados.push(nuevo);
-        actualizarEncargadosUI();
-
-        inputEnc.value = '';
-        btnCrear.classList.add("hidden");
-    };
 
     inputEnc.oninput = handleInput;
-    btnCrear.onclick = handleCreate;
+
 }
 
-// ABRIR MODAL EDITAR ENCARGADO (La lógica de edición de encargado es independiente del modal padre)
+// ABRIR MODAL EDITAR ENCARGADO
 function abrirModalEditarEncargado(encargado, index) {
   const modal = document.getElementById("editEncargadoModal");
   const nombreInput = document.getElementById("editNombre");
   const correoInput = document.getElementById("editCorreo");
 
-  // Limpiar errores (Si existen, no están en el DOM del modal de actividad, sino en el modal de encargado)
+  // Limpiar errores
   document.getElementById("errorNombreEncargado")?.remove();
   document.getElementById("errorCorreoEncargado")?.remove();
 
@@ -738,7 +708,7 @@ function abrirModalEditarEncargado(encargado, index) {
 
   modal.classList.remove("hidden");
   modal.classList.add("flex");
-  // Omitir estilos inline para mantener limpio, ya Tailwind lo maneja
+
 
   const closeModal = () => {
     modal.classList.add("hidden");
@@ -750,7 +720,6 @@ function abrirModalEditarEncargado(encargado, index) {
   document.getElementById("cancelEditBtn").onclick = closeModal;
 
   document.getElementById("saveEditBtn").onclick = () => {
-    // ... (lógica de validación de editar encargado - la misma)
     document.getElementById("errorNombreEncargado")?.remove();
     document.getElementById("errorCorreoEncargado")?.remove();
 
@@ -806,13 +775,12 @@ function abrirModalEditarEncargado(encargado, index) {
 }
 
 
-// Modal Agregar Encargado (Lógica independiente, ya que usa IDs únicos y no depende del modal de actividad)
-// El flujo es correcto para este modal, solo la apertura fue refactorizada a .btnOpenAddEncargado
+// Modal Agregar Encargado 
+
 document.querySelectorAll(".btnOpenAddEncargado").forEach(btn => {
     btn.addEventListener("click", () => {
         const modal = document.getElementById("addEncargadoModal");
         modal.classList.remove("hidden");
-        // ... (limpieza de campos)
         modal.querySelector("#addEncargadoNombre").value = '';
         modal.querySelector("#addEncargadoCorreo").value = '';
         modal.querySelector("#addNombreError").classList.add("hidden");
@@ -826,7 +794,6 @@ document.getElementById("cancelAddEncargado").addEventListener("click", () => {
 
 document.getElementById("saveAddEncargado").addEventListener("click", () => {
     const modal = document.getElementById("addEncargadoModal");
-    // ... (lógica de guardado de encargado - la misma)
     const nombre = modal.querySelector("#addEncargadoNombre").value.trim();
     const correo = modal.querySelector("#addEncargadoCorreo").value.trim();
 
@@ -867,10 +834,10 @@ document.getElementById("saveAddEncargado").addEventListener("click", () => {
 
 
 // ===============================
-// Periodos (Lógica reutilizable - USANDO CLASES) 🗓️
+// Periodos 
 // ===============================
 
-// Función para actualizar la lista visible (USANDO CLASES)
+// Función para actualizar la lista visible
 function actualizarPeriodosUI() {
     const container = getModalElement(".js-periodos-list");
     if (!container) return;
@@ -878,11 +845,10 @@ function actualizarPeriodosUI() {
 
     let errorLabel = getModalElement(".js-periodo-solapado-error");
     
-    // Crear el elemento de error si no existe (ya debería existir en el HTML refactorizado, pero lo creamos si es necesario)
+
     if (!errorLabel) {
         errorLabel = document.createElement('p');
         errorLabel.classList.add('text-red-600', 'font-medium', 'mb-2', 'hidden', 'js-periodo-solapado-error');
-        // Usar insertBefore en lugar de document.getElementById si es un elemento dinámico
         container.parentElement.insertBefore(errorLabel, container); 
     }
     errorLabel.textContent = '';
@@ -956,7 +922,7 @@ function actualizarPeriodosUI() {
 }
 
 // ===============================
-// Validar solapamientos (USANDO CLASES)
+// Validar solapamientos
 // ===============================
 function validarSolapamientos() {
     const errorLabel = getModalElement(".js-periodo-solapado-error");
@@ -1011,7 +977,7 @@ function validarSolapamientos() {
 }
 
 // ===============================
-// Agregar periodo (USANDO CLASES)
+// Agregar periodo
 // ===============================
 document.querySelectorAll(".js-add-periodo-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1099,10 +1065,9 @@ document.querySelectorAll(".js-add-periodo-btn").forEach(btn => {
 });
 
 // ===============================
-// Lógica de Guardado (Editar y Crear) 💾
+// Lógica de Guardado (Editar y Crear)
 // ===============================
 
-// Añadir al bloque de event listeners en tu script:
 
 const tipoSelect = document.querySelector('.js-activity-type');
 const lineaSimpleSelect = document.querySelector('.js-activity-line-simple');
@@ -1138,6 +1103,7 @@ if (tipoSelect && lineaSimpleSelect && lineasCheckboxContainer) {
 // Función de guardado genérica
 function manejarGuardado(urlEndpoint, esCreacion) {
     const modal = esCreacion ? document.getElementById("crearModal") : document.getElementById("editModal");
+
 
     // --- 1. Obtener y Validar Nombre ---
     const nombreInput = modal.querySelector(".js-activity-name");
@@ -1193,7 +1159,7 @@ function manejarGuardado(urlEndpoint, esCreacion) {
 
         // --- VALIDACIÓN DE LÍNEA DE TRABAJO ---
         
-        // 1. Validar que al menos se haya seleccionado una línea (para ambos tipos)
+        // 1. Validar que al menos se haya seleccionado una línea  
         if (linea.length === 0) {
             lineaError.textContent = "Debe seleccionar al menos una línea de trabajo.";
             lineaError.classList.remove("hidden");
@@ -1219,12 +1185,26 @@ function manejarGuardado(urlEndpoint, esCreacion) {
     // --- 3. Obtener y Validar Periodos (Mínimo uno) ---
     
     // Leemos directamente del array de datos temporales (tempActivity)
-    const periodos = tempActivity.periodos.map(p => ({
-        id: p.id || null, 
-        fecha_inicio: p.fecha_inicio,
-        fecha_fin: p.fecha_fin,
-        estado_valor: p.estado_valor || 'PEN' 
-    }));
+    const periodos = tempActivity.periodos.map(p => {
+        
+        let periodoId = null;
+        if (p.id) {
+            // Intentamos parsear el ID a entero. Si falla (p.id es texto basura), cae a NaN.
+            // Si no es un número válido, lo mantenemos como null para que el backend lo cree.
+            const parsedId = parseInt(p.id, 10);
+            if (!isNaN(parsedId)) {
+                periodoId = parsedId;
+            }
+        }
+        
+        return {
+            // Enviar el ID como número (si es válido) o null (si es nuevo)
+            id: periodoId, 
+            fecha_inicio: p.fecha_inicio,
+            fecha_fin: p.fecha_fin,
+            estado_valor: p.estado_valor || 'PEN' 
+        };
+    });
 
 
     // Validar: Debe haber al menos un período
@@ -1243,6 +1223,7 @@ function manejarGuardado(urlEndpoint, esCreacion) {
 
     // --- 4. Obtener Encargados ---
     const encargados = tempActivity.encargados.map(e => ({
+        id: e.id || "",    
         nombre: e.nombre,
         correo: e.correo
     }));
@@ -1258,9 +1239,8 @@ function manejarGuardado(urlEndpoint, esCreacion) {
     if (esCreacion) {
         payload.tipo = tipo;
         payload.producto = producto;
-        // Enviamos el array de líneas (incluso si solo tiene 1)
         payload.lineas_trabajo = linea; 
-        payload.proyecto_id = {{ proyecto.id }}; // Asume que esta variable está disponible
+        payload.proyecto_id = {{ proyecto.id }}; 
     }
 
     // --- 6. Enviar Solicitud ---
@@ -1268,7 +1248,7 @@ function manejarGuardado(urlEndpoint, esCreacion) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken') // Usa la función getCookie definida arriba
+            'X-CSRFToken': getCookie('csrftoken') 
         },
         body: JSON.stringify(payload)
     })
@@ -1296,7 +1276,6 @@ function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             let cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
@@ -1312,13 +1291,12 @@ document.getElementById("saveChanges").addEventListener("click", () => {
 
 // 7. Listener de Crear Actividad
 document.getElementById("btnCrearActividad").addEventListener("click", () => {
-    // Nota: Necesitarás definir la URL 'crear_actividad' en tus urls.py
     manejarGuardado("{% url 'crear_actividad' %}", true); 
 });
 
 
 // ===============================
-// Modal de Historial (No necesita refactorización de IDs internos)
+// Modal de Historial 
 // ===============================
 document.querySelectorAll(".btn-historial").forEach(btn => {
     btn.addEventListener("click", () => abrirModalHistorial(btn.dataset.id));
@@ -1359,7 +1337,7 @@ function abrirModalHistorial(actividadId) {
             return;
         }
 
-        // ... (Tu lógica de renderizado HTML del historial es correcta y se mantiene)
+
         let html = '<div class="space-y-4">';
         
         data.forEach((registro, index) => {
