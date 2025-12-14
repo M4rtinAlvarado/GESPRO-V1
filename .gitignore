@@ -5,4 +5,7 @@ gespro-env/
 
 databases/*.sqlite3
 
+# Carpeta compilada de Tailwind CSS
+theme/static/css/
+
 .env

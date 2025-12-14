@@ -39,12 +39,21 @@ def obtener_datos(request, proyecto_id):
 
     # Actividades normales
     for actividad in actividades_normales:
-
+        fechas_lista = []
+        # Este filtro SÍ se aplica (correcto)
+        for fecha in actividad.fechas.filter(activo=True):
+            inicio = fecha.fecha_inicio
+            fin = fecha.fecha_fin
+            fechas_lista.append({
+                "id": fecha.id,
+                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
+                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
+            })
 
         # <-- CAMBIO AQUÍ: Filtramos solo encargados activos en esta relación
         consulta_2 = Actividad_Encargado.objects.filter(
             actividad=actividad, 
-            activo=True  # <-- FILTRO AÑADIDO
+            activo=True 
         ).select_related('encargado')
         
         encargados = [
@@ -83,11 +92,22 @@ def obtener_datos(request, proyecto_id):
             'total_periodos': total_periodos,
             #'estado': actividad.get_estado_display() if hasattr(actividad, 'get_estado_display') else 'Sin estado',
             #'estado_valor': actividad.estado, 
+            'activo': actividad.activo, 
             'linea_trabajo': actividad.linea_trabajo.nombre if actividad.linea_trabajo else 'Sin línea',
         })
 
     # Actividades de difusión
     for actividad in actividades_difusion:
+        fechas_lista = []
+        # Este filtro SÍ se aplica (correcto)
+        for fecha in actividad.fechas.filter(activo=True):
+            inicio = fecha.fecha_inicio
+            fin = fecha.fecha_fin
+            fechas_lista.append({
+                "id": fecha.id,
+                "fecha_inicio": inicio.strftime('%Y-%m-%d') if inicio else None,
+                "fecha_fin": fin.strftime('%Y-%m-%d') if fin else None
+            })
 
         consulta= ActividadDifusion_Linea.objects.filter(actividad=actividad).select_related('linea_trabajo')
         lineas_trabajo = [rel.linea_trabajo.nombre for rel in consulta]

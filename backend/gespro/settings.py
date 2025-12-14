@@ -51,6 +51,12 @@ INSTALLED_APPS = [
     'proyectos',
     'alertas.apps.AlertasConfig',
     'vistas',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.microsoft',
+
 ]
 
 MIDDLEWARE = [
@@ -61,7 +67,23 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
+SITE_ID = 1
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
 
 ROOT_URLCONF = 'gespro.urls'
 
@@ -75,6 +97,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.request',
             ],
         },
     },
@@ -185,4 +208,31 @@ else:
     EMAIL_HOST_USER = os.getenv("EMAIL")
     EMAIL_HOST_PASSWORD = os.getenv("PASSWORD_APP")
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+#allauth settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+
+# Usar email como identificador
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+
+# Crear cuenta automáticamente sin pantalla intermedia
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Tomar nombre y email desde Google
+SOCIALACCOUNT_QUERY_EMAIL = True
+LOGIN_REDIRECT_URL = '/proyectos'
+
+MIDDLEWARE.insert(
+    MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+    'gespro.middleware.LoginRequiredMiddleware'
+)
+
+# Lista blanca de correos permitidos
+ALLOWED_GOOGLE_EMAILS = [
+    "isaiasgoku15@gmail.com",
+    "otrocorreo@empresa.com",
+]
+ACCOUNT_ADAPTER = "proyectos.verificadorUsuarios.MyAccountAdapter"
 
