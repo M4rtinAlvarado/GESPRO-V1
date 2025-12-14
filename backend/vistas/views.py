@@ -162,6 +162,20 @@ def obtener_datos(request, proyecto_id):
         ('COM', 'Completada'),
         ('TER', 'Terminada'),
     ]
+    lineas_trabajo_unicas = set()
+
+    # Normal
+    for act in actividades_normales:
+        if act.linea_trabajo:
+            lineas_trabajo_unicas.add(act.linea_trabajo.nombre)
+
+    # Difusión
+    for act in actividades_difusion:
+        consulta = ActividadDifusion_Linea.objects.filter(actividad=act).select_related('linea_trabajo')
+        for rel in consulta:
+            lineas_trabajo_unicas.add(rel.linea_trabajo.nombre)
+
+    lineas_trabajo_unicas = sorted(lineas_trabajo_unicas)
 
 
 
@@ -171,6 +185,7 @@ def obtener_datos(request, proyecto_id):
         'estados': estados,
         'all_encargados': all_encargados,
         'all_lineas_trabajo': all_lineas_trabajo,
+        'lineas_trabajo_unicas': lineas_trabajo_unicas,
     }
 
     return context
@@ -692,41 +707,6 @@ def reportes(request, proyecto_id):
     
 
 
-def crear_actividad(request):
-    try:
-        data = json.loads(request.body)
-        
-        # Datos del request
-        proyecto_id = data.get('proyecto_id')
-        nombre = data.get('nombre')
-        tipo = data.get('tipo')
-        producto_nombre = data.get('producto')
-        lineas_nombres = data.get('lineas_trabajo', [])
-        encargados_data = data.get('encargados', [])
-        periodos_data = data.get('periodos', [])
-
-        if not nombre:
-            return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
-
-        proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-
-    # 1️⃣ Creamos el filtro legacy dinámico
-    preselect_filters = {
-        CHART_ID: {
-            "project_id": [str(proyecto.id)]
-        }
-    }
-    print(preselect_filters)
-
-    filters_encoded = urllib.parse.quote(json.dumps(preselect_filters))
-
-    iframe_src = f"http://localhost:4003/superset"
-    print(iframe_src)
-
-    return render(request, 'vistas/reportes.html', {
-        'proyecto': proyecto,
-        'iframe_src': iframe_src
-    })
 
 def crear_actividad(request):
     try:

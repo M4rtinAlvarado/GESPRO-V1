@@ -4,28 +4,17 @@
 
 {% block content %}
 
-<!-- Mensajes -->
-<div class="mt-3 space-y-2 w-9/10">
-    {% for message in messages %}
-        <div class="px-4 py-2 rounded-lg text-sm font-medium 
-            {% if message.tags == 'success' %}bg-green-100 text-green-700 border border-green-300
-            {% elif message.tags == 'error' %}bg-red-100 text-red-700 border border-red-300
-            {% else %}bg-gray-100 text-gray-700 border border-gray-300{% endif %}">
-            {{ message }}
-        </div>
-    {% endfor %}
-</div>
+
 
 <!-- Lista de actividades -->
-<div class="flex flex-col items-center gap-4 py-6">
+<div class="flex flex-col items-center gap-6 mb-4 ">
     <div class="flex flex-row justify-between w-full px-4">
         <h1 class="text-4xl">Actividades del proyecto</h1>
         <button id="openCrearModal" 
                 class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Crear Actividad
     </div>
-<div class="flex gap-6 w-9/10 px-4 mb-4">
-        
+    <div class="flex gap-6 w-9/10 px-4 mb-4">    
         <div class="flex flex-col gap-1">
             <label for="filterEncargado" class="font-medium text-sm">Encargado</label>
             <select id="filterEncargado" class="border p-2 rounded text-sm w-75">

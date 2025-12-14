@@ -3,7 +3,53 @@
 
 
 {% block content %}
-<div class="flex gap-6 h-[calc(100vh-200px)]">
+<div class="flex flex-row justify-between w-full px-4 gap-6 mb-4">
+    <h1 class="text-4xl">Actividades del proyecto</h1>
+</div>
+<div class="flex gap-6 w-9/10 px-4 mb-4">
+    <!-- Encargado -->
+    <div class="flex flex-col gap-1">
+        <label for="filterEncargado" class="font-medium text-sm">Encargado</label>
+        <select id="filterEncargado" class="border p-2 rounded text-sm w-75">
+            <option value="">Todos</option>
+            {% for encargado in all_encargados %}
+                <option value="{{ encargado.nombre }}">{{ encargado.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Línea de trabajo -->
+    <div class="flex flex-col gap-1">
+        <label for="filterLinea" class="font-medium text-sm">Línea de Trabajo</label>
+        <select id="filterLinea" class="border p-2 rounded text-sm w-100">
+            <option value="">Todas</option>
+            {% for linea in lineas_trabajo_unicas %}
+                <option value="{{ linea }}">{{ linea }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Nombre de actividad -->
+    <div class="flex flex-col gap-1">
+        <label for="filtroActividades" class="text-sm font-medium ml-1">
+            Nombre de actividad
+        </label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </span>
+            <input type="text"
+                   id="filtroActividades"
+                   class="py-1.5 pl-10 pr-50 text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                   placeholder="Filtrar...">
+        </div>
+    </div>
+
+</div>
+<div id="tablero-kanban" class="flex gap-6 h-[calc(100vh-200px)]">
     {% for estado, nombre_estado in estados %}
     <div id="estado-{{ estado }}" class="flex-1 bg-gray-100 rounded-md p-4 flex flex-col border-2 border-blue-950">
 
@@ -31,7 +77,10 @@
                     
                     {% if p.estado_valor == estado %}
                     <div class="periodo-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500"
-                         data-periodo-id="{{ p.id }}" data-actividad-id="{{ actividad.id }}">
+                        data-periodo-id="{{ p.id }}"
+                        data-actividad-id="{{ actividad.id }}"
+                        data-linea="{% if actividad.linea_trabajo %}{% if actividad.tipo == 'Difusión' %}{{ actividad.linea_trabajo|join:',' }}{% else %}{{ actividad.linea_trabajo }}{% endif %}{% endif %}"
+                        data-encargados="{% for e in actividad.encargados %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}">
 
                         <strong class="text-gray-800">{{ actividad.nombre }}</strong>
 
@@ -126,6 +175,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+});
+document.addEventListener('DOMContentLoaded', () => {
+    const filterEncargado = document.getElementById('filterEncargado');
+    const filterLinea = document.getElementById('filterLinea');
+    const filtroActividades = document.getElementById('filtroActividades');
+
+    function filtrarActividades() {
+        const encargadoVal = filterEncargado.value.toLowerCase();
+        const lineaVal = filterLinea.value.toLowerCase();
+        const nombreVal = filtroActividades.value.toLowerCase();
+
+        document.querySelectorAll('.periodo-card').forEach(card => {
+            const actividadNombre = card.querySelector('strong').textContent.toLowerCase();
+            const encargados = card.dataset.encargados.toLowerCase();
+
+            // Convertimos las líneas de trabajo en array
+            const lineasArray = card.dataset.linea.split(',').map(l => l.trim().toLowerCase());
+
+            let mostrar = true;
+
+            if (encargadoVal && !encargados.includes(encargadoVal)) mostrar = false;
+            if (lineaVal && !lineasArray.includes(lineaVal)) mostrar = false;
+            if (nombreVal && !actividadNombre.includes(nombreVal)) mostrar = false;
+
+            card.style.display = mostrar ? 'block' : 'none';
+        });
+    }
+
+    filterEncargado.addEventListener('change', filtrarActividades);
+    filterLinea.addEventListener('change', filtrarActividades);
+    filtroActividades.addEventListener('input', filtrarActividades);
 });
 </script>
 {% endblock %}
