@@ -1,3 +1,4 @@
+
 {% extends 'base/navbar2.html' %}
 {% block title %}Lista actividades - {{ proyecto.nombre }}{% endblock %}
 
@@ -23,11 +24,59 @@
                 class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Crear Actividad
     </div>
+<div class="flex gap-6 w-9/10 px-4 mb-4">
+        
+        <div class="flex flex-col gap-1">
+            <label for="filterEncargado" class="font-medium text-sm">Encargado</label>
+            <select id="filterEncargado" class="border p-2 rounded text-sm w-75">
+                <option value="">Todos</option>
+                {% for encargado in all_encargados %}
+                    <option value="{{ encargado.nombre }}">{{ encargado.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-    {% for act in actividades %}
-    <div class="relative w-9/10 p-4 bg-transparent text-black border-b border-gray-500">
-        <div class="flex justify-between items-center">
-            <div class="text-2xl font-semibold">{{ act.nombre }}</div>
+        <div class="flex flex-col gap-1">
+            <label for="filterLinea" class="font-medium text-sm">Línea de Trabajo</label>
+            <select id="filterLinea" class="border p-2 rounded text-sm w-100">
+                <option value="">Todas</option>
+                {% comment %} 
+                    Se asume que la lista 'lineas_trabajo_unicas' se pasa desde la vista.
+                {% endcomment %}
+                {% if lineas_trabajo_unicas %}
+                    {% for linea in lineas_trabajo_unicas %}
+                        <option value="{{ linea }}">{{ linea }}</option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label for="filtroActividades" class="text-sm font-medium ml-1">
+                Nombre de actividad
+            </label>
+
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </span>
+                <input type="text" 
+                    id="filtroActividades" 
+                    class="py-1.5 pl-10 pr-50 text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:black-500 focus:border-transparent" 
+                    placeholder="Filtrar...">
+            </div>
+        </div>
+        
+    </div>
+    <div id="actividadesContainer" class="w-full flex flex-col items-center gap-4">
+        {% for act in actividades %}
+        <div class=" activity-item actividad-item relative w-9/10 p-4 bg-transparent text-black border-b border-gray-500"
+             data-encargados="{% for e in act.encargados %}{{ e.nombre }}{% if not forloop.last %},{% endif %}{% endfor %}"
+             data-linea-trabajo="{% if act.tipo == 'Difusión' %}{{ act.linea_trabajo|join:' - ' }}{% else %}{{ act.linea_trabajo }}{% endif %}">
+            <div class="flex justify-between items-center">
+            <div class="activity-name text-2xl font-semibold">{{ act.nombre }}</div>
 
             <div class="flex items-center gap-4">
                 <button class="btn-historial border px-2 py-1 text-white rounded flex items-center gap-1 border-gray-500"
@@ -60,38 +109,6 @@
                             d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
-            </div>
-                <div class="flex items-center gap-4">
-                    <button class="btn-historial border px-2 py-1 text-white rounded flex items-center gap-1"
-                            data-id="{{ act.id }}"
-                            title="Ver historial de cambios">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </button>
-                    
-                    <button class="btn-editar border px-2 py-1 text-white rounded flex items-center gap-1"
-                            data-id="{{ act.id }}"
-                            data-nombre="{{ act.nombre }}"
-                            data-encargados="{% for e in act.encargados %}{{ e.nombre }}|{{ e.correo_electronico }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                            data-periodos="{% for f in act.fechas %}{{ f.id }}|{{ f.fecha_inicio }}|{{ f.fecha_fin }}{% if not forloop.last %},{% endif %}{% endfor %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"/>
-                        </svg>
-                    </button>
-            
-                    <div class="estado-actividad">
-                        <!-- <select name="estado" class="border border-gray-600 text-sm rounded p-1"
-                                data-actividad-id="{{ act.id }}">
-                            {% for value, label in estados %}
-                                <option value="{{ value }}" {% if value == act.estado_valor %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                            {% endfor %}
-                        </select> -->
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -149,6 +166,7 @@
 
         <!-- Fin dropdown de periodos -->
     </div>
+    {% endfor %}
 </div>
 
 
@@ -423,7 +441,41 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     });
-});
+    actualizarOpcionesFiltro('inicial'); 
+
+    // Enlazar la función de filtro a los eventos 'change'
+    document.getElementById('filterEncargado').addEventListener('change', aplicarFiltros);
+    document.getElementById('filterLinea').addEventListener('change', aplicarFiltros);
+    
+    // Ejecutar filtros una vez para asegurar el estado inicial
+    aplicarFiltros();
+        const searchInput = document.getElementById('filtroActividades');
+
+        searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const items = document.querySelectorAll('.activity-item');
+
+        items.forEach(item => {
+            // Buscamos el nombre dentro del item usando la clase que agregamos
+            const nameElement = item.querySelector('.activity-name');
+            const nameText = nameElement ? nameElement.textContent.toLowerCase() : '';
+
+            // Si coincide (o el buscador está vacío), mostramos. Si no, ocultamos.
+            if (nameText.includes(searchTerm)) {
+                item.style.display = ''; // Restaura el display original (block/flex)
+                item.classList.remove('hidden');
+            } else {
+                item.style.display = 'none'; // Oculta el elemento
+                item.classList.add('hidden');
+            }
+        });
+
+        // Opcional: Mostrar mensaje si no hay resultados
+        // verificarSiHayResultados(items); 
+    });
+})
+
+
 
 // ===============================
 // Variables globales y Helpers de Modal
@@ -1597,5 +1649,180 @@ document.getElementById("modalOverlay").addEventListener("click", (e) => {
         cerrarModal(); 
     }
 });
+
+
+// Filtros de los dropdown
+function actualizarOpcionesFiltro(tipo) {
+    // 1. Obtener valores de los filtros (el filtro activo y el dependiente)
+    const encargadoFiltro = document.getElementById('filterEncargado').value;
+    const lineaFiltro = document.getElementById('filterLinea').value;
+    const actividades = document.querySelectorAll('.actividad-item');
+    
+    // Conjuntos para recolectar las opciones válidas
+    const encargadosValidos = new Set();
+    const lineasValidas = new Set();
+    
+    // 2. Iterar sobre las actividades y aplicar el filtro *opuesto*
+    actividades.forEach(actividad => {
+        const encargadosData = actividad.dataset.encargados || '';
+        const lineaData = actividad.dataset.lineaTrabajo || '';
+        
+        let cumpleFiltroOpuesto = true;
+
+        // Si estamos actualizando las LÍNEAS, filtramos por ENCARGADO
+        if (tipo === 'linea' && encargadoFiltro) {
+            const regex = new RegExp(`(^|,)${encargadoFiltro}(,|$)`);
+            if (!regex.test(encargadosData)) {
+                cumpleFiltroOpuesto = false;
+            }
+        } 
+        // Si estamos actualizando los ENCARGADOS, filtramos por LÍNEA
+        else if (tipo === 'encargado' && lineaFiltro) {
+            if (lineaData !== lineaFiltro) {
+                cumpleFiltroOpuesto = false;
+            }
+        }
+        
+        // 3. Si la actividad pasa el filtro opuesto, recolectar sus datos
+        if (cumpleFiltroOpuesto) {
+            // Recolectar todas las líneas de trabajo que pasan el filtro
+            if (lineaData) {
+                lineasValidas.add(lineaData);
+            }
+            
+            // Recolectar todos los encargados que pasan el filtro
+            if (encargadosData) {
+                encargadosData.split(',').forEach(nombre => {
+                    const nombreTrim = nombre.trim();
+                    if (nombreTrim) {
+                        encargadosValidos.add(nombreTrim);
+                    }
+                });
+            }
+        }
+    });
+
+    // 4. Actualizar los dropdowns
+    
+    // a) Actualizar Líneas de Trabajo
+    if (tipo === 'linea' || tipo === 'inicial') {
+        const select = document.getElementById('filterLinea');
+        const valorActual = select.value;
+        select.innerHTML = '<option value="">Todas</option>';
+        
+        Array.from(lineasValidas).sort().forEach(linea => {
+            const option = document.createElement('option');
+            option.value = linea;
+            option.textContent = linea;
+            select.appendChild(option);
+        });
+        
+        // Mantener la selección actual si todavía es válida
+        if (valorActual && lineasValidas.has(valorActual)) {
+            select.value = valorActual;
+        } else {
+            // Si el valor ya no es válido, reiniciar el filtro (o dejar 'Todas')
+            select.value = ""; 
+        }
+    }
+
+    // b) Actualizar Encargados
+    if (tipo === 'encargado' || tipo === 'inicial') {
+        const select = document.getElementById('filterEncargado');
+        const valorActual = select.value;
+        
+        // 1. Recolectar TODAS las opciones que Django renderizó inicialmente.
+        // Solo necesitamos hacer esto si estamos en el modo 'inicial' para capturarlas
+        // antes de que la función las manipule. (Se asume que las opciones de Django
+        // NO cambian, solo se ocultan/muestran en el DOM).
+        
+        // Para simplificar, capturamos las opciones originales de Django solo una vez
+        // y luego usamos esa lista completa para reconstruir el dropdown.
+        let opcionesOriginales = [];
+        if (select.dataset.originalOptions) {
+            opcionesOriginales = JSON.parse(select.dataset.originalOptions);
+        } else {
+            // Si no existen, las capturamos y guardamos en un dataset (solo la primera vez)
+            opcionesOriginales = Array.from(select.options)
+                                    .filter(opt => opt.value !== "")
+                                    .map(opt => ({ value: opt.value, text: opt.text }));
+            select.dataset.originalOptions = JSON.stringify(opcionesOriginales);
+        }
+
+        // 2. Limpiamos y re-agregamos "Todos"
+        select.innerHTML = '<option value="">Todos</option>';
+        
+        // La bandera 'mostrarTodos' será true si NO hay filtro de Línea de Trabajo activo.
+        const mostrarTodos = !lineaFiltro;
+
+        // 3. Reconstruir el dropdown
+        opcionesOriginales.forEach(opt => {
+            // Si estamos en modo 'Mostrar Todos' O si el encargado está en la lista de encargados válidos
+            if (mostrarTodos || encargadosValidos.has(opt.value)) {
+                 const option = document.createElement('option');
+                 option.value = opt.value;
+                 option.textContent = opt.text;
+                 select.appendChild(option);
+            }
+        });
+        
+        // 4. Mantener la selección actual
+        if (valorActual && (mostrarTodos || encargadosValidos.has(valorActual))) {
+            select.value = valorActual;
+        } else {
+            select.value = "";
+            // Si el valor cambia, debemos asegurar que se llama a aplicarFiltros para actualizar la lista de actividades
+            if (valorActual !== select.value) {
+                 // Si se reinicia el valor, disparamos el filtro para actualizar las actividades y el otro dropdown (Líneas)
+                 aplicarFiltros.call(select); 
+            }
+        }
+    }
+}
+
+// ===================================
+// MODIFICACIÓN: aplicarFiltros
+// ===================================
+function aplicarFiltros() {
+    const encargadoFiltro = document.getElementById('filterEncargado').value;
+    const lineaFiltro = document.getElementById('filterLinea').value;
+    const actividades = document.querySelectorAll('.actividad-item');
+
+    // 1. Aplicar filtro principal a la lista de actividades (igual que antes)
+    actividades.forEach(actividad => {
+        const encargadosData = actividad.dataset.encargados || '';
+        const lineaData = actividad.dataset.lineaTrabajo || '';
+
+        let mostrarEncargado = true;
+        let mostrarLinea = true;
+
+        if (encargadoFiltro) {
+            const regex = new RegExp(`(^|,)${encargadoFiltro}(,|$)`);
+            mostrarEncargado = regex.test(encargadosData);
+        }
+
+        if (lineaFiltro) {
+            mostrarLinea = lineaData === lineaFiltro;
+        }
+
+        if (mostrarEncargado && mostrarLinea) {
+            actividad.classList.remove('hidden');
+        } else {
+            actividad.classList.add('hidden');
+        }
+    });
+    
+    // 2. Determinar qué dropdown actualizar basado en cuál cambió
+    if (this && this.id === 'filterEncargado') {
+        actualizarOpcionesFiltro('linea');
+    } else if (this && this.id === 'filterLinea') {
+        actualizarOpcionesFiltro('encargado');
+    }
+}
+
+// Enlazar la función de filtro a los eventos 'change' de los dropdowns
+document.getElementById('filterEncargado').addEventListener('change', aplicarFiltros);
+document.getElementById('filterLinea').addEventListener('change', aplicarFiltros);
+
 </script>
 {% endblock %}
