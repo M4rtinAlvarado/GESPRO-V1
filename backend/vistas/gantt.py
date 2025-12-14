@@ -49,14 +49,16 @@ def calcular_gantt_data(actividades):
 
 
 def _extraer_fechas_actividades(actividades):
+    """Extrae todas las fechas de los periodos de las actividades"""
     todas_fechas = []
     
     for actividad in actividades:
-        if actividad['fechas']:
-            for fecha_obj in actividad['fechas']:
-                if fecha_obj['fecha_inicio'] and fecha_obj['fecha_fin']:
-                    fecha_inicio = datetime.strptime(fecha_obj['fecha_inicio'], '%Y-%m-%d').date()
-                    fecha_fin = datetime.strptime(fecha_obj['fecha_fin'], '%Y-%m-%d').date()
+        # Cambiado: fechas → periodos
+        if actividad.get('periodos'):
+            for periodo_obj in actividad['periodos']:
+                if periodo_obj['fecha_inicio'] and periodo_obj['fecha_fin']:
+                    fecha_inicio = datetime.strptime(periodo_obj['fecha_inicio'], '%Y-%m-%d').date()
+                    fecha_fin = datetime.strptime(periodo_obj['fecha_fin'], '%Y-%m-%d').date()
                     todas_fechas.extend([fecha_inicio, fecha_fin])
     
     return todas_fechas
@@ -109,30 +111,32 @@ def _generar_columnas_semanales(start_date, total_weeks, week_width):
 
 
 def _calcular_posiciones_actividades(actividades, start_date, week_width):
+    """Calcula posiciones de barras para cada periodo de cada actividad"""
     for actividad in actividades:
         actividad['periodos_calculados'] = []
         
-        if not actividad['fechas']:
+        # Cambiado: fechas → periodos
+        if not actividad.get('periodos'):
             continue
             
-        for i, fecha_obj in enumerate(actividad['fechas']):
-            if not (fecha_obj['fecha_inicio'] and fecha_obj['fecha_fin']):
+        for i, periodo_obj in enumerate(actividad['periodos']):
+            if not (periodo_obj['fecha_inicio'] and periodo_obj['fecha_fin']):
                 continue
                 
             # Parsear fechas
-            fecha_inicio = datetime.strptime(fecha_obj['fecha_inicio'], '%Y-%m-%d').date()
-            fecha_fin = datetime.strptime(fecha_obj['fecha_fin'], '%Y-%m-%d').date()
+            fecha_inicio = datetime.strptime(periodo_obj['fecha_inicio'], '%Y-%m-%d').date()
+            fecha_fin = datetime.strptime(periodo_obj['fecha_fin'], '%Y-%m-%d').date()
             
             duracion_dias = (fecha_fin - fecha_inicio).days + 1
             dias_desde_inicio = (fecha_inicio - start_date).days
             dias_hasta_fin = (fecha_fin - start_date).days
             
-            # Calcular semanas que abarca la actividad
+            # Calcular semanas que abarca el periodo
             week_inicio = dias_desde_inicio // 7
             week_fin = dias_hasta_fin // 7
             semanas_ocupadas = week_fin - week_inicio + 1
             
-            # Vista semanal: siempre ocupa semana completa donde inicia
+            # Vista semanal: ancho proporcional a las semanas que ocupa
             left_px = week_inicio * week_width
             width_px = semanas_ocupadas * week_width
             
@@ -140,10 +144,15 @@ def _calcular_posiciones_actividades(actividades, start_date, week_width):
             left_px_monthly = _escalar_posicion_mensual(left_px)
             width_px_monthly = _calcular_ancho_mensual_real(semanas_ocupadas)
             
+            # Obtener clase de color según el estado del periodo
+            color_class = _obtener_color_por_estado(periodo_obj.get('estado'))
+            
             actividad['periodos_calculados'].append({
                 'periodo': i + 1,
-                'fecha_inicio': fecha_obj['fecha_inicio'],
-                'fecha_fin': fecha_obj['fecha_fin'],
+                'fecha_inicio': periodo_obj['fecha_inicio'],
+                'fecha_fin': periodo_obj['fecha_fin'],
+                'estado': periodo_obj.get('estado'),  # Estado individual del periodo
+                'color_class': color_class,  # Clase Tailwind para colorear la barra
                 'left_px': left_px,
                 'width_px': width_px,
                 'left_px_monthly': left_px_monthly,
@@ -167,3 +176,15 @@ def _calcular_ancho_mensual_real(semanas_ocupadas):
     ancho_por_semana = 25  # 25px por semana en vista mensual
     ancho_total = semanas_ocupadas * ancho_por_semana
     return max(ancho_total, 18)  # Mínimo 18px
+
+
+def _obtener_color_por_estado(estado):
+    """Mapea el código de estado del periodo a una clase Tailwind de color"""
+    colores = {
+        'PEN': 'bg-red-500',      # Pendiente → Rojo
+        'LPC': 'bg-yellow-500',   # Listo para comenzar → Amarillo
+        'EPR': 'bg-blue-500',     # En progreso → Azul
+        'COM': 'bg-green-500',    # Completado → Verde
+        'TER': 'bg-purple-500'    # Terminado → Morado
+    }
+    return colores.get(estado, 'bg-gray-400')  # Por defecto gris si no se reconoce
