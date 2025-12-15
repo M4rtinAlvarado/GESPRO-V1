@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect
 from proyectos.models import *
+from django.db.models import Prefetch
 from .forms import UploadExcelForm
 import os
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.conf import settings
 from django.contrib import messages
 from .import_gantt import importar_gantt, informacion_proyecto, separar_tablas_excel, FormatoInvalidoError
+from .export_gantt import exportar_gantt_excel
 
 
 # Create your views here.
@@ -130,3 +132,27 @@ def descargar_plantilla(request):
         return FileResponse(open(ruta_archivo, 'rb'), as_attachment=True, filename='plantilla.xlsx')
     else:
         raise Http404("Archivo no encontrado")
+    
+
+def exportar_proyecto_gantt(request, proyecto_id):
+    """
+    Exporta la carta Gantt del proyecto a un archivo Excel.
+    """
+    try:
+        output, filename = exportar_gantt_excel(proyecto_id)
+        
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Proyecto.DoesNotExist:
+        raise Http404("Proyecto no encontrado")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error al exportar Gantt: {str(e)}")
+        messages.error(request, f"Error al exportar: {str(e)}")
+        return redirect('proyectos')

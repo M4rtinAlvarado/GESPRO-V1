@@ -2512,6 +2512,11 @@
     }
   }
   @media (hover: hover) {
+    .hover\:bg-red-50:hover {
+      background-color: var(--color-red-50);
+    }
+  }
+  @media (hover: hover) {
     .hover\:bg-red-500:hover {
       background-color: var(--color-red-500);
     }
