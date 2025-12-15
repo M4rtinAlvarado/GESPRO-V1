@@ -822,6 +822,73 @@
     position: absolute;
     inset-inline-end: 0.75em;
   }
+  .table {
+    font-size: 0.875rem;
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-box);
+    text-align: left;
+  }
+  .table:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+    text-align: right;
+  }
+  @media (hover: hover) {
+    .table tr.row-hover:hover, .table tr.row-hover:nth-child(even):hover {
+      background-color: var(--color-base-200);
+    }
+  }
+  .table :where(th, td) {
+    padding-inline: calc(0.25rem * 4);
+    padding-block: calc(0.25rem * 3);
+    vertical-align: middle;
+  }
+  .table :where(thead, tfoot) {
+    white-space: nowrap;
+    color: var(--color-base-content);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .table :where(thead, tfoot) {
+      color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    }
+  }
+  .table :where(thead, tfoot) {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .table :where(tfoot) {
+    border-top: var(--border) solid var(--color-base-content);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .table :where(tfoot) {
+      border-top: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+    }
+  }
+  .table :where(.table-pin-rows thead tr) {
+    position: sticky;
+    top: calc(0.25rem * 0);
+    z-index: 1;
+    background-color: var(--color-base-100);
+  }
+  .table :where(.table-pin-rows tfoot tr) {
+    position: sticky;
+    bottom: calc(0.25rem * 0);
+    z-index: 1;
+    background-color: var(--color-base-100);
+  }
+  .table :where(.table-pin-cols tr th) {
+    position: sticky;
+    right: calc(0.25rem * 0);
+    left: calc(0.25rem * 0);
+    background-color: var(--color-base-100);
+  }
+  .table :where(thead tr, tbody tr:not(:last-child)) {
+    border-bottom: var(--border) solid var(--color-base-content);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .table :where(thead tr, tbody tr:not(:last-child)) {
+      border-bottom: var(--border) solid color-mix(in oklch, var(--color-base-content) 5%, #0000);
+    }
+  }
   .select {
     border: var(--border) solid #0000;
     position: relative;
@@ -990,6 +1057,81 @@
     border-end-start-radius: 0;
     border-start-end-radius: var(--radius-selector);
     border-end-end-radius: var(--radius-selector);
+  }
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-box);
+    outline-width: 2px;
+    transition: outline 0.2s ease-in-out;
+    outline: 0 solid #0000;
+    outline-offset: 2px;
+  }
+  .card:focus {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  @media (forced-colors: active) {
+    .card:focus {
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+    }
+  }
+  .card:focus-visible {
+    outline-color: currentColor;
+  }
+  .card :where(figure:first-child) {
+    overflow: hidden;
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    border-end-start-radius: unset;
+    border-end-end-radius: unset;
+  }
+  .card :where(figure:last-child) {
+    overflow: hidden;
+    border-start-start-radius: unset;
+    border-start-end-radius: unset;
+    border-end-start-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  .card:where(.card-border) {
+    border: var(--border) solid var(--color-base-200);
+  }
+  .card:where(.card-dash) {
+    border: var(--border) dashed var(--color-base-200);
+  }
+  .card.image-full {
+    display: grid;
+  }
+  .card.image-full > * {
+    grid-column-start: 1;
+    grid-row-start: 1;
+  }
+  .card.image-full > .card-body {
+    position: relative;
+    color: var(--color-neutral-content);
+  }
+  .card.image-full :where(figure) {
+    overflow: hidden;
+    border-radius: inherit;
+  }
+  .card.image-full > figure img {
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(28%);
+  }
+  .card figure {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card:has(> input:is(input[type="checkbox"], input[type="radio"])) {
+    cursor: pointer;
+    user-select: none;
+  }
+  .card:has(> :checked) {
+    outline: 2px solid currentColor;
   }
   .checkbox {
     border: var(--border) solid var(--input-color, var(--color-base-content));
@@ -1342,9 +1484,6 @@
   .mt-20 {
     margin-top: calc(var(--spacing) * 20);
   }
-  .mt-35 {
-    margin-top: calc(var(--spacing) * 35);
-  }
   .mr-1 {
     margin-right: calc(var(--spacing) * 1);
   }
@@ -1496,6 +1635,12 @@
   }
   .inline-block {
     display: inline-block;
+  }
+  .inline-flex {
+    display: inline-flex;
+  }
+  .table {
+    display: table;
   }
   .h-2 {
     height: calc(var(--spacing) * 2);
@@ -1674,6 +1819,9 @@
   .flex-grow {
     flex-grow: 1;
   }
+  .border-collapse {
+    border-collapse: collapse;
+  }
   .-translate-x-1\/2 {
     --tw-translate-x: calc(calc(1/2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
@@ -1693,6 +1841,24 @@
   }
   .animate-spin {
     animation: var(--animate-spin);
+  }
+  .link {
+    cursor: pointer;
+    text-decoration-line: underline;
+  }
+  .link:focus {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  @media (forced-colors: active) {
+    .link:focus {
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+    }
+  }
+  .link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
   .cursor-not-allowed {
     cursor: not-allowed;
@@ -1823,9 +1989,6 @@
   }
   .overflow-y-auto {
     overflow-y: auto;
-  }
-  .overflow-y-scroll {
-    overflow-y: scroll;
   }
   .rounded {
     border-radius: 0.25rem;
@@ -2125,9 +2288,6 @@
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
   }
-  .px-5 {
-    padding-inline: calc(var(--spacing) * 5);
-  }
   .px-6 {
     padding-inline: calc(var(--spacing) * 6);
   }
@@ -2152,9 +2312,6 @@
   .py-4 {
     padding-block: calc(var(--spacing) * 4);
   }
-  .py-5 {
-    padding-block: calc(var(--spacing) * 5);
-  }
   .py-6 {
     padding-block: calc(var(--spacing) * 6);
   }
@@ -2163,9 +2320,6 @@
   }
   .pt-2 {
     padding-top: calc(var(--spacing) * 2);
-  }
-  .pt-24 {
-    padding-top: calc(var(--spacing) * 24);
   }
   .pr-10 {
     padding-right: calc(var(--spacing) * 10);

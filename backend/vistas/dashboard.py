@@ -1,18 +1,12 @@
 
+import pandas as pd 
 import plotly.express as px
-from django.shortcuts import render, get_object_or_404
-import json
-from plotly.offline import plot
+import plotly.graph_objects as go
+from datetime import date
 from proyectos.models import *
-from django.db.models import Count, Value, CharField, F, Q, Min
-import pandas as pd
-from datetime import date
-
-import pandas as pd
-from datetime import date
-from django.db.models import F, Q, Min, Max, Count, Case, When
-from proyectos.models import Actividad, ActividadDifusion_Linea, Periodo, EstadoActividad, Proyecto, Alerta 
-from dateutil.relativedelta import relativedelta 
+from plotly.offline import plot
+from django.db.models import F, Q, Min
+from django.shortcuts import render, get_object_or_404
 
 def datos_dashboard(id_proyecto, filtro_linea=None, filtro_tipo_actividad='todas'):
     """
@@ -419,43 +413,76 @@ def graf_bar_lin_est(df_barras, estado_labels):
 
 
 
-def graf_area_temporal(df_plot):
+
+
+def graf_area_temporal(df_plot: pd.DataFrame):
     """
-    Genera el HTML del gráfico de área de actividades (mensuales, NO acumulativas y NO apiladas).
+    Genera el HTML del gráfico de área usando go.Scatter para garantizar que NO se apilen,
+    y añade transparencia (opacidad), implementando la lógica de color inline.
     """
-    
+
     if df_plot.empty:
         return {'grafico_area_temporal': '<h2>No hay datos temporales para mostrar.</h2>'}
     
-    category_orders = {
-        "Tipo": ['Actividades Planificadas (Inicio)', 'Actividades Completadas (Finalizadas)']
-    }
+    # 1. Separar los datos
+    df_planificadas = df_plot[df_plot['Tipo'] == 'Actividades Planificadas (Inicio)']
+    df_completadas = df_plot[df_plot['Tipo'] == 'Actividades Completadas (Finalizadas)']
+    
+    COLOR_PLANIFICADAS_HEX = '#1F77B4'
+    COLOR_COMPLETADAS_HEX = '#f57b42'
+    OPACIDAD = 0.6
+    
+    # Lógica de Conversión HEX a RGB (Inline)
+    # Ejemplo: '#AEC7E8' -> (174, 199, 232)
+    rgb_planificadas = tuple(int(COLOR_PLANIFICADAS_HEX.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+    rgb_completadas = tuple(int(COLOR_COMPLETADAS_HEX.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+    
+    # Construcción de la cadena RGBA (Inline)
+    rgba_planificadas = f'rgba({rgb_planificadas[0]}, {rgb_planificadas[1]}, {rgb_planificadas[2]}, {OPACIDAD})'
+    rgba_completadas = f'rgba({rgb_completadas[0]}, {rgb_completadas[1]}, {rgb_completadas[2]}, {OPACIDAD})'
+    
+    fig = go.Figure()
 
-    # Se elimina el argumento 'stackgroup' para resolver el TypeError 
-    # y para cumplir con el requisito de no apilar.
-    fig = px.area(
-        df_plot, 
-        x='Fecha_Plot', 
-        y='Cantidad', 
-        color='Tipo',
-        title='Inicio Planificado y Finalización Real por Mes', 
-        category_orders=category_orders,
-        color_discrete_sequence=['#AEC7E8', '#1F77B4'], 
-        # stackgroup ha sido ELIMINADO.
-    )
+    # 2. Agregar la traza de Actividades Planificadas (Área Base)
+    fig.add_trace(go.Scatter(
+        x=df_planificadas['Fecha_Plot'],
+        y=df_planificadas['Cantidad'],
+        mode='lines',
+        line=dict(width=2, color=COLOR_PLANIFICADAS_HEX),
+        fill='tozeroy',  
+        fillcolor=rgba_planificadas, # Usa la cadena RGBA construida correctamente
+        opacity=1, 
+        name='Actividades Planificadas (Inicio)',
+        hoverinfo='skip'
+    ))
 
+    # 3. Agregar la traza de Actividades Completadas (Área Superior/Superpuesta)
+    fig.add_trace(go.Scatter(
+        x=df_completadas['Fecha_Plot'],
+        y=df_completadas['Cantidad'],
+        mode='lines',
+        line=dict(width=2, color=COLOR_COMPLETADAS_HEX),
+        fill='tozeroy',  
+        fillcolor=rgba_completadas, # Usa la cadena RGBA construida correctamente
+        opacity=1, 
+        name='Actividades Completadas (Finalizadas)',
+        hoverinfo='skip'
+    ))
+
+    # 4. Configurar Layout
     fig.update_layout(
+        title='Inicio Planificado y Finalización Real por Mes',
         xaxis_title="Mes",
-        yaxis_title="Cantidad Mensual de Actividades", # Título ajustado
+        yaxis_title="Cantidad Mensual de Actividades",
         legend_title="Tipo de Avance",
         margin=dict(l=20, r=20, t=50, b=20),
         hovermode="x unified",
-        xaxis=dict(tickformat="%b %Y")
+        xaxis=dict(tickformat="%b %Y", showgrid=True),
+        yaxis=dict(showgrid=True, zeroline=True)
     )
     
-    
+    # 5. Configurar el Hover Template 
     fig.update_traces(
-        # Eliminar el texto interno en un gráfico de área
         hovertemplate="<b>%{x|%b %Y}</b><br>" +
                       "<b>%{fullData.name}</b>: %{y}<extra></extra>"
     )

@@ -5,14 +5,93 @@
 {% block content %}
     {# 1. Contenedor principal sin la clase 'container' para evitar restricciones de ancho. Solo se usa padding. #}
     <div class="w-full p-4 sm:p-6 lg:p-8">
-        
 
-        {# ======================================================= #}
-        {# SECCIÓN: FORMULARIO DE FILTROS (Línea y Tipo) #}
-        {# ======================================================= #}
-        <h2 class="text-xl font-semibold text-gray-600 mb-4">Opciones de Filtrado</h2>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            Dashboard del Proyecto: {{ proyecto.nombre }}
+        </h1>
+        
         
         <div class="bg-white p-6 shadow-lg rounded-lg mb-8 border border-gray-100">
+            {# ======================================================= #}
+            {# 1 & 2. MÉTRICAS CLAVE Y BARRAS DE PROGRESO (UNA SOLA FILA) #}
+            {# ======================================================= #}
+             <h2 class="text-xl font-semibold text-gray-600 mb-4">Resumen y Progreso General</h2>
+            {# Contenedor flex para que las métricas y el progreso estén en la misma fila en pantallas grandes #}
+            <div class="flex flex-col xl:flex-row gap-6 mb-8">
+                
+                {# BLOQUE A: TARJETAS DE MÉTRICAS CLAVE #}
+                <div class="xl:w-1/2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    {# Métrica 1: Total Actividades (Azul) #}
+                    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-blue-500">
+                        <div class="p-5">
+                            <h5 class="text-sm font-medium text-gray-500 truncate">Total de Actividades</h5>
+                            <p class="mt-1 text-4xl font-semibold text-blue-600">{{ total_actividades }}</p>
+                        </div>
+                    </div>
+
+                    {# Métrica 2: Actividades Completadas (Verde) #}
+                    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-green-500">
+                        <div class="p-5">
+                            <h5 class="text-sm font-medium text-gray-500 truncate">Actividades Finalizadas</h5>
+                            <p class="mt-1 text-4xl font-semibold text-green-600">{{ actividades_completadas }}</p>
+                        </div>
+                    </div>
+
+                    {# Métrica 3: Actividades Retrasadas (Rojo) #}
+                    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-red-500">
+                        <div class="p-5">
+                            <h5 class="text-sm font-medium text-gray-500 truncate">Actividades Retrasadas</h5>
+                            <p class="mt-1 text-4xl font-semibold text-red-600">{{ actividades_retrasadas }}</p>
+                        </div>
+                    </div>
+
+                    {# Métrica 4: Alertas Pendientes (Amarillo/Naranja) #}
+                    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-yellow-500">
+                        <div class="p-5">
+                            <h5 class="text-sm font-medium text-gray-500 truncate">Alertas Pendientes</h5>
+                            <p class="mt-1 text-4xl font-semibold text-yellow-600">{{ alertas_pendientes_num }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {# BLOQUE B: BARRAS DE PROGRESO #}
+                <div class="xl:w-1/2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    {# Barra de Progreso General (Por Tareas - Verde) #}
+                    <div class="bg-white p-5 shadow-lg rounded-lg">
+                        <h5 class="text-base font-medium text-gray-700 mb-2">Progreso por Tareas ({{ progreso_general }}%)</h5>
+                        <div class="w-full bg-gray-200 rounded-full h-7">
+                            <div class="bg-green-600 h-7 rounded-full text-center text-white font-medium" 
+                                style="width: {{ progreso_general }}%">
+                                {{ progreso_general }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Barra de Progreso Temporal (Por Tiempo Transcurrido - Púrpura) #}
+                    <div class="bg-white p-5 shadow-lg rounded-lg">
+                        <h5 class="text-base font-medium text-gray-700 mb-2">Progreso por Tiempo ({{ progreso_temporal }}%)</h5>
+                        {% if dias_proyecto_totales %}
+                            <div class="w-full bg-gray-200 rounded-full h-7">
+                                <div class="bg-purple-600 h-7 rounded-full text-center text-white font-medium" 
+                                    style="width: {{ progreso_temporal }}%">
+                                    {{ progreso_temporal }}%
+                                </div>
+                            </div>
+                            <small class="text-gray-500 mt-1 block">
+                                Días restantes: <strong class="font-semibold">{{ dias_proyecto_restantes }}</strong> de {{ dias_proyecto_totales }} totales.
+                            </small>
+                        {% else %}
+                            <p class="text-gray-500">Fechas de proyecto no definidas.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {# ======================================================= #}
+            {# SECCIÓN: FORMULARIO DE FILTROS (Línea y Tipo) #}
+            {# ======================================================= #}
+            <h2 class="text-xl font-semibold text-gray-600 mb-4">Opciones de Filtrado</h2>
             
             <form id="filtro-dashboard-form" method="GET" class="flex flex-col md:flex-row md:items-start gap-6"> 
                 
@@ -79,121 +158,37 @@
                 </a>
             </div>
             
-            
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">
-            Dashboard del Proyecto: {{ proyecto.nombre }}
-        </h1>
-        
-
-        {# ======================================================= #}
-        {# 1 & 2. MÉTRICAS CLAVE Y BARRAS DE PROGRESO (UNA SOLA FILA) #}
-        {# ======================================================= #}
-        <h2 class="text-xl font-semibold text-gray-600 mb-4">Resumen y Progreso General</h2>
-        
-        {# Contenedor flex para que las métricas y el progreso estén en la misma fila en pantallas grandes #}
-        <div class="flex flex-col xl:flex-row gap-6 mb-8">
-            
-            {# BLOQUE A: TARJETAS DE MÉTRICAS CLAVE #}
-            <div class="xl:w-1/2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                {# Métrica 1: Total Actividades (Azul) #}
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-blue-500">
-                    <div class="p-5">
-                        <h5 class="text-sm font-medium text-gray-500 truncate">Total de Actividades</h5>
-                        <p class="mt-1 text-4xl font-semibold text-blue-600">{{ total_actividades }}</p>
-                    </div>
-                </div>
-
-                {# Métrica 2: Actividades Completadas (Verde) #}
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-green-500">
-                    <div class="p-5">
-                        <h5 class="text-sm font-medium text-gray-500 truncate">Actividades Finalizadas</h5>
-                        <p class="mt-1 text-4xl font-semibold text-green-600">{{ actividades_completadas }}</p>
-                    </div>
-                </div>
-
-                {# Métrica 3: Actividades Retrasadas (Rojo) #}
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-red-500">
-                    <div class="p-5">
-                        <h5 class="text-sm font-medium text-gray-500 truncate">Actividades Retrasadas</h5>
-                        <p class="mt-1 text-4xl font-semibold text-red-600">{{ actividades_retrasadas }}</p>
-                    </div>
-                </div>
-
-                {# Métrica 4: Alertas Pendientes (Amarillo/Naranja) #}
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden border-l-4 border-yellow-500">
-                    <div class="p-5">
-                        <h5 class="text-sm font-medium text-gray-500 truncate">Alertas Pendientes</h5>
-                        <p class="mt-1 text-4xl font-semibold text-yellow-600">{{ alertas_pendientes_num }}</p>
-                    </div>
-                </div>
-            </div>
-
-            {# BLOQUE B: BARRAS DE PROGRESO #}
-            <div class="xl:w-1/2 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {# Barra de Progreso General (Por Tareas - Verde) #}
-                <div class="bg-white p-5 shadow-lg rounded-lg">
-                    <h5 class="text-base font-medium text-gray-700 mb-2">Progreso por Tareas ({{ progreso_general }}%)</h5>
-                    <div class="w-full bg-gray-200 rounded-full h-7">
-                        <div class="bg-green-600 h-7 rounded-full text-center text-white font-medium" 
-                             style="width: {{ progreso_general }}%">
-                            {{ progreso_general }}%
-                        </div>
-                    </div>
-                </div>
-
-                {# Barra de Progreso Temporal (Por Tiempo Transcurrido - Púrpura) #}
-                <div class="bg-white p-5 shadow-lg rounded-lg">
-                    <h5 class="text-base font-medium text-gray-700 mb-2">Progreso por Tiempo ({{ progreso_temporal }}%)</h5>
-                    {% if dias_proyecto_totales %}
-                        <div class="w-full bg-gray-200 rounded-full h-7">
-                            <div class="bg-purple-600 h-7 rounded-full text-center text-white font-medium" 
-                                 style="width: {{ progreso_temporal }}%">
-                                {{ progreso_temporal }}%
-                            </div>
-                        </div>
-                        <small class="text-gray-500 mt-1 block">
-                            Días restantes: <strong class="font-semibold">{{ dias_proyecto_restantes }}</strong> de {{ dias_proyecto_totales }} totales.
-                        </small>
-                    {% else %}
-                        <p class="text-gray-500">Fechas de proyecto no definidas.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
 
         {# ======================================================= #}
         {# 3. VISUALIZACIONES DE GRÁFICOS #}
         {# ======================================================= #}
-        <h2 class="text-xl font-semibold text-gray-600 mb-4">Análisis Detallado</h2>
-        
-        {# FILA 1: Torta y Barras/Líneas #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-600 mb-4">Análisis Detallado</h2>
             
-            {# Gráfico 1: Torta de Estados (Mitad de la fila) #}
-            <div class="bg-white p-4 shadow-lg rounded-lg">
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">Distribución por Estado</h3>
-                {{ grafico_torta_estado | safe }} 
-            </div>
+            {# FILA 1: Torta y Barras/Líneas #}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                
+                {# Gráfico 1: Torta de Estados (Mitad de la fila) #}
+                <div class="bg-white p-4 shadow-lg rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Distribución por Estado</h3>
+                    {{ grafico_torta_estado | safe }} 
+                </div>
 
-            {# Gráfico 2: Barras Apiladas (Carga de Trabajo) (La otra mitad de la fila) #}
-            <div class="bg-white p-4 shadow-lg rounded-lg">
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">Carga de Trabajo y Avance</h3>
-                {{ grafico_barras_lineas | safe }} 
+                {# Gráfico 2: Barras Apiladas (Carga de Trabajo) (La otra mitad de la fila) #}
+                <div class="bg-white p-4 shadow-lg rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Carga de Trabajo y Avance</h3>
+                    {{ grafico_barras_lineas | safe }} 
+                </div>
+            </div>
+            
+            {# FILA 2: Gráfico de Áreas Temporal (Solo) #}
+            <div class="grid grid-cols-1 gap-6">
+                
+                {# Gráfico 3: Gráfico de Áreas Temporales (Ocupa todo el ancho) #}
+                <div class="bg-white p-4 shadow-lg rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Progreso Planificado vs. Real</h3>
+                    {{ grafico_area_temporal | safe }} 
+                </div>
             </div>
         </div>
-        
-        {# FILA 2: Gráfico de Áreas Temporal (Solo) #}
-        <div class="grid grid-cols-1 gap-6">
-            
-            {# Gráfico 3: Gráfico de Áreas Temporales (Ocupa todo el ancho) #}
-            <div class="bg-white p-4 shadow-lg rounded-lg">
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">Progreso Planificado vs. Real</h3>
-                {{ grafico_area_temporal | safe }} 
-            </div>
-        </div>
-
     </div>
 {% endblock content %}
