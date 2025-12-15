@@ -110,22 +110,22 @@ WSGI_APPLICATION = 'gespro.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.getenv('POSTGRES_DB', 'gespro'),
-#         'USER': os.getenv('POSTGRES_USER', 'albaca'),
-#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', '9E5Og5yodW6u0S'),
-#         'HOST': os.getenv('DB_HOST', 'gespro-db'),
-#         'PORT': os.getenv('POSTGRES_PORT', '5003'),
-#     }
-# }
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR /'databases'/ 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'gespro'),
+        'USER': os.getenv('POSTGRES_USER', 'albaca'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '9E5Og5yodW6u0S'),
+        'HOST': os.getenv('DB_HOST', 'gespro-db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5003'),
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR /'databases'/ 'db.sqlite3',
+#     }
+# }
 
 
 
