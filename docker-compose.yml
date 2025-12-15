@@ -1,114 +1,99 @@
 version: '3.8'
 
 services:
-  gespro-frontend:
-    # Depende del servicio de DB, ahora llamado 'gespro-db'
-    depends_on:
-      gespro-db:
-        condition: service_healthy
-    # Comando de inicio adaptado del archivo del servidor (espera a la DB)
-    # y las migraciones del archivo actualizado.
-    command: >
-      sh -c "python backend/manage.py migrate &&
-             python backend/manage.py runserver 0.0.0.0:3003"
-    restart: "on-failure"
-    build: .
-    # Puertos del servidor
+  # ==========================================
+  # BASE DE DATOS (Postgres)
+  # ==========================================
+  database:
+    image: ${DB_IMAGE:-postgres:15-alpine}
+    container_name: ${GROUP}_${PROJECT}_db
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      # Fuerza a Django a usar el nombre del servicio como host
-      DB_HOST: ${DB_HOST:-gespro-db}
-      # Fuerza a Django a usar el puerto de Postgres desde .env
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      # También necesitamos pasar las credenciales para que Django las use en settings.py
-      POSTGRES_DB: ${POSTGRES_DB:-gespro}
-      POSTGRES_USER: ${POSTGRES_USER:-albaca}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-9E5Og5yodW6u0S}
-    ports:
-      - "${DJANGO_HOST_PORT:-3003}:3003"
-    # Healthcheck del archivo actualizado
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    #Red del servidor
-    # networks:
-    #   - red_taller_software
-
-  gespro-db:
-    image: postgres:15-alpine
-    # Healthcheck adaptado con el nombre de usuario y puerto del servidor
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-albaca} -d ${POSTGRES_DB:-gespro} -p ${POSTGRES_PORT:-5432}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # Variables de entorno del archivo actualizado (permitiendo valores por defecto)
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-gespro}
-      POSTGRES_USER: ${POSTGRES_USER:-albaca}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-9E5Og5yodW6u0S}
-    # Montaje de volumen
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: always
-    # Red y configuración del servidor
-    # networks:
-      # red_taller_software:
-      #   aliases:
-      #      - gespro-db # Alias para ser accesible por otros servicios
-    ports:
-      - "${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}" # Puerto expuesto en el servidor
-    command: postgres -c "port=${POSTGRES_PORT:-5432}" # Comando para cambiar el puerto de Postgres dentro del contenedor
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - red_taller_software
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    labels:
+      - "org.uach.group=${GROUP}"
+      - "org.uach.project=${PROJECT}"
+      - "org.uach.service=database"
+      - "logging=promtail"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  superset:
+  # ==========================================
+  # DJANGO (Monolítico, backend + frontend)
+  # ==========================================
+  backend:
     build:
       context: .
-      dockerfile: superset/superset.Dockerfile 
-    # Puertos del servidor (4003)
+      dockerfile: Dockerfile
+    container_name: ${GROUP}_${PROJECT}_backend
+    restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "${SUPERSET_HOST_PORT:-4003}:4003"
-    environment:
-      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-'65xo4J3AvtbK1A'}
-      MAPBOX_API_KEY: ''
-      # Conexión adaptada para el servidor: usa variables de entorno para todos los parámetros
-      SQLALCHEMY_DATABASE_URI: 'postgresql+psycopg2://${POSTGRES_USER:-albaca}:${POSTGRES_PASSWORD:-9E5Og5yodW6u0S}@${DB_HOST:-gespro-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-gespro}'
-      # La variable SUPERSET_PORT ya no es necesaria si el comando usa 4003, pero se puede añadir si es relevante
-      # - SUPERSET_PORT=4003
-    volumes:
-      - superset_home:/app/superset/
-    # Red del servidor
-    # networks:
-    #   - red_taller_software
-    # El comando usa el puerto 8088 interno si no se especifica, se ha ajustado a 4003 para coincidir con la config del servidor
-    command: 
-      - /bin/bash 
-      - -c 
-      - |
-        superset db upgrade && 
-        superset fab create-admin \
-          --username "${SUPERSET_ADMIN_USERNAME:-admin}" \
-          --firstname "${SUPERSET_ADMIN_FIRSTNAME:-Super}" \
-          --lastname "${SUPERSET_ADMIN_LASTNAME:-Admin}" \
-          --email "${SUPERSET_ADMIN_EMAIL:-admin@example.com}" \
-          --password "${SUPERSET_ADMIN_PASSWORD:-adminpass123}" || true && 
-        superset init &&
-
-        superset run -h 0.0.0.0 -p ${SUPERSET_PORT:-4003}
-    # Healthcheck adaptado al puerto interno 4003
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - red_taller_software
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:${BACKEND_PORT}"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 700M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+    labels:
+      - "org.uach.group=${GROUP}"
+      - "org.uach.project=${PROJECT}"
+      - "org.uach.service=backend"
+      - "logging=promtail"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${SUPERSET_PORT:-4003}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT}/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-    depends_on:
-      gespro-db:
-        condition: service_healthy
+    environment:
+      DB_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
 
 volumes:
-  superset_home:
-  postgres_data:
+  db_data:
+    name: ${GROUP}_${PROJECT}_db_data
 
-# networks:
-#   red_taller_software:
-#     external: true
+networks:
+  red_taller_software:
+    external: true
