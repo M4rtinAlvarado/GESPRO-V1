@@ -24,6 +24,4 @@ COPY . /app/
 # Exponer puerto
 EXPOSE 3003
 
-# Instalar y compilar Tailwind
-RUN python backend/manage.py tailwind install
-RUN python backend/manage.py tailwind build
+
