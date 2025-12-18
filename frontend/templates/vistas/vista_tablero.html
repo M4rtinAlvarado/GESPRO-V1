@@ -181,21 +181,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterLinea = document.getElementById('filterLinea');
     const filtroActividades = document.getElementById('filtroActividades');
 
+    // Función mágica para ignorar tildes
+    const sinTildes = (str) => {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    };
+
     function filtrarActividades() {
-        const encargadoVal = filterEncargado.value.toLowerCase();
-        const lineaVal = filterLinea.value.toLowerCase();
-        const nombreVal = filtroActividades.value.toLowerCase();
+        // Normalizamos los valores que el usuario escribe
+        const encargadoVal = sinTildes(filterEncargado.value);
+        const lineaVal = sinTildes(filterLinea.value);
+        const nombreVal = sinTildes(filtroActividades.value);
 
         document.querySelectorAll('.periodo-card').forEach(card => {
-            const actividadNombre = card.querySelector('strong').textContent.toLowerCase();
-            const encargados = card.dataset.encargados.toLowerCase();
-
-            // Convertimos las líneas de trabajo en array
-            const lineasArray = card.dataset.linea.split(',').map(l => l.trim().toLowerCase());
+            // 1. Busca el nombre en el <strong> (Visible)
+            const actividadNombre = sinTildes(card.querySelector('strong').textContent);
+            
+            // 2. Busca en los atributos data- (Ocultos)
+            const encargadosAttr = sinTildes(card.dataset.encargados || "");
+            const lineasArray = (card.dataset.linea || "")
+                                .split(',')
+                                .map(l => sinTildes(l.trim()));
 
             let mostrar = true;
 
-            if (encargadoVal && !encargados.includes(encargadoVal)) mostrar = false;
+            // Lógica de filtrado coincidiendo con texto sin tildes
+            if (encargadoVal && !encargadosAttr.includes(encargadoVal)) mostrar = false;
             if (lineaVal && !lineasArray.includes(lineaVal)) mostrar = false;
             if (nombreVal && !actividadNombre.includes(nombreVal)) mostrar = false;
 

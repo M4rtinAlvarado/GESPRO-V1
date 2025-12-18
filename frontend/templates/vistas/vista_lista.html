@@ -314,7 +314,7 @@
 </div>
 
 <!-- Modal de edición de encargado -->
-<div id="editEncargadoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+<div id="editEncargadoModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
   <div class="bg-white p-6 rounded-lg shadow-xl w-96 relative">
     <h2 class="text-lg font-semibold mb-4">Editar encargado</h2>
     
@@ -438,29 +438,33 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Ejecutar filtros una vez para asegurar el estado inicial
     aplicarFiltros();
-        const searchInput = document.getElementById('filtroActividades');
+    const searchInput = document.getElementById('filtroActividades');
 
-        searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
+    searchInput.addEventListener('input', function(e) {
+        // Función interna para quitar tildes
+        const quitarTildes = (str) => {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        };
+
+        const searchTerm = quitarTildes(e.target.value.toLowerCase().trim());
         const items = document.querySelectorAll('.activity-item');
 
         items.forEach(item => {
-            // Buscamos el nombre dentro del item usando la clase que agregamos
             const nameElement = item.querySelector('.activity-name');
-            const nameText = nameElement ? nameElement.textContent.toLowerCase() : '';
+            let nameText = nameElement ? nameElement.textContent.toLowerCase() : '';
+            
+            // Normalizamos también el texto del nombre de la actividad
+            const nameTextSinTildes = quitarTildes(nameText);
 
-            // Si coincide (o el buscador está vacío), mostramos. Si no, ocultamos.
-            if (nameText.includes(searchTerm)) {
-                item.style.display = ''; // Restaura el display original (block/flex)
+            // Comparamos los textos ya "limpios" de tildes
+            if (nameTextSinTildes.includes(searchTerm)) {
+                item.style.display = ''; 
                 item.classList.remove('hidden');
             } else {
-                item.style.display = 'none'; // Oculta el elemento
+                item.style.display = 'none'; 
                 item.classList.add('hidden');
             }
         });
-
-        // Opcional: Mostrar mensaje si no hay resultados
-        // verificarSiHayResultados(items); 
     });
 })
 

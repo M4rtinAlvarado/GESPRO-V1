@@ -456,205 +456,152 @@ def generar_diccionario_registro(data, estado_anterior_json):
 
 
 def editar_actividad(request):
-    #requets = {actividad: id, nombre: nuevo_nombre, periodos: [{id_periodo: 1, f_inicio: fecha_inicio, f_fin:fecha_fin},{id_periodo: '', f_inicio: fecha_inicio, f_fin:fecha_fin}]}
     if request.method == 'POST':
-
-        #cargar json
-        data = json.loads(request.body)
-        print("\n--- Datos recibidos en editar_actividad ---")
-        print(json.dumps(data, indent=4, ensure_ascii=False))
-        print("------------------------------------------\n")
-
-
-        #obtener id de la actividad y el nombre
-        actividad_id = data.get('actividad_id') or data.get('id')
-        if not actividad_id:
-            return JsonResponse({"success": False, "error": "Falta el ID de la actividad a editar."}, status=400)
-        print(actividad_id)
-        nuevo_nombre = data.get('nombre')
-
-        # 1. Obtener Periodos ANTES de la modificación
-        periodos_anteriores = Periodo.objects.filter(actividad=actividad_id, activo=True).order_by('fecha_inicio')
-        periodos_json_anteriores = [{
-            "id": p.id,
-            "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
-            "f_fin": p.fecha_fin.strftime('%Y-%m-%d')
-        } for p in periodos_anteriores]
-
-
-        
-        # 2. Obtener Encargados ANTES de la modificación (usando la relación inversa)
-        relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True)
-        encargados_json_anteriores = []
-        for relacion in relaciones_encargados:
-             encargados_json_anteriores.append({
-                "id": relacion.encargado.id,
-                "nombre": relacion.encargado.nombre,
-                "correo": relacion.encargado.correo_electronico
-            })
-
-
-        actividad_antes = get_object_or_404(ActividadBase, id=actividad_id)
-        # 3. Crear el JSON de Estado Inicial
-        estado_anterior_json = {
-            "id": actividad_antes.id,
-            "nombre": actividad_antes.nombre,
-            "encargados": encargados_json_anteriores,
-            "periodos": periodos_json_anteriores
-        }
-        
-        # Revisar cambios antes de hacer nada
-        cambios = generar_diccionario_registro(data, estado_anterior_json)
-        if not cambios["actividad"] and not cambios["encargados"] and not cambios["periodos"]:
-            return JsonResponse({"success": True, "message": "No hay cambios para guardar"})
-
-
-
-        #obtener la actividad
-        actividad = get_object_or_404(ActividadBase, id=actividad_id)
-
-        # Actualizar nombre si se envió
-        if nuevo_nombre:
-            actividad.nombre = nuevo_nombre
-            actividad.save()
-
-        # Actualizar periodos si se envió
-        periodos = data.get('periodos',[])
-        ids_presentes_en_request = []
-
-        for periodo_data in periodos:
-
-            periodo_id = periodo_data.get('id') or None 
-
-            # Normalizar la fecha
-            f_inicio = periodo_data.get('f_inicio') or periodo_data.get('fecha_inicio')
-            f_fin = periodo_data.get('f_fin') or periodo_data.get('fecha_fin')
-
-            if periodo_id:  
-
-                if isinstance(periodo_id, int):
-                    ids_presentes_en_request.append(periodo_id)
-                else:
-
-                    return JsonResponse({"success": False, "error": f"ID de período {periodo_id} no es un número válido."}, status=400)
-
-
-                # Obtener el periodo para actualizar
-                try:
-                    # Usamos .get() en lugar de get_object_or_404 para manejo interno de errores.
-                    periodo = Periodo.objects.get(id=periodo_id, actividad_id=actividad_id)
-                except Periodo.DoesNotExist:
-                    return JsonResponse({"success": False, "error": f"Período con ID {periodo_id} no existe para esta actividad."}, status=400)
-
-                # Actualizar fechas
-                if periodo.fecha_inicio.strftime('%Y-%m-%d') != f_inicio:
-                    periodo.fecha_inicio = f_inicio
-                if periodo.fecha_fin.strftime('%Y-%m-%d') != f_fin:
-                    periodo.fecha_fin = f_fin
-                periodo.save()
-
-            else:
-                # Crear nuevo periodo (periodo_id es None)
-                nuevo_periodo = Periodo.objects.create(
-                    actividad_id=actividad_id,
-                    fecha_inicio=f_inicio,
-                    fecha_fin=f_fin,
-                    estado_valor=periodo_data.get('estado_valor', 'PEN'),
-                    activo=True
-                )
-                # Se añade el ID (que es entero) generado por la DB
-                ids_presentes_en_request.append(nuevo_periodo.id)
-
-
-        Fechas_a_eliminar = Periodo.objects.filter(actividad=actividad_id, activo=True).exclude(
-        id__in=ids_presentes_en_request)
-        
-        # para cada fecha actrualizar estado a False
-        conteo_eliminado = 0
-        for fecha in Fechas_a_eliminar:
-            fecha.activo = False
-            fecha.save()
-            conteo_eliminado += 1
-
-
-
-
-        encargados = data.get('encargados',[])
-        ids_encargados_en_request = []
-        for encargado_data in encargados:            
-            encargado_id = encargado_data.get('id')
-            if encargado_id != '':
-                ids_encargados_en_request.append(encargado_id)
-            nombre = encargado_data.get('nombre')
-            correo = encargado_data.get('correo')
-            if encargado_id != '':
-                #print("Actualizando encargado existente")
-                # Actualizar encargado existente
-                encargado = get_object_or_404(Encargado, id=encargado_id)
-                #comparar fechas del request con las ya existentes
-                encargado.nombre = nombre
-                encargado.correo_electronico = correo
-                encargado.save()
-
-                if not Actividad_Encargado.objects.filter(actividad=actividad_id, encargado=encargado).exists():
-                    # Crear la relación si no existe
-                    Actividad_Encargado.objects.create(
-                        actividad=actividad_id,
-                        encargado=encargado,
-                        activo=True
-                    ) 
-                else:
-                    # Asegurarse de que la relación esté activa
-                    relacion = Actividad_Encargado.objects.get(actividad=actividad_id, encargado=encargado)
-                    if not relacion.activo:
-                        relacion.activo = True
-                        relacion.save()
-        
-            else:
-                # Crear nuevo encargado
-                nuevo_encargado = Encargado.objects.create(
-                    nombre=nombre,
-                    correo_electronico=correo,
-                    activo=True
-                )
-                Actividad_Encargado.objects.create(
-                    actividad=actividad_id,
-                    encargado=nuevo_encargado,
-                    activo=True
-                )
-
-                ids_encargados_en_request.append(nuevo_encargado.id)
-        encargados_a_eliminar = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True).exclude(
-        encargado__id__in=ids_encargados_en_request )
-        conteo_eliminado = 0
-        for relacion in encargados_a_eliminar:
-            # print("Eliminando encargado:", encargado.nombre)
-            relacion.activo = False
-            relacion.save()
-            conteo_eliminado += 1
-
         try:
-            # Obtener estado actual para el correo
-            periodos_actuales = Periodo.objects.filter(actividad=actividad_id, activo=True).order_by('fecha_inicio')
-            encargados_actuales = Actividad_Encargado.objects.filter(actividad=actividad_id, activo=True)
-
-            estado_actual = {
-                "nombre": actividad.nombre,
-                "encargados": [{"nombre": e.encargado.nombre, "correo": e.encargado.correo_electronico} for e in encargados_actuales],
-                "periodos": [{"f_inicio": p.fecha_inicio.strftime("%Y-%m-%d"), "f_fin": p.fecha_fin.strftime("%Y-%m-%d")} for p in periodos_actuales]
-            }
-
-            print("\n--- Cambios detectados ---")
-            print(json.dumps(cambios, indent=4, ensure_ascii=False))
+            data = json.loads(request.body)
+            print("\n--- Datos recibidos en editar_actividad ---")
+            print(json.dumps(data, indent=4, ensure_ascii=False))
             print("------------------------------------------\n")
-            # Registrar y notificar siempre
-            registrar_y_notificar_cambios(actividad, cambios, estado_actual)
+
+            # 1. Obtener y limpiar el ID de la actividad
+            raw_id = data.get('actividad_id') or data.get('id')
+            if not raw_id:
+                return JsonResponse({"success": False, "error": "Falta el ID de la actividad."}, status=400)
+            
+            # Lo pasamos a entero de una vez para evitar problemas de "must be instance"
+            actividad_id = int(str(raw_id).strip())
+            
+            # 2. Obtener el OBJETO (actividad_obj) - Lo usaremos para todas las relaciones
+            actividad_obj = get_object_or_404(ActividadBase, id=actividad_id)
+            nuevo_nombre = data.get('nombre')
+
+            # --- ESTADO ANTERIOR PARA EL REGISTRO ---
+            periodos_anteriores = Periodo.objects.filter(actividad=actividad_obj, activo=True).order_by('fecha_inicio')
+            periodos_json_anteriores = [{
+                "id": p.id,
+                "f_inicio": p.fecha_inicio.strftime('%Y-%m-%d'),
+                "f_fin": p.fecha_fin.strftime('%Y-%m-%d')
+            } for p in periodos_anteriores]
+
+            relaciones_encargados = Actividad_Encargado.objects.filter(actividad=actividad_obj, activo=True)
+            encargados_json_anteriores = [{
+                "id": rel.encargado.id,
+                "nombre": rel.encargado.nombre,
+                "correo": rel.encargado.correo_electronico
+            } for rel in relaciones_encargados]
+
+            estado_anterior_json = {
+                "id": actividad_obj.id,
+                "nombre": actividad_obj.nombre,
+                "encargados": encargados_json_anteriores,
+                "periodos": periodos_json_anteriores
+            }
+            
+            cambios = generar_diccionario_registro(data, estado_anterior_json)
+            if not cambios["actividad"] and not cambios["encargados"] and not cambios["periodos"]:
+                return JsonResponse({"success": True, "message": "No hay cambios para guardar"})
+
+            # --- PROCESAR ACTUALIZACIÓN ---
+            if nuevo_nombre:
+                actividad_obj.nombre = nuevo_nombre
+                actividad_obj.save()
+
+            # --- PERIODOS ---
+            periodos_data = data.get('periodos', [])
+            ids_presentes_en_request = []
+
+            for p_data in periodos_data:
+                # Limpiar el ID del periodo si viene como string sucio
+                p_id = p_data.get('id')
+                if p_id and str(p_id).strip():
+                    p_id = int(str(p_id).strip())
+                else:
+                    p_id = None
+
+                f_inicio = p_data.get('f_inicio') or p_data.get('fecha_inicio')
+                f_fin = p_data.get('f_fin') or p_data.get('fecha_fin')
+
+                if p_id:
+                    ids_presentes_en_request.append(p_id)
+                    try:
+                        # Buscamos usando el objeto actividad_obj
+                        periodo = Periodo.objects.get(id=p_id, actividad=actividad_obj)
+                        periodo.fecha_inicio = f_inicio
+                        periodo.fecha_fin = f_fin
+                        periodo.save()
+                    except Periodo.DoesNotExist:
+                        return JsonResponse({"success": False, "error": f"Periodo {p_id} no existe"}, status=400)
+                else:
+                    # Crear nuevo periodo
+                    nuevo_p = Periodo.objects.create(
+                        actividad=actividad_obj, # Usamos el OBJETO
+                        fecha_inicio=f_inicio,
+                        fecha_fin=f_fin,
+                        estado_valor=p_data.get('estado_valor', 'PEN'),
+                        activo=True
+                    )
+                    ids_presentes_en_request.append(nuevo_p.id)
+
+            # Desactivar periodos que no vinieron
+            Periodo.objects.filter(actividad=actividad_obj, activo=True).exclude(id__in=ids_presentes_en_request).update(activo=False)
+
+            # --- ENCARGADOS ---
+            encargados_data = data.get('encargados', [])
+            ids_encargados_en_request = []
+
+            for e_data in encargados_data:
+                e_id = e_data.get('id')
+                nombre_e = e_data.get('nombre')
+                correo_e = e_data.get('correo')
+
+                if e_id and str(e_id).strip():
+                    e_id = int(str(e_id).strip())
+                    ids_encargados_en_request.append(e_id)
+                    encargado_obj = get_object_or_404(Encargado, id=e_id)
+                    encargado_obj.nombre = nombre_e
+                    encargado_obj.correo_electronico = correo_e
+                    encargado_obj.save()
+                    
+                    # Asegurar relación activa (Usamos el OBJETO actividad_obj)
+                    rel, created = Actividad_Encargado.objects.get_or_create(
+                        actividad=actividad_obj, 
+                        encargado=encargado_obj,
+                        defaults={'activo': True}
+                    )
+                    if not rel.activo:
+                        rel.activo = True
+                        rel.save()
+                else:
+                    # Crear nuevo encargado
+                    nuevo_e = Encargado.objects.create(nombre=nombre_e, correo_electronico=correo_e, activo=True)
+                    Actividad_Encargado.objects.create(actividad=actividad_obj, encargado=nuevo_e, activo=True)
+                    ids_encargados_en_request.append(nuevo_e.id)
+
+            # Desactivar encargados eliminados
+            Actividad_Encargado.objects.filter(actividad=actividad_obj, activo=True).exclude(encargado__id__in=ids_encargados_en_request).update(activo=False)
+
+            # --- NOTIFICACIÓN ---
+            try:
+                # Recargar datos frescos para el correo
+                estado_actual = {
+                    "nombre": actividad_obj.nombre,
+                    "encargados": [{"nombre": rel.encargado.nombre, "correo": rel.encargado.correo_electronico} 
+                                  for rel in Actividad_Encargado.objects.filter(actividad=actividad_obj, activo=True)],
+                    "periodos": [{"f_inicio": p.fecha_inicio.strftime("%Y-%m-%d"), "f_fin": p.fecha_fin.strftime("%Y-%m-%d")} 
+                                for p in Periodo.objects.filter(actividad=actividad_obj, activo=True)]
+                }
+                registrar_y_notificar_cambios(actividad_obj, cambios, estado_actual)
+            except Exception as e:
+                print(f"Error en notificación: {e}")
+
+            return JsonResponse({"success": True, "message": "Actividad actualizada correctamente"})
 
         except Exception as e:
-            print(f"Error al registrar o notificar cambios: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
 
-
-    return JsonResponse({"success": True, "message": "Datos recibidos correctamente"})
+    return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
 
 
 
