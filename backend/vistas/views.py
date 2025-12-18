@@ -537,7 +537,7 @@ def editar_actividad(request):
                         actividad=actividad_obj, # Usamos el OBJETO
                         fecha_inicio=f_inicio,
                         fecha_fin=f_fin,
-                        estado_valor=p_data.get('estado_valor', 'PEN'),
+                        estado=p_data.get('estado_valor', 'PEN'),
                         activo=True
                     )
                     ids_presentes_en_request.append(nuevo_p.id)
@@ -740,7 +740,7 @@ def crear_actividad(request):
                 Actividad_Encargado.objects.create(
                     actividad=actividad_nueva,
                     encargado=encargado_obj,
-                    activo=True  # <--- CORRECCIÓN IMPORTANTE: Tu modelo usa 'activo', no 'estado'
+                    activo=True 
                 )
 
             # --- 3. Procesar Periodos ---

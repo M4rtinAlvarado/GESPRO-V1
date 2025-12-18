@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function filtrarActividades() {
         // Normalizamos los valores que el usuario escribe
         const encargadoVal = sinTildes(filterEncargado.value);
-        const lineaVal = sinTildes(filterLinea.value);
+        const lineaVal = filterLinea.value;
         const nombreVal = sinTildes(filtroActividades.value);
 
         document.querySelectorAll('.periodo-card').forEach(card => {
