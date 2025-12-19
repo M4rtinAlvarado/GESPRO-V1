@@ -226,11 +226,12 @@
         <div class="space-y-4 mb-6">
             <!-- Selector tipo de fecha base -->
             <div class="flex items-center gap-4">
-                <label class="text-sm font-medium w-32">A partir de</label>
+                <label class="text-sm font-medium w-32">Programar según</label>
                 <select id="tipo-fecha" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Tipo de fecha base">
-                    <option value="fecha_especifica">Fecha específica</option>
-                    <option value="fecha_inicio">Fecha de inicio (Alerta después del inicio)</option>
-                    <option value="fecha_fin">Fecha de término (Alerta antes del término)</option>
+                    <option value="fecha_especifica">Fecha y hora exacta</option>
+                    <option value="antes_inicio">Antes de que inicie la actividad</option>
+                    <option value="fecha_inicio">Después de que inicie la actividad</option>
+                    <option value="fecha_fin">Antes de que termine la actividad</option>
                 </select>
             </div>
 
@@ -242,14 +243,14 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <label class="text-sm font-medium w-32"></label>
-                    <p class="text-xs text-gray-500">La alerta se creará en la fecha y hora especificada</p>
+                    <p class="text-xs text-gray-500">Todas las alertas se programarán para esta fecha y hora</p>
                 </div>
             </div>
 
             <!-- Offset temporal para fechas de inicio/fin -->
             <div id="offset-container" class="hidden space-y-2">
                 <div class="flex items-center gap-4">
-                    <label class="text-sm font-medium w-32">Tiempo</label>
+                    <label class="text-sm font-medium w-32">Anticipación</label>
                     <div class="flex items-center gap-2 flex-1">
                         <input type="number" id="offset-valor" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
                         <select id="offset-unidad" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
@@ -449,11 +450,12 @@
         <div class="space-y-4 mb-6">
             <!-- Selector tipo de fecha base -->
             <div class="flex items-center gap-4">
-                <label class="text-sm font-medium w-32">A partir de</label>
+                <label class="text-sm font-medium w-32">Programar según</label>
                 <select id="tipo-fecha-individual" class="border border-gray-300 rounded px-3 py-2 text-sm flex-1" aria-label="Tipo de fecha base">
-                    <option value="fecha_especifica">Fecha específica</option>
-                    <option value="fecha_inicio">Fecha de inicio (Alerta después del inicio)</option>
-                    <option value="fecha_fin">Fecha de término (Alerta antes del término)</option>
+                    <option value="fecha_especifica">Fecha y hora exacta</option>
+                    <option value="antes_inicio">Antes de que inicie la actividad</option>
+                    <option value="fecha_inicio">Después de que inicie la actividad</option>
+                    <option value="fecha_fin">Antes de que termine la actividad</option>
                 </select>
             </div>
 
@@ -465,14 +467,14 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <label class="text-sm font-medium w-32"></label>
-                    <p class="text-xs text-gray-500">La alerta se creará en la fecha y hora especificada</p>
+                    <p class="text-xs text-gray-500">La alerta se programará para esta fecha y hora exacta</p>
                 </div>
             </div>
 
             <!-- Offset temporal para fechas de inicio/fin -->
             <div id="offset-container-individual" class="hidden space-y-2">
                 <div class="flex items-center gap-4">
-                    <label class="text-sm font-medium w-32">Tiempo</label>
+                    <label class="text-sm font-medium w-32">Anticipación</label>
                     <div class="flex items-center gap-2 flex-1">
                         <input type="number" id="offset-valor-individual" min="0" value="1" class="border border-gray-300 rounded px-3 py-2 text-sm w-24" aria-label="Cantidad de tiempo">
                         <select id="offset-unidad-individual" class="border border-gray-300 rounded px-3 py-2 text-sm" aria-label="Unidad de tiempo">
@@ -840,7 +842,8 @@
         const primerPeriodo = accordion.querySelector('.periodo-row');
         if (!primerPeriodo) return null;
         
-        const fechaStr = tipoFecha === 'fecha_inicio' 
+        // antes_inicio y fecha_inicio usan la misma fecha base (fecha de inicio)
+        const fechaStr = (tipoFecha === 'fecha_inicio' || tipoFecha === 'antes_inicio')
             ? primerPeriodo.dataset.fechaInicio 
             : primerPeriodo.dataset.fechaFin;
         
@@ -868,6 +871,9 @@
             
             if (tipoFecha === 'fecha_especifica') {
                 fechaAlerta = fechaBase; // Sin offset, es la fecha exacta
+            } else if (tipoFecha === 'antes_inicio') {
+                // Antes del inicio (restar)
+                fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true);
             } else if (tipoFecha === 'fecha_inicio') {
                 // Después del inicio (sumar)
                 fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
@@ -885,10 +891,29 @@
             let mensajeError = '';
             let colorClase = 'text-gray-900';
             
-            if (fechaAlerta && fechaAlerta < ahora) {
+            // Calcular límite de 10 días antes del inicio (aplica para antes_inicio y fecha_especifica)
+            let limiteDiezDias = null;
+            if (fechaInicioBase) {
+                limiteDiezDias = new Date(fechaInicioBase);
+                limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
+            }
+            
+            // Validación para "antes del inicio" y "fecha específica"
+            if ((tipoFecha === 'antes_inicio' || tipoFecha === 'fecha_especifica') && fechaAlerta && fechaInicioBase) {
+                if (fechaAlerta < ahora) {
+                    mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
+                    colorClase = 'text-red-600';
+                } else if (fechaAlerta < limiteDiezDias) {
+                    mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: más de 10 días antes del inicio</span>';
+                    colorClase = 'text-red-600';
+                } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
+                    mensajeError = '<span class="text-red-600 font-semibold">La alerta es posterior al término de la actividad</span>';
+                    colorClase = 'text-red-600';
+                }
+            } else if (fechaAlerta && fechaAlerta < ahora) {
                 mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
                 colorClase = 'text-red-600';
-            } else if (fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
+            } else if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
                 mensajeError = '<span class="text-red-600 font-semibold">La alerta es anterior al inicio de la actividad</span>';
                 colorClase = 'text-red-600';
             } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
@@ -917,10 +942,12 @@
             offsetContainer.classList.remove('hidden');
             
             // Actualizar label explicativo
-            if (this.value === 'fecha_inicio') {
-                labelExplicacion.textContent = 'La alerta se creará después de la fecha de inicio de cada actividad';
+            if (this.value === 'antes_inicio') {
+                labelExplicacion.textContent = 'Recibirás la alerta X tiempo antes de que comience (máx. 10 días)';
+            } else if (this.value === 'fecha_inicio') {
+                labelExplicacion.textContent = 'Recibirás la alerta X tiempo después de que comience la actividad';
             } else {
-                labelExplicacion.textContent = 'La alerta se creará antes de la fecha de término de cada actividad';
+                labelExplicacion.textContent = 'Recibirás la alerta X tiempo antes de que finalice la actividad';
             }
         }
         actualizarListaActividades();
@@ -994,6 +1021,9 @@
                 if (tipoFecha === 'fecha_especifica') {
                     fechaBase = fechaEspecificaInput.value ? new Date(fechaEspecificaInput.value) : null;
                     fechaAlerta = fechaBase;
+                } else if (tipoFecha === 'antes_inicio') {
+                    fechaBase = fechaInicioPeriodo;
+                    fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, true); // Restar tiempo
                 } else if (tipoFecha === 'fecha_inicio') {
                     fechaBase = fechaInicioPeriodo;
                     fechaAlerta = calcularFechaAlerta(fechaBase, offsetVal, unidad, false);
@@ -1015,8 +1045,19 @@
                         return; // Skip esta alerta
                     }
                     
-                    // Verificar si está fuera de rango del periodo
-                    if (fechaInicioPeriodo && fechaAlerta < fechaInicioPeriodo) {
+                    // Validación de 10 días antes del inicio (aplica para antes_inicio y fecha_especifica)
+                    if ((tipoFecha === 'antes_inicio' || tipoFecha === 'fecha_especifica') && fechaInicioPeriodo) {
+                        const limiteDiezDias = new Date(fechaInicioPeriodo);
+                        limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
+                        if (fechaAlerta < limiteDiezDias) {
+                            console.warn(`Alerta inválida para ${nombreActividad}: más de 10 días antes del inicio del periodo`);
+                            alertasInvalidas++;
+                            return; // Skip esta alerta
+                        }
+                    }
+                    
+                    // Verificar si está fuera de rango del periodo (solo para tipos que no son antes_inicio ni fecha_especifica)
+                    if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && fechaInicioPeriodo && fechaAlerta < fechaInicioPeriodo) {
                         console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio del periodo`);
                         alertasInvalidas++;
                         return; // Skip esta alerta
@@ -1176,13 +1217,21 @@
             alertasPendientes.forEach(alerta => {
                 const fechaNueva = calcularFechaAlerta(alerta.fechaOriginal, offsetVal, unidad, direccion === 'antes');
                 
-                // Validar que la nueva fecha esté dentro del rango del periodo
+                // Validar que la nueva fecha esté dentro del rango permitido
                 let esValida = true;
                 let mensajeError = '';
                 
-                if (fechaNueva && alerta.fechaInicioPeriodo && fechaNueva < alerta.fechaInicioPeriodo) {
+                // Calcular límite de 10 días antes del inicio
+                let limiteDiezDias = null;
+                if (alerta.fechaInicioPeriodo) {
+                    limiteDiezDias = new Date(alerta.fechaInicioPeriodo);
+                    limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
+                }
+                
+                // Validar que no sea más de 10 días antes del inicio
+                if (fechaNueva && limiteDiezDias && fechaNueva < limiteDiezDias) {
                     esValida = false;
-                    mensajeError = 'Previo a Fecha Inicio';
+                    mensajeError = 'Máx. 10 días antes';
                 } else if (fechaNueva && alerta.fechaFinPeriodo && fechaNueva > alerta.fechaFinPeriodo) {
                     esValida = false;
                     mensajeError = 'Excede Fecha Límite';
@@ -1618,10 +1667,12 @@
             offsetContainerIndividual.classList.remove('hidden');
             
             // Actualizar label explicativo
-            if (tipoFechaIndividual.value === 'fecha_inicio') {
-                labelExplicacionIndividual.textContent = 'La alerta se creará después de la fecha de inicio de la actividad';
+            if (tipoFechaIndividual.value === 'antes_inicio') {
+                labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo antes de que comience (máx. 10 días)';
+            } else if (tipoFechaIndividual.value === 'fecha_inicio') {
+                labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo después de que comience la actividad';
             } else {
-                labelExplicacionIndividual.textContent = 'La alerta se creará antes de la fecha de término de la actividad';
+                labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo antes de que finalice la actividad';
             }
         }
         actualizarTablaCrearIndividual();
@@ -1642,12 +1693,20 @@
             if (fechaEspecificaIndividual.value) {
                 fechaAlerta = new Date(fechaEspecificaIndividual.value);
             }
+        } else if (tipoFecha === 'antes_inicio') {
+            // Antes del inicio (restar)
+            if (actividadActualCrear.fechaInicio) {
+                fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, true);
+            } else {
+                mensajeError = 'Esta actividad no tiene fecha de inicio definida';
+                esValida = false;
+            }
         } else if (tipoFecha === 'fecha_inicio') {
             // Después del inicio (sumar)
             if (actividadActualCrear.fechaInicio) {
                 fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, false);
             } else {
-                mensajeError = 'La actividad no tiene fecha de inicio definida';
+                mensajeError = 'Esta actividad no tiene fecha de inicio definida';
                 esValida = false;
             }
         } else { // fecha_fin
@@ -1655,7 +1714,7 @@
             if (actividadActualCrear.fechaFin) {
                 fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaFin, offsetVal, unidad, true);
             } else {
-                mensajeError = 'La actividad no tiene fecha de término definida';
+                mensajeError = 'Esta actividad no tiene fecha de término definida';
                 esValida = false;
             }
         }
@@ -1667,19 +1726,29 @@
             // 1. Validar que no sea en el pasado
             if (fechaAlerta < ahora) {
                 esValida = false;
-                mensajeError = 'La fecha calculada está en el pasado. Las alertas deben programarse para el futuro.';
+                mensajeError = 'Esta fecha ya pasó. Solo puedes programar alertas para el futuro.';
             }
             
-            // 2. Validar que no sea antes de la fecha de inicio (si existe)
-            if (esValida && actividadActualCrear.fechaInicio && fechaAlerta < actividadActualCrear.fechaInicio) {
+            // 2. Validación de 10 días antes del inicio (aplica para antes_inicio y fecha_especifica)
+            if (esValida && (tipoFecha === 'antes_inicio' || tipoFecha === 'fecha_especifica') && actividadActualCrear.fechaInicio) {
+                const limiteDiezDias = new Date(actividadActualCrear.fechaInicio);
+                limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
+                if (fechaAlerta < limiteDiezDias) {
+                    esValida = false;
+                    mensajeError = 'Solo puedes programar alertas hasta 10 días antes del inicio.';
+                }
+            }
+            
+            // 3. Validar que no sea antes de la fecha de inicio (solo para tipos que no son antes_inicio ni fecha_especifica)
+            if (esValida && tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && actividadActualCrear.fechaInicio && fechaAlerta < actividadActualCrear.fechaInicio) {
                 esValida = false;
-                mensajeError = 'La alerta no puede ser anterior a la fecha de inicio de la actividad.';
+                mensajeError = 'La alerta no puede ser anterior al inicio de la actividad.';
             }
             
-            // 3. Validar que no sea después de la fecha de fin (si existe)
+            // 4. Validar que no sea después de la fecha de fin (si existe)
             if (esValida && actividadActualCrear.fechaFin && fechaAlerta > actividadActualCrear.fechaFin) {
                 esValida = false;
-                mensajeError = 'La alerta no puede ser posterior a la fecha de término de la actividad.';
+                mensajeError = 'La alerta no puede ser posterior al término de la actividad.';
             }
         }
         
@@ -1739,6 +1808,9 @@
                 return;
             }
             fechaAlerta = new Date(fechaEspecificaIndividual.value);
+        } else if (tipoFecha === 'antes_inicio') {
+            // Antes del inicio (restar tiempo)
+            fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, true);
         } else if (tipoFecha === 'fecha_inicio') {
             fechaAlerta = calcularFechaAlerta(actividadActualCrear.fechaInicio, offsetVal, unidad, false);
         } else {
@@ -1930,22 +2002,29 @@
         // VALIDACIONES
         const ahora = new Date();
         
+        // Calcular límite de 10 días antes del inicio
+        let limiteDiezDias = null;
+        if (alertaIndividualActual.fechaInicio) {
+            limiteDiezDias = new Date(alertaIndividualActual.fechaInicio);
+            limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
+        }
+        
         // 1. Validar que no sea en el pasado
         if (fechaNueva < ahora) {
             esValida = false;
-            mensajeError = '⚠️ La fecha calculada está en el pasado. Las alertas deben programarse para el futuro.';
+            mensajeError = '⚠️ Esta fecha ya pasó. Solo puedes programar alertas para el futuro.';
         }
         
-        // 2. Validar que no sea antes de la fecha de inicio (si existe)
-        if (esValida && alertaIndividualActual.fechaInicio && fechaNueva < alertaIndividualActual.fechaInicio) {
+        // 2. Validar que no sea más de 10 días antes del inicio
+        if (esValida && limiteDiezDias && fechaNueva < limiteDiezDias) {
             esValida = false;
-            mensajeError = '⚠️ La alerta no puede ser anterior a la fecha de inicio de la actividad.';
+            mensajeError = '⚠️ Solo puedes programar alertas hasta 10 días antes del inicio.';
         }
         
         // 3. Validar que no sea después de la fecha de fin (si existe)
         if (esValida && alertaIndividualActual.fechaFin && fechaNueva > alertaIndividualActual.fechaFin) {
             esValida = false;
-            mensajeError = '⚠️ La alerta no puede ser posterior a la fecha de término de la actividad.';
+            mensajeError = '⚠️ La alerta no puede ser posterior al término de la actividad.';
         }
         
         // Mostrar u ocultar error
