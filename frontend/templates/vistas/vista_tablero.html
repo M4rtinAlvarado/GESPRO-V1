@@ -79,7 +79,7 @@
                     <div class="periodo-card bg-white p-4 mb-3 rounded-xl border-2 border-blue-500"
                         data-periodo-id="{{ p.id }}"
                         data-actividad-id="{{ actividad.id }}"
-                        data-linea="{% if actividad.linea_trabajo %}{% if actividad.tipo == 'Difusión' %}{{ actividad.linea_trabajo|join:',' }}{% else %}{{ actividad.linea_trabajo }}{% endif %}{% endif %}"
+                        data-linea="{{ actividad.linea_trabajo|default:'' }}"                        
                         data-encargados="{% for e in actividad.encargados %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}">
 
                         <strong class="text-gray-800">{{ actividad.nombre }}</strong>
@@ -108,7 +108,7 @@
                             Encargados:
                             {% if actividad.encargados %}
                                 {% for encargado in actividad.encargados %}
-                                    {{ encargado.nombre }}{% if not forloop.last %}, {% endif %}
+                                    {{ encargado.nombre }}{% if not forloop.last %} {% endif %}
                                 {% endfor %}
                             {% else %}
                                 Sin encargados
@@ -187,26 +187,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function filtrarActividades() {
-        // Normalizamos los valores que el usuario escribe
         const encargadoVal = sinTildes(filterEncargado.value);
-        const lineaVal = filterLinea.value;
+        const lineaVal = filterLinea.value; // No aplicamos sinTildes aquí para comparar exacto con el value del select
         const nombreVal = sinTildes(filtroActividades.value);
 
         document.querySelectorAll('.periodo-card').forEach(card => {
-            // 1. Busca el nombre en el <strong> (Visible)
             const actividadNombre = sinTildes(card.querySelector('strong').textContent);
-            
-            // 2. Busca en los atributos data- (Ocultos)
             const encargadosAttr = sinTildes(card.dataset.encargados || "");
-            const lineasArray = (card.dataset.linea || "")
-                                .split(',')
-                                .map(l => sinTildes(l.trim()));
+            
+            // Obtenemos el valor bruto del data-attribute
+            const lineaAttr = card.dataset.linea || "";
 
             let mostrar = true;
 
-            // Lógica de filtrado coincidiendo con texto sin tildes
+            // Filtro de Encargado (Búsqueda parcial)
             if (encargadoVal && !encargadosAttr.includes(encargadoVal)) mostrar = false;
-            if (lineaVal && !lineasArray.includes(lineaVal)) mostrar = false;
+
+            // Filtro de Línea (Búsqueda exacta o contenida)
+            // Usamos includes para manejar casos donde haya múltiples líneas separadas por comas o guiones
+            if (lineaVal && !lineaAttr.includes(lineaVal)) mostrar = false;
+
+            // Filtro de Nombre (Búsqueda parcial)
             if (nombreVal && !actividadNombre.includes(nombreVal)) mostrar = false;
 
             card.style.display = mostrar ? 'block' : 'none';
