@@ -225,10 +225,10 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 LOGIN_REDIRECT_URL = '/proyectos'
 
-#MIDDLEWARE.insert(
-#    MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
-#    'gespro.middleware.LoginRequiredMiddleware'
-#)
+MIDDLEWARE.insert(
+    MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+    'gespro.middleware.LoginRequiredMiddleware'
+)
 
 # Lista blanca de correos permitidos
 ALLOWED_GOOGLE_EMAILS = [
