@@ -5,6 +5,10 @@ from django.http import JsonResponse
 import json
 from datetime import datetime
 from django.utils import timezone
+import pytz
+
+# Zona horaria de Chile
+CHILE_TZ = pytz.timezone('America/Santiago')
 
 
 # Create your views here.
@@ -122,8 +126,7 @@ def crear_alertas(request):
             if isinstance(datos, dict):
                     datos = [datos]
 
-            timezone.activate('America/Santiago')
-            ahora = timezone.localtime()
+            ahora = timezone.now()
             
             for item in datos:
                 # CAMBIO: Ahora recibimos 'periodo_id', no 'actividad'
@@ -133,8 +136,10 @@ def crear_alertas(request):
                 if not periodo_id:
                     continue
 
-                fecha_envio_dt = datetime.strptime(fecha_envio_str, "%Y-%m-%d %H:%M:%S").replace(microsecond=0)
-                fecha_envio_aware = timezone.make_aware(fecha_envio_dt)
+                # Parsear la fecha como naive
+                fecha_envio_dt = datetime.strptime(fecha_envio_str, "%Y-%m-%d %H:%M:%S")
+                # Localizarla a Chile (la fecha viene en hora local de Chile)
+                fecha_envio_aware = CHILE_TZ.localize(fecha_envio_dt)
 
                 if fecha_envio_aware > ahora:
                     # Buscamos el Periodo
@@ -176,11 +181,10 @@ def mover_alertas(request):
                     alerta_id = alerta_item.get("id_alerta")
                     fecha_envio_str = alerta_item.get("fecha")
                     
-                    # 💡 CAMBIO CLAVE: Se añade '%S' para el componente de segundos.
+                    # Parsear la fecha como naive
                     fecha_envio_dt = datetime.strptime(fecha_envio_str, "%Y-%m-%d %H:%M:%S")
-                    
-                    # Es buena práctica asegurar que la datetime es 'aware' para la comparación con timezone.now()
-                    fecha_envio_aware = timezone.make_aware(fecha_envio_dt)
+                    # Localizarla a Chile (la fecha viene en hora local de Chile)
+                    fecha_envio_aware = CHILE_TZ.localize(fecha_envio_dt)
                     
                     # verificar que la fecha no haya pasado
                     if fecha_envio_aware > ahora:
