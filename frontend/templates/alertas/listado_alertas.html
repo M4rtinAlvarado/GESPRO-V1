@@ -898,6 +898,13 @@
                 limiteDiezDias.setDate(limiteDiezDias.getDate() - 10);
             }
             
+            // Calcular límite de 10 días antes del fin (aplica para fecha_fin)
+            let limiteDiezDiasFin = null;
+            if (fechaFinBase) {
+                limiteDiezDiasFin = new Date(fechaFinBase);
+                limiteDiezDiasFin.setDate(limiteDiezDiasFin.getDate() - 10);
+            }
+            
             // Validación para "antes del inicio" y "fecha específica"
             if ((tipoFecha === 'antes_inicio' || tipoFecha === 'fecha_especifica') && fechaAlerta && fechaInicioBase) {
                 if (fechaAlerta < ahora) {
@@ -910,10 +917,19 @@
                     mensajeError = '<span class="text-red-600 font-semibold">La alerta es posterior al término de la actividad</span>';
                     colorClase = 'text-red-600';
                 }
+            } else if (tipoFecha === 'fecha_fin' && fechaAlerta && fechaFinBase) {
+                // Validación para "antes de que termine"
+                if (fechaAlerta < ahora) {
+                    mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
+                    colorClase = 'text-red-600';
+                } else if (fechaAlerta < limiteDiezDiasFin) {
+                    mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: más de 10 días antes del término</span>';
+                    colorClase = 'text-red-600';
+                }
             } else if (fechaAlerta && fechaAlerta < ahora) {
                 mensajeError = '<span class="text-red-600 font-semibold">No se puede crear: la fecha ya pasó</span>';
                 colorClase = 'text-red-600';
-            } else if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
+            } else if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && tipoFecha !== 'fecha_fin' && fechaAlerta && fechaInicioBase && fechaAlerta < fechaInicioBase) {
                 mensajeError = '<span class="text-red-600 font-semibold">La alerta es anterior al inicio de la actividad</span>';
                 colorClase = 'text-red-600';
             } else if (fechaAlerta && fechaFinBase && fechaAlerta > fechaFinBase) {
@@ -947,7 +963,7 @@
             } else if (this.value === 'fecha_inicio') {
                 labelExplicacion.textContent = 'Recibirás la alerta X tiempo después de que comience la actividad';
             } else {
-                labelExplicacion.textContent = 'Recibirás la alerta X tiempo antes de que finalice la actividad';
+                labelExplicacion.textContent = 'Recibirás la alerta X tiempo antes de que finalice (máx. 10 días)';
             }
         }
         actualizarListaActividades();
@@ -1056,8 +1072,19 @@
                         }
                     }
                     
-                    // Verificar si está fuera de rango del periodo (solo para tipos que no son antes_inicio ni fecha_especifica)
-                    if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && fechaInicioPeriodo && fechaAlerta < fechaInicioPeriodo) {
+                    // Validación de 10 días antes del fin (aplica para fecha_fin)
+                    if (tipoFecha === 'fecha_fin' && fechaFinPeriodo) {
+                        const limiteDiezDiasFin = new Date(fechaFinPeriodo);
+                        limiteDiezDiasFin.setDate(limiteDiezDiasFin.getDate() - 10);
+                        if (fechaAlerta < limiteDiezDiasFin) {
+                            console.warn(`Alerta inválida para ${nombreActividad}: más de 10 días antes del término del periodo`);
+                            alertasInvalidas++;
+                            return; // Skip esta alerta
+                        }
+                    }
+                    
+                    // Verificar si está fuera de rango del periodo (solo para tipos que no son antes_inicio, fecha_especifica ni fecha_fin)
+                    if (tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && tipoFecha !== 'fecha_fin' && fechaInicioPeriodo && fechaAlerta < fechaInicioPeriodo) {
                         console.warn(`Alerta inválida para ${nombreActividad}: la alerta es anterior al inicio del periodo`);
                         alertasInvalidas++;
                         return; // Skip esta alerta
@@ -1672,7 +1699,7 @@
             } else if (tipoFechaIndividual.value === 'fecha_inicio') {
                 labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo después de que comience la actividad';
             } else {
-                labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo antes de que finalice la actividad';
+                labelExplicacionIndividual.textContent = 'Recibirás la alerta X tiempo antes de que finalice (máx. 10 días)';
             }
         }
         actualizarTablaCrearIndividual();
@@ -1739,8 +1766,18 @@
                 }
             }
             
-            // 3. Validar que no sea antes de la fecha de inicio (solo para tipos que no son antes_inicio ni fecha_especifica)
-            if (esValida && tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && actividadActualCrear.fechaInicio && fechaAlerta < actividadActualCrear.fechaInicio) {
+            // 2.5 Validación de 10 días antes del fin (aplica para fecha_fin)
+            if (esValida && tipoFecha === 'fecha_fin' && actividadActualCrear.fechaFin) {
+                const limiteDiezDiasFin = new Date(actividadActualCrear.fechaFin);
+                limiteDiezDiasFin.setDate(limiteDiezDiasFin.getDate() - 10);
+                if (fechaAlerta < limiteDiezDiasFin) {
+                    esValida = false;
+                    mensajeError = 'Solo puedes programar alertas hasta 10 días antes del término.';
+                }
+            }
+            
+            // 3. Validar que no sea antes de la fecha de inicio (solo para tipos que no son antes_inicio, fecha_especifica ni fecha_fin)
+            if (esValida && tipoFecha !== 'antes_inicio' && tipoFecha !== 'fecha_especifica' && tipoFecha !== 'fecha_fin' && actividadActualCrear.fechaInicio && fechaAlerta < actividadActualCrear.fechaInicio) {
                 esValida = false;
                 mensajeError = 'La alerta no puede ser anterior al inicio de la actividad.';
             }

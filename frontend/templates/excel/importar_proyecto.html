@@ -1,92 +1,214 @@
 {% extends 'base/navbar1.html'%}
 {% block content %}
 
-{% if messages %}
-<!-- Mensajes de error y advertencia solamente -->
-<div class="mt-3 space-y-2">
-  {% for message in messages %}
-    {% if message.tags == 'error' or message.tags == 'warning' %}
-      <div class="
-        px-4 py-2 rounded-lg text-sm font-medium 
-        {% if message.tags == 'error' %}
-          bg-red-100 text-red-700 border border-red-300
-        {% elif message.tags == 'warning' %}
-          bg-yellow-100 text-yellow-800 border border-yellow-300
-        {% endif %}
-      ">
-        {{ message }}
-      </div>
-    {% endif %}
-  {% endfor %}
-</div>
-{% endif %}
-
 {% load widget_tweaks %}
 
-<!-- Contenedor -->
-<div class="flex flex-col items-center gap-4 py-6 relative min-w-[250px] text-white">
+<div class="max-w-xl mx-auto px-4 py-8">
 
-  <!-- Formulario -->
-  <form method="post" enctype="multipart/form-data" action="{% url 'verificar_proyecto' %}"
-        class="space-y-4 p-6 border border-black rounded-xl bg-gray-800 text-white">
+  <!-- Card del Formulario -->
+  <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+    
+    <!-- Header del Card -->
+    <div class="bg-blue-950 px-6 py-5">
+      <h2 class="text-xl font-semibold text-white">Crear Nuevo Proyecto</h2>
+      <p class="text-blue-200 text-sm mt-1">Completa los datos para comenzar</p>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" enctype="multipart/form-data" action="{% url 'verificar_proyecto' %}" class="p-6 space-y-5" id="form-proyecto" novalidate>
       {% csrf_token %}
 
+      <!-- Mensajes de error y advertencia dentro del card -->
+      {% if messages %}
+      <div class="space-y-3">
+        {% for message in messages %}
+          {% if message.tags == 'error' or message.tags == 'warning' %}
+            <div class="server-message flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium 
+              {% if message.tags == 'error' %}
+                bg-red-50 text-red-700 border border-red-200
+              {% elif message.tags == 'warning' %}
+                bg-amber-50 text-amber-700 border border-amber-200
+              {% endif %}">
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              {{ message }}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {% for field in form %}
-        <div class="space-y-1">
-          <label class="block text-white font-medium">{{ field.label }}</label>
-          {{ field|add_class:"w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" }}
-          {% if field.errors %}
-            <p class="text-red-500 text-sm">{{ field.errors }}</p>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700">{{ field.label }} <span class="text-red-400">*</span></label>
+          
+          {% if field.name == 'archivo' %}
+            <!-- Input de archivo personalizado -->
+            <div class="relative">
+              <input type="file" name="{{ field.name }}" id="id_{{ field.name }}" 
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    accept=".xlsx,.xls">
+              <div id="file-display" class="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 flex items-center justify-between transition-all hover:border-blue-400">
+                <span id="file-name" class="text-gray-400">Seleccionar archivo Excel...</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+              </div>
+            </div>
+          {% else %}
+            {{ field|add_class:"w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" }}
           {% endif %}
         </div>
       {% endfor %}
 
-
-      <button type="submit"
-              class="w-full bg-green-600 hover:bg-green-700 
-                     text-white font-semibold py-4 px-4 
-                     rounded-lg shadow transition">
-          Crear Proyecto
+      <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Crear Proyecto
       </button>
-  </form>
+    </form>
 
-  <!-- Enlace para descargar la plantilla de Gantt -->
-  <a href="{% url 'descargar_plantilla' %}" 
-     class="block text-center bg-blue-600 hover:bg-blue-700 
-            text-white font-semibold py-2 px-4 
-            rounded-lg shadow transition">
+    <script>
+      // Mostrar nombre del archivo seleccionado
+      const fileInput = document.getElementById('id_archivo');
+      const fileDisplay = document.getElementById('file-display');
+      const fileName = document.getElementById('file-name');
+
+      if (fileInput) {
+        fileInput.addEventListener('change', function() {
+          if (this.files && this.files.length > 0) {
+            fileName.textContent = this.files[0].name;
+            fileName.classList.remove('text-gray-400');
+            fileName.classList.add('text-gray-800', 'font-medium');
+            fileDisplay.classList.remove('border-gray-300');
+            fileDisplay.classList.add('border-green-400', 'bg-green-50');
+          } else {
+            fileName.textContent = 'Seleccionar archivo Excel...';
+            fileName.classList.add('text-gray-400');
+            fileName.classList.remove('text-gray-800', 'font-medium');
+            fileDisplay.classList.add('border-gray-300');
+            fileDisplay.classList.remove('border-green-400', 'bg-green-50');
+          }
+        });
+      }
+
+      // Validación del formulario (solo visual, sin mensajes duplicados)
+      document.getElementById('form-proyecto').addEventListener('submit', function(e) {
+        const nombre = this.querySelector('input[name="nombre"]');
+        const archivo = document.getElementById('id_archivo');
+        let valid = true;
+
+        // Limpiar errores previos generados por JS
+        this.querySelectorAll('.error-msg-js').forEach(el => el.remove());
+
+        if (nombre && !nombre.value.trim()) {
+          valid = false;
+          nombre.classList.remove('border-gray-300');
+          nombre.classList.add('border-red-400');
+        } else if (nombre) {
+          nombre.classList.remove('border-red-400');
+          nombre.classList.add('border-gray-300');
+        }
+
+        if (archivo && archivo.files.length === 0) {
+          valid = false;
+          fileDisplay.classList.remove('border-gray-300', 'border-green-400');
+          fileDisplay.classList.add('border-red-400');
+        }
+
+        if (!valid) {
+          e.preventDefault();
+          
+          // Solo mostrar mensaje JS si no hay mensajes del servidor
+          const existingServerMessages = this.querySelectorAll('.server-message');
+          if (existingServerMessages.length === 0) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-msg-js flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 text-sm border border-red-200';
+            errorDiv.innerHTML = `
+              <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              Por favor, completa todos los campos requeridos.
+            `;
+            // Insertar después del csrf token
+            const csrfToken = this.querySelector('[name="csrfmiddlewaretoken"]');
+            if (csrfToken) {
+              csrfToken.insertAdjacentElement('afterend', errorDiv);
+            } else {
+              this.insertBefore(errorDiv, this.firstChild);
+            }
+          }
+        }
+      });
+    </script>
+  </div>
+
+  <!-- Enlace Plantilla -->
+  <div class="mt-6 text-center">
+    <p class="text-gray-500 text-sm mb-3">¿Necesitas la plantilla de Gantt?</p>
+    <a href="{% url 'descargar_plantilla' %}" class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium py-3 px-6 rounded-xl shadow-sm transition-all duration-200">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
       Descargar plantilla Gantt
-  </a>
+    </a>
+  </div>
+
 </div>
 
 <!-- Modal de verificación de datos -->
-<div id="modal-verificacion" tabindex="-1" aria-hidden="true" class="{% if mostrar_modal %}flex{% else %}hidden{% endif %} fixed inset-0 bg-black/75 items-center justify-center z-50 text-white">
-  <div class="bg-gray-900 rounded-lg p-6 w-11/12 max-w-lg">
-    <h2 class="text-xl font-bold mb-4">Verificación de Datos</h2>
-    <div id="datos-verificacion" class="mb-4 max-h-64 overflow-y-auto">
-      <h3 class="text-lg font-semibold mb-2">Datos de <strong>{{info_proyecto.Nombre_del_Proyecto}}</strong>:</h3>
+<div id="modal-verificacion" tabindex="-1" aria-hidden="true" class="{% if mostrar_modal %}flex{% else %}hidden{% endif %} fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center z-50">
+  <div class="bg-white rounded-2xl shadow-2xl w-11/12 max-w-lg overflow-hidden transform transition-all">
+    
+    <!-- Header del Modal -->
+    <div class="bg-blue-950 px-6 py-4">
+      <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Verificación de Datos
+      </h2>
+    </div>
+    
+    <!-- Contenido -->
+    <div class="p-6">
+      <div class="mb-4">
+        <p class="text-sm text-gray-500 mb-1">Proyecto:</p>
+        <h3 class="text-lg font-semibold text-gray-800">{{info_proyecto.Nombre_del_Proyecto}}</h3>
+      </div>
       
       {% if info_proyecto %}
-        <ul class="list-disc list-inside space-y-2">
+      <div class="bg-gray-50 rounded-xl p-4 max-h-64 overflow-y-auto">
+        <ul class="space-y-3">
           {% for key, value in info_proyecto.items %}
             {% if key != 'Nombre_del_Proyecto' %}
-              <li>
-                <strong>{{ key }}:</strong> {{ value }}
+              <li class="flex justify-between items-start text-sm border-b border-gray-200 pb-2 last:border-0 last:pb-0">
+                <span class="font-medium text-gray-600">{{ key }}:</span>
+                <span class="text-gray-800 text-right">{{ value }}</span>
               </li>
             {% endif %}
           {% endfor %}
         </ul>
+      </div>
       {% else %}
-        <p>No hay datos para verificar.</p>
+      <p class="text-gray-500 text-sm">No hay datos para verificar.</p>
       {% endif %}
     </div>
-    <div class="flex justify-end space-x-4">
-      <button id="btn-cancelar" onclick="document.getElementById('modal-verificacion').classList.add('hidden')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg">Cancelar</button>
+    
+    <!-- Acciones -->
+    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+      <button id="btn-cancelar" onclick="document.getElementById('modal-verificacion').classList.add('hidden')" class="px-5 py-2.5 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 font-medium transition-colors">
+        Cancelar
+      </button>
       <form method="post" action="{% url 'importar_proyecto' %}">
         {% csrf_token %}
         <input type="hidden" name="nombre_proyecto" value="{{ info_proyecto.Nombre_del_Proyecto }}">
         <input type="hidden" name="archivo" value="{{ archivo }}">
-        <button type="submit" id="btn-confirmar"  class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">Confirmar</button>
+        <button type="submit" id="btn-confirmar" class="px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg transition-all">
+          Confirmar
+        </button>
       </form>
     </div>
   </div>

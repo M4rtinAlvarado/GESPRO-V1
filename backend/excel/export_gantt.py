@@ -534,7 +534,7 @@ def exportar_gantt_excel(proyecto_id):
             ws.cell(row=fila, column=4).alignment = wrap_align
             
             # Columna E: Responsables
-            ws.cell(row=fila, column=5, value='; '.join(act['responsables']))
+            ws.cell(row=fila, column=5, value=';'.join(act['responsables']))
             ws.cell(row=fila, column=5).border = borde_actual
             ws.cell(row=fila, column=5).alignment = wrap_align
             

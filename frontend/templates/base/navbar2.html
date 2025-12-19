@@ -3,104 +3,159 @@
 <html data-theme="light" lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>{% block title %}Proyecto X{% endblock %}</title>
+  <title>{% block title %}{{ proyecto.nombre }} - GESPRO{% endblock %}</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   {% tailwind_css %}
 </head>
-<body class="bg-gray-100 overflow-hidden">
+<body class="bg-gray-50 h-screen overflow-hidden">
 
+<nav class="bg-blue-950 shadow-xl fixed top-0 left-0 w-full z-50">
+  <div class="w-full px-6">
+    <div class="flex items-center justify-between h-20">
 
+      <!-- Izquierda: Botón Atrás + Logo + Nombre Proyecto -->
+      <div class="flex items-center gap-4">
+        <a href="{% url 'proyectos' %}" class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 group" title="Volver a proyectos">
+          <svg class="w-5 h-5 text-white group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
         
-  <nav class="bg-blue-950 shadow-md w-full fixed top-0 left-0 z-50">
+        <!-- Logo -->
+        <span class="text-3xl font-bold text-white tracking-tight">GESPRO</span>
+        
+        <!-- Separador -->
+        <div class="h-8 w-px bg-white/30 mx-2"></div>
+        
+        <!-- Nombre del Proyecto -->
+        <h1 class="text-xl font-semibold text-white truncate max-w-xs">{{ proyecto.nombre }}</h1>
+      </div>
 
-    <div class="w-full px-6">
-      <div class="flex items-center justify-between h-20">
-
-        <!-- Flecha izquierda -->
-        <div class="flex items-center">
-          <a href="{% url 'proyectos' %}"
-            class="text-5xl font-bold text-white hover:text-gray-300 flex items-center h-full">
-            ←
+      <!-- Derecha: Navegación + Exportar + Usuario -->
+      <div class="flex items-center gap-4">
+        
+        <!-- Links de navegación -->
+        <div class="flex items-center gap-1">
+          <a href="{% url 'vista_gantt' proyecto.id %}" 
+             class="px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 {% if request.resolver_match.url_name == 'vista_gantt' %}bg-white text-blue-950{% else %}text-white/70 hover:text-white hover:bg-white/10{% endif %}">
+            Gantt
+          </a>
+          <a href="{% url 'lista_actividades' proyecto.id %}" 
+             class="px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 {% if request.resolver_match.url_name == 'lista_actividades' %}bg-white text-blue-950{% else %}text-white/70 hover:text-white hover:bg-white/10{% endif %}">
+            Lista
+          </a>
+          <a href="{% url 'vista_tablero' proyecto.id %}" 
+             class="px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 {% if request.resolver_match.url_name == 'vista_tablero' %}bg-white text-blue-950{% else %}text-white/70 hover:text-white hover:bg-white/10{% endif %}">
+            Tablero
+          </a>
+          <a href="{% url 'listado_alertas' proyecto.id %}" 
+             class="px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 {% if request.resolver_match.url_name == 'listado_alertas' %}bg-white text-blue-950{% else %}text-white/70 hover:text-white hover:bg-white/10{% endif %}">
+            Alertas
+          </a>
+          <a href="{% url 'reportes' proyecto.id %}" 
+             class="px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 {% if request.resolver_match.url_name == 'reportes' %}bg-white text-blue-950{% else %}text-white/70 hover:text-white hover:bg-white/10{% endif %}">
+            Reportes
           </a>
         </div>
 
-        <!-- Título centrado -->
-        <div class="absolute left-1/2 -translate-x-1/2">
-          <h1 class="text-4xl font-semibold text-white">
-            {{ proyecto.nombre }}
-          </h1>
-        </div>
+        <!-- Botón Exportar Gantt (solo icono) -->
+        <button id="btn-exportar-gantt" class="flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200" title="Exportar Gantt">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+        </button>
 
-        <!-- Derecha: links + usuario -->
-        <div class="flex items-center space-x-6 ml-auto">
-          <!-- links -->
-          <div class="flex space-x-6">
-            <a href="{% url 'vista_gantt' proyecto.id %}"
-             class="text-white hover:text-gray-300 border-b-2 border-transparent {% if request.resolver_match.url_name == 'vista_gantt' %} font-bold border-white {% endif %}">
-              Gantt
-            </a>
-            <a href="{% url 'lista_actividades' proyecto.id %}" 
-            class="text-white hover:text-gray-300 border-b-2 border-transparent {% if request.resolver_match.url_name == 'lista_actividades' %} font-bold border-white {% endif %}">
-              Lista
-            </a>
-            <a href="{% url 'vista_tablero' proyecto.id %}" 
-            class="text-white hover:text-gray-300 border-b-2 border-transparent {% if request.resolver_match.url_name == 'vista_tablero' %} font-bold border-white {% endif %}">
-                Tablero
-            </a>
-            <a href="{% url 'listado_alertas' proyecto.id %}" 
-            class="text-white hover:text-gray-300 border-b-2 border-transparent {% if request.resolver_match.url_name == 'listado_alertas' %} font-bold border-white {% endif %}">
-                Alertas
-            </a>
-            <a href="{% url 'reportes' proyecto.id %}" 
-            class="text-white hover:text-gray-300 border-b-2 border-transparent {% if request.resolver_match.url_name == 'reportes' %} font-bold border-white {% endif %}">
-                Reportes
+        <!-- Separador -->
+        <div class="h-8 w-px bg-white/20"></div>
+
+        <!-- Usuario -->
+        {% if request.user.is_authenticated %}
+        <div class="relative flex items-center">
+          <div id="user-menu-button" class="cursor-pointer flex items-center gap-2 text-white hover:text-blue-200 transition-colors px-3 py-2 rounded-lg hover:bg-white/10">
+            <span class="text-base font-medium">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+
+          <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-100">
+            <a href="{% url 'account_logout' %}" class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+              Cerrar sesión
             </a>
           </div>
-          {% if request.user.is_authenticated %}
-          <div class="relative flex items-center">
-            <div class="h-10 w-px bg-white opacity-30 mx-4"></div>
-
-            <div id="user-menu-button"
-                class="cursor-pointer text-white text-lg font-semibold px-3 py-2 hover:text-gray-300">
-              {{ request.user.get_full_name|default:request.user.username }}
-            </div>
-
-            <div id="user-dropdown"
-                class="hidden absolute right-0 top-full mt-2 w-48 bg-gray-100 rounded-md shadow-lg py-2 z-50">
-              <a href="{% url 'account_logout' %}"
-                class="block px-4 py-2 text-gray-800 hover:bg-gray-300">
-                Cerrar sesión
-              </a>
-            </div>
-          </div>
-          {% endif %}
         </div>
+        {% endif %}
 
       </div>
     </div>
-  </nav>
+  </div>
+</nav>
 
-  <main class="p-4 h-[calc(100vh-5rem)] overflow-y-auto mt-20">
+<!-- Modal Exportar Gantt -->
+<div id="modal-exportar-gantt" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" id="modal-exportar-overlay"></div>
+  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Exportar Gantt</h3>
+    <p class="text-gray-600 mb-6">¿Estás seguro de exportar? Será en un archivo .xlsx.</p>
+    
+    <div class="flex gap-3 justify-end">
+      <button id="btn-cancelar-exportar" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium rounded-lg hover:bg-gray-100 transition-colors">
+        Cancelar
+      </button>
+      <a id="btn-confirmar-exportar" href="{% url 'exportar_gantt' proyecto.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+        Exportar
+      </a>
+    </div>
+  </div>
+</div>
 
+<main class="mt-20 p-4 h-[calc(100vh-5rem)] overflow-y-auto">
+  {% block content %}
+  {% endblock %}
+</main>
 
-    {% block content %}
-    {% endblock %}
-  </main>
-  <script>
-    const btn = document.getElementById('user-menu-button');
-    const drop = document.getElementById('user-dropdown');
+<script>
+  // Menú de usuario
+  const btn = document.getElementById('user-menu-button');
+  const drop = document.getElementById('user-dropdown');
 
-    btn?.addEventListener('click', () => drop.classList.toggle('hidden'));
+  btn?.addEventListener('click', () => drop.classList.toggle('hidden'));
 
-    window.addEventListener('click', function(e){
-        if (!btn.contains(e.target) && !drop.contains(e.target)) {
-            drop.classList.add('hidden');
-        }
-    });
+  window.addEventListener('click', function(e){
+    if (btn && drop && !btn.contains(e.target) && !drop.contains(e.target)) {
+      drop.classList.add('hidden');
+    }
+  });
+
+  // Modal Exportar Gantt
+  const btnExportar = document.getElementById('btn-exportar-gantt');
+  const modalExportar = document.getElementById('modal-exportar-gantt');
+  const btnCancelarExportar = document.getElementById('btn-cancelar-exportar');
+  const modalOverlay = document.getElementById('modal-exportar-overlay');
+
+  btnExportar?.addEventListener('click', () => {
+    modalExportar.classList.remove('hidden');
+  });
+
+  btnCancelarExportar?.addEventListener('click', () => {
+    modalExportar.classList.add('hidden');
+  });
+
+  modalOverlay?.addEventListener('click', () => {
+    modalExportar.classList.add('hidden');
+  });
+
+  // Cerrar modal al confirmar exportación
+  const btnConfirmarExportar = document.getElementById('btn-confirmar-exportar');
+  btnConfirmarExportar?.addEventListener('click', () => {
+    modalExportar.classList.add('hidden');
+  });
 </script>
 
 </body>
