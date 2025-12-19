@@ -89,7 +89,7 @@ def verificar_proyecto(request):
             if request.POST.get('nombre_proyecto') or request.FILES.get('archivo'):
                 for field, errors in form.errors.items():
                     for error in errors:
-                        messages.error(request, f"Error en {field}: {error}")
+                        messages.error(request, error)
     else:
         form = UploadExcelForm()
 
