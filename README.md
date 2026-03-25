@@ -1,63 +1,29 @@
-# GESPRO
+# Gespro Project - Guía de Configuración
 
-Proyecto Django + Superset para gestión de proyectos (GESPRO).
+Este proyecto es una aplicación Django que utiliza Tailwind CSS, PostgreSQL y Superset. Sigue estos pasos para configurar tu entorno de desarrollo local.
 
-## Índice
+## Requisitos Previos
 
-- [Descripción breve](#descripción-breve)
-- [Archivo `.env`](#archivo-env)
-- [Requisitos para ejecutar Docker Compose](#requisitos-para-ejecutar-docker-compose)
-- [Pasos para levantar con Docker Compose](#pasos-para-levantar-con-docker-compose)
-- [Pruebas básicas de despliegue](#pruebas-básicas-de-despliegue)
+* **Conda** (Anaconda o Miniconda) instalado.
+* **Python 3.10+** (instalado dentro del entorno de Conda).
 
-## Descripción breve
+---
 
-GESPRO es una aplicación basada en Django que provee funcionalidades para gestionar proyectos, vistas y reportes. Incluye un servicio web principal (Django) y una instancia de Apache Superset para visualización y exploración de datos. La configuración del entorno y los servicios se orquesta mediante Docker Compose.
+## Paso 1: Configuración del Entorno Virtual
 
-## Archivo `.env`
+Si aún no has creado o activado tu entorno, ejecuta:
 
-El proyecto carga variables de entorno desde un archivo `.env` usando python-dotenv. A continuación se listan las variables relevantes y su propósito.
-
-Variables usadas en el código y ejemplos:
-
-- EMAIL_MODE: Modo de envío de correos. Valores: `dummy` (por defecto), `console`, `smtp`.
-  - Ejemplo: `EMAIL_MODE=console`
-- SMTP_SERVER: Host del servidor SMTP (solo si `EMAIL_MODE=smtp`).
-  - Ejemplo: `SMTP_SERVER=smtp.mail.example`
-- EMAIL: Usuario/email para autenticación SMTP (si `EMAIL_MODE=smtp`).
-  - Ejemplo: `EMAIL=no-reply@example.com`
-- PASSWORD_APP: Contraseña o token de aplicación para SMTP (si `EMAIL_MODE=smtp`).
-  - Ejemplo: `PASSWORD_APP=mi_clave_smtp`
- - POSTGRES_DB: Nombre de la base de datos Postgres usada por Docker (default: `gespro`).
-   - Ejemplo: `POSTGRES_DB=gespro`
- - POSTGRES_USER: Usuario de la base de datos Postgres (default: `albaca`).
-   - Ejemplo: `POSTGRES_USER=albaca`
- - POSTGRES_PASSWORD: Contraseña de Postgres (default incluido en compose). Reemplazar en producción.
-   - Ejemplo: `POSTGRES_PASSWORD=secreto_postgres`
- - POSTGRES_PORT: Puerto interno de Postgres (default: `5003`).
-   - Ejemplo: `POSTGRES_PORT=5003`
- - DB_HOST: Host del servicio de BD desde Django (default: `gespro-db`).
-   - Ejemplo: `DB_HOST=gespro-db`
- - DJANGO_HOST_PORT: Puerto del host para mapear el servidor Django (host:container). Default `3003`.
-   - Ejemplo: `DJANGO_HOST_PORT=3003`
- - SUPERSET_HOST_PORT: Puerto del host para mapear Superset (host:container). Default `4003`.
-   - Ejemplo: `SUPERSET_HOST_PORT=4003`
- - SUPERSET_ADMIN_USERNAME: Usuario admin que se creará en Superset (default: `admin`).
-   - Ejemplo: `SUPERSET_ADMIN_USERNAME=admin`
- - SUPERSET_ADMIN_PASSWORD: Contraseña del admin de Superset (default: `adminpass123`).
-   - Ejemplo: `SUPERSET_ADMIN_PASSWORD=contraseña_segura`
- - SUPERSET_ADMIN_FIRSTNAME: Nombre del admin (default: `Super`).
-   - Ejemplo: `SUPERSET_ADMIN_FIRSTNAME=Super`
- - SUPERSET_ADMIN_LASTNAME: Apellido del admin (default: `Admin`).
-   - Ejemplo: `SUPERSET_ADMIN_LASTNAME=Admin`
- - SUPERSET_ADMIN_EMAIL: Email del admin (default: `admin@example.com`).
-   - Ejemplo: `SUPERSET_ADMIN_EMAIL=admin@example.com`
-
-Nota: la configuración de la base de datos y credenciales usadas por Docker Compose (usuario `albaca`, contraseña y nombre de BD) están hardcodeadas en `docker-compose.yml` y en los settings de Django. Para producción se recomienda mover esas credenciales al `.env` y modificar `backend/gespro/settings.py` para leerlas desde variables de entorno.
-
-Ejemplo mínimo de `.env` para desarrollo:
-
+```bash
+conda activate gespro
+# Asegúrate de tener pip instalado en el entorno
+conda install pip
 ```
+
+## Paso 2: Configuración de Variables de Entorno
+
+Debes crear un archivo llamado `.env` en la raíz del proyecto y pegar el siguiente contenido:
+
+```env
 EMAIL_MODE=console
 # Si EMAIL_MODE=smtp
 # SMTP_SERVER=smtp.mail.example
@@ -75,7 +41,7 @@ DB_HOST=db
 DJANGO_HOST_PORT=3003
 SUPERSET_HOST_PORT=4003
  
-# Credenciales admin Superset (creadas al iniciar el contenedor)
+# Credenciales admin Superset
 SUPERSET_ADMIN_USERNAME=admin
 SUPERSET_ADMIN_PASSWORD=adminpass123
 SUPERSET_ADMIN_FIRSTNAME=Super
@@ -83,72 +49,32 @@ SUPERSET_ADMIN_LASTNAME=Admin
 SUPERSET_ADMIN_EMAIL=admin@example.com
 ```
 
-Guarda este archivo en la raíz del proyecto como `.env`.
+## Paso 3: Instalación de Dependencias
 
-## Requisitos para ejecutar Docker Compose
+Con el entorno activo, instala todas las librerías necesarias:
 
-Asegúrate de tener instaladas las siguientes herramientas en tu máquina:
-
-- Docker (Engine) v20+ compatible con Compose v2.
-- Docker Compose (incluido en Docker Desktop o como plugin docker-compose v2).
-- Al menos 2-4 GB de memoria disponible para los contenedores; Superset y Postgres requieren memoria.
-- Puerto 3003 libre (Django) y 4003 libre (Superset) en la máquina host o ajustar en `docker-compose.yml`.
-
-Recomendación: ejecutar `docker --version` y `docker compose version` antes de comenzar.
-
-## Pasos para levantar con Docker Compose
-
-1. Copia el ejemplo de `.env` y ajústalo si usas SMTP:
-
-   - Crear `.env` en la raíz del repo.
-
-2. Construir y levantar servicios (en la raíz del proyecto):
-
-```
-docker compose up --build
+```bash
+pip install -r requirements.txt
 ```
 
-Esto hará:
-- Construir la imagen de la aplicación y de Superset.
-- Crear un contenedor para Postgres con la base de datos `gespro`.
-- Ejecutar las migraciones de Django y levantar el servidor en `0.0.0.0:3003`.
-- Iniciar Superset en el puerto `8088` dentro del contenedor, mapeado al `4003` del host (según `docker-compose.yml`).
+## Paso 4: Ejecución del Programa
 
+Navega a la carpeta del servidor y prepara la base de datos y los estilos:
 
+```bash
+# Entrar al directorio del backend
+cd backend/
 
-3. Acceder a las aplicaciones desde el navegador:
+# Aplicar las migraciones a la base de datos
+python manage.py migrate
 
-- Aplicación Django: http://localhost:3003/
-- Superset: http://localhost:4003/ (usuario admin/adminpass123, creado automáticamente por el comando de arranque de Superset en el compose)
+# Generar los archivos de estilo de Tailwind
+python manage.py tailwind build
 
-4. Parar y limpiar:
-
-```
-docker compose down --volumes --remove-orphans
-```
-
-## Pruebas básicas de despliegue
-
-Comprobación mínima solicitada: verificar que los contenedores estén en estado "healthy".
-
-1. Listar contenedores y revisar la columna STATUS/HEALTH:
-
-```
-docker ps
+# Iniciar el servidor de desarrollo
+python manage.py runserver
 ```
 
-o usando Docker Compose:
+El servidor estará disponible en: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 ```
-docker compose ps
-```
-
-2. Para filtrar solo los contenedores que no estén healthy (si tu versión de docker lo muestra en STATUS):
-
-```
-docker ps --filter "health=unhealthy"
-```
-
-Si todos los servicios relevantes aparecen como healthy, el despliegue básico se considera correcto. 
-
-
