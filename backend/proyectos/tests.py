@@ -1,22 +1,17 @@
-# Importamos la clase especial de Django para pruebas con navegador real
+import time
+import os
+from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-# Importamos 'reverse' para buscar nuestras URLs por su nombre
 from django.urls import reverse
 
-# Importaciones necesarias de Selenium
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 
-import time
 from .models import Proyecto
-import os
-from django.conf import settings
+from excel.import_gantt import importar_gantt
 
-
-
-# Ruta al archivo plantilla que usaremos para crear el proyecto
 PLANTILLA_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "frontend",
@@ -26,85 +21,143 @@ PLANTILLA_PATH = os.path.join(
 
 class ProyectosSeleniumTests(StaticLiveServerTestCase):
     """
-    Suite de pruebas E2E (End-to-End) para la aplicación de Proyectos usando Selenium.
+    Suite de pruebas End-to-End (E2E) para la gestión de proyectos y actividades.
+    Utiliza Selenium WebDriver para simular la interacción real de un usuario.
     """
     
     @classmethod
     def setUpClass(cls):
         """
-        Paso de preparación: Se ejecuta una sola vez antes de comenzar las pruebas.
-        Aquí inicializamos nuestro navegador virtual.
+        Inicializa el servidor de pruebas en vivo y configura el controlador de Google Chrome.
+        Se ejecuta una única vez al comenzar la suite de pruebas.
         """
         super().setUpClass()
-        
-        # Configuramos opciones para el navegador Chrome
         options = webdriver.ChromeOptions()
-        # Si quisieras que la prueba corra sin abrir la ventana (modo fantasma),
-        # descomentarías la siguiente línea:
-        # options.add_argument('--headless') 
         
-        # Instalamos y abrimos Chrome automáticamente
         cls.selenium = webdriver.Chrome(
             service=ChromeService(ChromeDriverManager().install()), 
             options=options
         )
-        
-        # Le damos a Selenium hasta 10 segundos de tolerancia para encontrar elementos
-        # en caso de que la página tarde un poco en cargar
         cls.selenium.implicitly_wait(10)
 
     @classmethod
     def tearDownClass(cls):
         """
-        Paso de limpieza: Se ejecuta al finalizar todas las pruebas en esta clase.
+        Cierra la instancia del navegador web y limpia el entorno al finalizar todas las pruebas.
         """
-        # Cerramos el navegador para no dejar ventanas "huérfanas" en tu computadora
         cls.selenium.quit()
         super().tearDownClass()
 
+    def test01(self, tiempo=2):
+        """
+        Verifica el flujo completo de creación de un proyecto simulando la interacción del usuario.
+        Abarca la navegación, llenado del formulario, carga del archivo Excel y confirmación.
+        """
+        url_crear = self.live_server_url + reverse('verificar_proyecto') 
+        self.selenium.get(url_crear)
+        
+        input_nombre = self.selenium.find_element(By.NAME, "nombre_proyecto")
+        time.sleep(tiempo) 
+        input_nombre.send_keys("test01")
+        time.sleep(tiempo)
+        
+        campo_archivo = self.selenium.find_element(By.ID, "id_archivo")
+        ruta_archivo = os.path.join(settings.BASE_DIR, 'frontend', 'static', 'plantilla.xlsx')
+        campo_archivo.send_keys(ruta_archivo)
+        time.sleep(tiempo) 
+        
+        boton_guardar = self.selenium.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        boton_guardar.click()
+        time.sleep(tiempo) 
 
+        confirmar_btn = self.selenium.find_element(By.ID, "btn-confirmar")
+        confirmar_btn.click()
+        time.sleep(tiempo) 
 
-    def test_crear_proyecto_test01_con_plantilla(self):
-            # 1. Navegar al formulario de creación
-            # El nombre es 'verificar_proyecto' según tu excel/urls.py
-            url_crear = self.live_server_url + reverse('verificar_proyecto') 
-            self.selenium.get(url_crear)
-            
-            # 2. Escribir el nombre del proyecto
-            # Asegúrate de que en tu HTML el <input> tenga name="nombre"
-            input_nombre = self.selenium.find_element(By.NAME, "nombre_proyecto")
-            
-            time.sleep(2) # Pausa para que alcances a ver la ventana de Chrome
-            input_nombre.send_keys("test01")
-            
-            # 3. Pausa final para verificar visualmente antes de que se cierre
-            time.sleep(1)
-            
-             # 4. CARGAMOS EL ARCHIVO EXCEL
-            # Buscamos el input de tipo archivo (revisando tu HTML, tiene el id="id_archivo")
-            campo_archivo = self.selenium.find_element(By.ID, "id_archivo")
-            
-            # Construimos la ruta exacta de tu archivo usando BASE_DIR de Django
-            ruta_archivo = os.path.join(settings.BASE_DIR, 'frontend', 'static', 'plantilla.xlsx')
-            
-            # Enviamos la ruta del archivo al input
-            campo_archivo.send_keys(ruta_archivo)
-            time.sleep(1) # Pausa para que veas que el archivo se cargó (el nombre debería aparecer en tu interfaz)
-            
-            # 5. ENVIAMOS EL FORMULARIO
-            # Buscamos el botón de tipo "submit" para guardar el formulario
-            boton_guardar = self.selenium.find_element(By.CSS_SELECTOR, "button[type='submit']")
-            boton_guardar.click()
+    def test02(self):
+        """
+        Verifica la funcionalidad de modificación de una actividad existente en un proyecto.
+        
+        Flujo de la prueba:
+        1. Prepara el entorno inyectando el proyecto base en la BD (Data Seeding).
+        2. Navega al proyecto y accede a la vista de "Lista".
+        3. Abre el modal de edición de la primera actividad.
+        4. Modifica el nombre de la actividad y añade un nuevo encargado.
+        5. Guarda los cambios y aserta que las modificaciones se reflejen en el DOM.
+        """
+        ruta_archivo = os.path.join(settings.BASE_DIR, 'frontend', 'static', 'plantilla.xlsx')
+        with open(ruta_archivo, 'rb') as archivo_excel:
+            importar_gantt("test01", archivo_excel)
 
-            time.sleep(1) # Pausa para que veas el resultado después de enviar el formulario
+        url_proyectos = self.live_server_url + reverse('proyectos')
+        self.selenium.get(url_proyectos)
+        time.sleep(2) 
 
-            confirmar_btn = self.selenium.find_element(By.ID, "btn-confirmar")
-            confirmar_btn.click()
+        proyecto_link = self.selenium.find_element(
+            By.XPATH, f"//h2[contains(text(), 'test01')]/ancestor::a"
+        )
+        proyecto_link.click()
+        time.sleep(2)
+        
+        self.assertIn('gantt', self.selenium.current_url.lower())
+        time.sleep(1)
 
-            time.sleep(2) # Pausa para que veas el resultado después de confirmar
+        boton_lista = self.selenium.find_element(By.LINK_TEXT, "Lista")
+        boton_lista.click()
+        time.sleep(2) 
+        
+        self.assertIn('lista_actividades', self.selenium.current_url)
+        
+        boton_lista_nuevo = self.selenium.find_element(By.LINK_TEXT, "Lista")
+        clases_boton = boton_lista_nuevo.get_attribute("class")
+        self.assertIn("bg-white", clases_boton)
 
+        boton_editar = self.selenium.find_element(By.CLASS_NAME, "btn-editar")
+        self.selenium.execute_script("arguments[0].scrollIntoView();", boton_editar)
+        self.selenium.execute_script("arguments[0].click();", boton_editar)
+        time.sleep(1) 
+        
+        modal_edicion = self.selenium.find_element(By.ID, "editModal")
+        self.assertNotIn("hidden", modal_edicion.get_attribute("class"))
+        
+        nombre_actividad = boton_editar.get_attribute("data-nombre")
+        input_nombre = self.selenium.find_element(By.ID, "editNombreInput")
+        self.assertEqual(input_nombre.get_attribute("value"), nombre_actividad)
+        time.sleep(2) 
 
+        input_nombre = self.selenium.find_element(By.ID, "editNombreInput")
+        input_nombre.clear()
+        nuevo_nombre = "test_2"
+        input_nombre.send_keys(nuevo_nombre)
 
+        btn_abrir_add_encargado = self.selenium.find_element(By.CSS_SELECTOR, "#editModal .btnOpenAddEncargado")
+        self.selenium.execute_script("arguments[0].click();", btn_abrir_add_encargado)
+        time.sleep(1) 
 
+        self.selenium.find_element(By.ID, "addEncargadoNombre").send_keys("ivan duran")
+        self.selenium.find_element(By.ID, "addEncargadoCorreo").send_keys("ivan.duran@gmail.com")
+        time.sleep(2) 
 
+        btn_guardar_encargado = self.selenium.find_element(By.ID, "saveAddEncargado")
+        btn_guardar_encargado.click()
+        time.sleep(1) 
 
+        lista_encargados_modal = self.selenium.find_element(By.CLASS_NAME, "js-encargados-list")
+        self.assertIn("ivan duran", lista_encargados_modal.text)
+
+        btn_guardar = self.selenium.find_element(By.ID, "saveChanges")
+        btn_guardar.click()
+        time.sleep(1.5) 
+        
+        try:
+            alerta = self.selenium.switch_to.alert
+            alerta.accept()
+        except:
+            pass
+
+        time.sleep(4)
+        modal_edicion = self.selenium.find_element(By.ID, "editModal")
+        self.assertIn("hidden", modal_edicion.get_attribute("class"))
+
+        primer_nombre_lista = self.selenium.find_element(By.CLASS_NAME, "activity-name").text
+        self.assertEqual(primer_nombre_lista, "test_2")
