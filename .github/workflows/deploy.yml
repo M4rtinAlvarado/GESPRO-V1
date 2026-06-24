@@ -1,0 +1,51 @@
+name: Deploy con Rollback
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mostrar versión
+        run: |
+          echo "Desplegando ${{ github.ref_name }}"
+
+      - name: Preparar rollback
+        id: rollback
+        run: |
+          git fetch --tags --force
+          CURRENT_TAG="${{ github.ref_name }}"
+          PREVIOUS_TAG="$(git tag --sort=-creatordate | grep -vFx "$CURRENT_TAG" | head -n 1)"
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No se encontró una versión previa para rollback" >&2
+            exit 1
+          fi
+
+          echo "ref=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          echo "Rollback preparado a $PREVIOUS_TAG"
+
+      - name: Desplegar
+        run: |
+          ./deploy.sh "${{ github.ref_name }}"
+
+      - name: Health Check
+        run: |
+          curl --fail --retry 10 --retry-delay 5 http://localhost:4004/api/health
+
+      - name: Rollback
+        if: failure()
+        run: |
+          ./deploy.sh "${{ steps.rollback.outputs.ref }}"
